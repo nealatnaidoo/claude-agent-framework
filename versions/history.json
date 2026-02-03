@@ -56,7 +56,7 @@
       "checksum": "79bc6f5bc9bd246b",
       "version": "1.0.0",
       "valid_from": "2026-02-03T22:57:37.318615+00:00",
-      "valid_to": null,
+      "valid_to": "2026-02-03T23:37:27.202155+00:00",
       "recorded_at": "2026-02-03T22:57:37.318615+00:00",
       "change_type": "initial",
       "change_summary": "Initial tracking"
@@ -540,6 +540,18 @@
       "recorded_at": "2026-02-03T23:29:45.757620+00:00",
       "change_type": "modified",
       "change_summary": "Updated (checksum changed from 64bac99e631d3edd)"
+    },
+    {
+      "component_type": "agents",
+      "component_name": "coding-agent",
+      "file_path": "agents/coding-agent.md",
+      "checksum": "b1df41cb2cbe43e5",
+      "version": "1.0.1",
+      "valid_from": "2026-02-03T23:37:27.202155+00:00",
+      "valid_to": null,
+      "recorded_at": "2026-02-03T23:37:27.202155+00:00",
+      "change_type": "modified",
+      "change_summary": "Updated (checksum changed from 79bc6f5bc9bd246b)"
     }
   ],
   "snapshots": []

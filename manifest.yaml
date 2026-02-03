@@ -38,7 +38,7 @@ agents:
     depended_by: [coding-agent]
 
   coding-agent:
-    version: "4.0.0"
+    version: "4.1.0"
     file: "agents/coding-agent.md"
     scope: micro
     exclusive_permission: write_source_code
