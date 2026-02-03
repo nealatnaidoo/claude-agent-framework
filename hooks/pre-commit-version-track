@@ -1,0 +1,33 @@
+#!/bin/bash
+# Pre-commit hook to automatically record version changes
+#
+# Install by adding to .git/hooks/pre-commit:
+#   #!/bin/bash
+#   ./hooks/pre-commit-version-track
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# Check if any tracked components changed
+STAGED_FILES=$(git diff --cached --name-only)
+TRACKED_DIRS="agents prompts schemas lenses knowledge docs"
+
+COMPONENT_CHANGED=false
+for dir in $TRACKED_DIRS; do
+    if echo "$STAGED_FILES" | grep -q "^$dir/"; then
+        COMPONENT_CHANGED=true
+        break
+    fi
+done
+
+if [ "$COMPONENT_CHANGED" = true ]; then
+    echo "Tracked components changed - recording version history..."
+    cd "$REPO_ROOT"
+    python3 scripts/version_tracker.py scan
+
+    # Add updated history file to commit
+    if [ -f versions/history.json ]; then
+        git add versions/history.json
+    fi
+fi
+
+exit 0

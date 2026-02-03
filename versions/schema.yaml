@@ -1,0 +1,42 @@
+# Bi-Temporal Version Tracking Schema
+#
+# Two time dimensions:
+# - valid_from/valid_to: When this version was active in the real world
+# - recorded_at: When this record was written to the system
+#
+# This enables queries like:
+# - "What was coding-agent like on 2026-01-15?" (point-in-time)
+# - "When did coding-agent change from v3 to v4?" (audit trail)
+# - "Show me all changes in the last 7 days" (recent changes)
+
+version: "1.0"
+
+# Component types that are tracked
+tracked_components:
+  - agents
+  - prompts/system
+  - prompts/playbooks
+  - schemas
+  - lenses
+  - knowledge
+
+# Version record structure
+record_schema:
+  component_type: string    # e.g., "agents", "prompts/system"
+  component_name: string    # e.g., "coding-agent", "ba_system_prompt_v4_0"
+  version: string           # Semantic version or content-derived
+  file_path: string         # Relative path from repo root
+  checksum: string          # SHA-256 of file content
+  valid_from: datetime      # When this version became active (ISO 8601)
+  valid_to: datetime|null   # When superseded (null = current)
+  recorded_at: datetime     # When this record was created
+  change_type: string       # "initial", "modified", "deleted"
+  change_summary: string    # Brief description of what changed
+
+# Snapshot structure (full system state at a point in time)
+snapshot_schema:
+  snapshot_id: string       # Unique identifier
+  created_at: datetime      # When snapshot was taken
+  git_commit: string|null   # Git SHA if committed
+  description: string       # Human description
+  components: list          # List of component records at this point

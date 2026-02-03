@@ -114,6 +114,63 @@ git pull
 
 Since the framework uses symlinks, updates are immediate.
 
+## Bi-Temporal Version Tracking
+
+The framework tracks all component changes with two time dimensions:
+- **Valid time**: When a version was active
+- **Transaction time**: When the change was recorded
+
+### Initialize Tracking
+
+```bash
+python3 scripts/version_tracker.py init
+```
+
+### Scan for Changes
+
+```bash
+# Show what would be recorded
+python3 scripts/version_tracker.py scan --dry-run
+
+# Record changes
+python3 scripts/version_tracker.py scan
+```
+
+### Query Historical State
+
+```bash
+# What was the system like on a specific date?
+python3 scripts/version_tracker.py query 2026-01-15
+
+# Current state
+python3 scripts/version_tracker.py query now
+```
+
+### View Change History
+
+```bash
+# Full history
+python3 scripts/version_tracker.py history
+
+# Just agents
+python3 scripts/version_tracker.py history --type agents
+```
+
+### Compare Two Points in Time
+
+```bash
+python3 scripts/version_tracker.py diff 2026-01-01 now
+```
+
+### Automatic Tracking (Optional)
+
+Install the pre-commit hook to auto-record changes:
+
+```bash
+cp hooks/pre-commit-version-track .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
 ## Customization
 
 ### Local Configuration (not tracked)
