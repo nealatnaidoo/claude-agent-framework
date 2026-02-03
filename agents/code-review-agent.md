@@ -4,8 +4,9 @@ description: Deep code review verifying Prime Directive alignment, actual task c
 tools: Read, Grep, Glob, Bash
 model: sonnet
 scope: micro
-depends_on: [qa-reviewer]
-version: 2.1.0
+depends_on: [qa-reviewer, backend-coding-agent, frontend-coding-agent]
+depended_by: [lessons-advisor]
+version: 2.2.0
 ---
 
 ## Identity

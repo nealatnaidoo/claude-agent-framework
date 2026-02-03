@@ -21,7 +21,7 @@ agents:
     scope: macro
     exclusive_permission: execute_deployments
     depends_on: []
-    depended_by: [solution-designer, business-analyst, coding-agent]
+    depended_by: [solution-designer, business-analyst, backend-coding-agent, frontend-coding-agent]
 
   solution-designer:
     version: "2.2.0"
@@ -35,28 +35,36 @@ agents:
     file: "agents/business-analyst.md"
     scope: micro
     depends_on: [solution-designer, devops-governor]
-    depended_by: [coding-agent]
+    depended_by: [backend-coding-agent, frontend-coding-agent]
 
-  coding-agent:
-    version: "4.1.0"
-    file: "agents/coding-agent.md"
+  backend-coding-agent:
+    version: "1.0.0"
+    file: "agents/backend-coding-agent.md"
     scope: micro
-    exclusive_permission: write_source_code
+    exclusive_permission: write_backend_code
+    depends_on: [business-analyst]
+    depended_by: [qa-reviewer, code-review-agent]
+
+  frontend-coding-agent:
+    version: "1.0.0"
+    file: "agents/frontend-coding-agent.md"
+    scope: micro
+    exclusive_permission: write_frontend_code
     depends_on: [business-analyst]
     depended_by: [qa-reviewer, code-review-agent]
 
   qa-reviewer:
-    version: "2.1.0"
+    version: "2.2.0"
     file: "agents/qa-reviewer.md"
     scope: micro
-    depends_on: [coding-agent]
+    depends_on: [backend-coding-agent, frontend-coding-agent]
     depended_by: [code-review-agent]
 
   code-review-agent:
-    version: "2.1.0"
+    version: "2.2.0"
     file: "agents/code-review-agent.md"
     scope: micro
-    depends_on: [qa-reviewer, coding-agent]
+    depends_on: [qa-reviewer, backend-coding-agent, frontend-coding-agent]
     depended_by: [lessons-advisor]
 
   lessons-advisor:
@@ -177,8 +185,23 @@ compatibility:
   claude_code_min: "1.0.0"
   python_min: "3.10"
 
+# Architecture patterns
+patterns:
+  backend-hexagonal:
+    version: "1.0.0"
+    path: "patterns/backend-hexagonal/"
+    description: "Python hexagonal architecture (ports & adapters)"
+    audit_script: "hex_audit.py"
+
+  frontend-fsd:
+    version: "1.0.0"
+    path: "patterns/frontend-fsd/"
+    description: "React/TypeScript Feature-Sliced Design"
+    audit_script: "fsd-audit.ts"
+
 # Exclusive permissions map (for governance validation)
 exclusive_permissions:
-  write_source_code: coding-agent
+  write_backend_code: backend-coding-agent
+  write_frontend_code: frontend-coding-agent
   execute_deployments: devops-governor
   define_user_journeys: persona-evaluator

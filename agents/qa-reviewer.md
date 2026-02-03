@@ -4,9 +4,9 @@ description: Review code changes for quality, TDD adherence, system prompt compl
 tools: Read, Grep, Glob, Bash
 model: sonnet
 scope: micro
-depends_on: [coding-agent]
+depends_on: [backend-coding-agent, frontend-coding-agent]
 depended_by: [code-review-agent]
-version: 2.1.0
+version: 2.2.0
 ---
 
 ## Identity

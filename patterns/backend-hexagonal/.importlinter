@@ -1,0 +1,73 @@
+# Backend Hexagonal Architecture - Import Boundary Enforcement
+# Copy to project root
+
+[importlinter]
+root_packages =
+    components
+    shared
+    app
+
+# ════════════════════════════════════════════════
+# CONTRACT 1: Domain must NEVER import adapters
+# ════════════════════════════════════════════════
+[importlinter:contract:domain-cannot-import-adapters]
+name = Domain layer must not import from adapters
+type = forbidden
+source_modules =
+    components.*.domain
+forbidden_modules =
+    components.*.adapters
+
+# ════════════════════════════════════════════════
+# CONTRACT 2: Domain model must NEVER import ports
+# ════════════════════════════════════════════════
+[importlinter:contract:model-cannot-import-ports]
+name = Domain model must not import from ports
+type = forbidden
+source_modules =
+    components.*.domain.model
+forbidden_modules =
+    components.*.ports
+
+# ════════════════════════════════════════════════
+# CONTRACT 3: Ports must NEVER import adapters
+# ════════════════════════════════════════════════
+[importlinter:contract:ports-cannot-import-adapters]
+name = Ports must not import from adapters
+type = forbidden
+source_modules =
+    components.*.ports
+forbidden_modules =
+    components.*.adapters
+
+# ════════════════════════════════════════════════
+# CONTRACT 4: Domain model must not import frameworks
+# ════════════════════════════════════════════════
+[importlinter:contract:model-no-frameworks]
+name = Domain model must not use framework types
+type = forbidden
+source_modules =
+    components.*.domain.model
+forbidden_modules =
+    sqlalchemy
+    pydantic
+    django
+    flask
+    fastapi
+    celery
+    redis
+    boto3
+    httpx
+    requests
+    aiohttp
+
+# ════════════════════════════════════════════════
+# CONTRACT 5: Inbound adapters must not import outbound adapters
+# ════════════════════════════════════════════════
+[importlinter:contract:no-adapter-cross-talk]
+name = Inbound adapters must not import outbound adapters directly
+type = forbidden
+source_modules =
+    components.*.adapters.inbound
+forbidden_modules =
+    components.*.adapters.outbound
