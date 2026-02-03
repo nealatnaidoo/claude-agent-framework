@@ -1,0 +1,15 @@
+devops: upgrade db-harness to v1.0.0 in portfolio manifest
+
+Update DevOps Governor manifest and documentation to reflect
+db-harness v1.0.0 release.
+
+Changes:
+- manifest.yaml: Update db-harness version 0.1.0 → 1.0.0
+- manifest.yaml: Add GitHub repository URL and release metadata
+- decisions.md: Add DEC-DEVOPS-016 decision record
+- evolution.md: Document 2026-02-03 upgrade
+
+Decision: DEC-DEVOPS-016
+Affects: all projects with databases (little-research-lab)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>

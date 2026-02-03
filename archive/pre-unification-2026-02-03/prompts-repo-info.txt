@@ -1,0 +1,24 @@
+=== ~/Developer/claude/prompts git log ===
+1c1a371 Add Lesson 56: Extracting Icons from PDFs with PyMuPDF
+2fdcedf Add Lesson 123: Manifest Sync in Parallel Worktree Scenarios
+8309be7 Add Lesson 122: Manifest Task Status Must Sync on Merge
+f00cda1 Add external code review prompt for visiting agents
+ba2156c Add lessons 120-121: Worktree consolidation and nav menu disconnection
+32138d2 Add Lesson 119: Fix Upstream Processes, Not Downstream Constraints
+40b2e51 Add Lesson 118: Codify Lessons into Reusable Pattern Templates
+6be83a5 Update system prompts and playbooks for v2.5 agent governance
+4081d76 Add lesson 55: Claude Code slash command syntax limitations
+be1424f Add Lesson 116: Multiple Database Files verification
+0fe37fa docs: Add lesson 115 (Fly.io CI/CD) and project artifact migration guide
+76748b9 feat: Add checkpoint verification to QA and Code Review agents
+2de2730 feat: Restore verification checkpoint enforcement
+4b1a982 docs: Add lesson 114 - Claude Code subagent types are system-defined
+d75ff93 feat: Add project review prompt template for /review-project command
+e6e5eb0 docs: Add lessons 107-113 and /doc skill
+873f5ef docs: Add CLAUDE.md with prime directive and non-negotiable requirements
+f52a2ef docs: Add lessons 101-106 from agentic_hub_extension implementation
+ca4ba7b Initial commit: Development prompts and lessons knowledge base
+
+=== Remote ===
+origin	https://github.com/nealatnaidoo/claude-prompts.git (fetch)
+origin	https://github.com/nealatnaidoo/claude-prompts.git (push)

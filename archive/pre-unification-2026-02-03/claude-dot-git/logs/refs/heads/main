@@ -1,0 +1,6 @@
+0000000000000000000000000000000000000000 da58589c7ee92c12dec8bf58fad00794e3730064 nealatnaidoo <neal@naidoo.io> 1769895122 +0000	commit (initial): Initial commit: Claude Code configuration with local Docker validation
+da58589c7ee92c12dec8bf58fad00794e3730064 a8515232706fa7dabe2a1b9fd8fc7be0abdf07fb nealatnaidoo <neal@naidoo.io> 1769895271 +0000	commit: Fix DevOps Governor consistency for local Docker validation
+a8515232706fa7dabe2a1b9fd8fc7be0abdf07fb 70156fc52b89bfbcd189d469b8e5dee96dae27cc nealatnaidoo <neal@naidoo.io> 1769897834 +0000	commit: Add best practice pattern templates from devlessons.md
+70156fc52b89bfbcd189d469b8e5dee96dae27cc 17bd3526bfaea122cf1c229942143afc2617271b nealatnaidoo <neal@naidoo.io> 1769899365 +0000	commit: Add Next.js frontend GitLab CI template with agent navigation patterns
+17bd3526bfaea122cf1c229942143afc2617271b c0075e821c4b0c2971417451d384578fb89bd548 nealatnaidoo <neal@naidoo.io> 1769902162 +0000	commit: feat: Add worktree integration for parallel BA + Coding workflows
+c0075e821c4b0c2971417451d384578fb89bd548 e2bef2ec2374a3fe31210c4bf6d90a334283220c nealatnaidoo <neal@naidoo.io> 1770079705 +0000	commit: devops: upgrade db-harness to v1.0.0 in portfolio manifest

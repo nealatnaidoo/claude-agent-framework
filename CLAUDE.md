@@ -4,7 +4,7 @@
 
 Always reference the development prompts folder for established patterns, lessons, and agent prompts:
 
-**Location**: `/Users/naidooone/Developer/claude/prompts/`
+**Location**: `~/Developer/claude-agent-framework/` (or `~/.claude/` via symlinks)
 
 **Version**: v2.6 (worktree_parallelization) - Updated 2026-01-31
 
@@ -65,7 +65,7 @@ Lens packs define domain-specific evaluation perspectives. Available at `~/.clau
 **Custom lenses:** Copy a template to your project's `.claude/persona_lenses.yaml` and modify for your domain.
 
 **Agent Prompt Files Location**: `~/.claude/agents/` (registered subagents)
-**Detailed Prompts Location**: `/Users/naidooone/Developer/claude/prompts/agents/` (full methodology docs)
+**Detailed Prompts Location**: `~/.claude/prompts/` (system prompts and playbooks)
 
 To invoke a subagent, use the Task tool with `subagent_type` matching the agent name (e.g., `subagent_type: "lessons-advisor"`).
 
@@ -124,19 +124,19 @@ python ~/.claude/scripts/validate_agents.py agent-name.md
 
 | File | Purpose |
 |------|---------|
-| `devlessons.md` | Hard-won lessons from past projects - consult before making architectural decisions |
-| `system-prompts-v2/coding_system_prompt_v4_0_hex_tdd_8k.md` | Coding standards: TDD, hexagonal architecture, atomic components |
-| `playbooks-v2/coding_playbook_v4_0.md` | How to implement: task loop, drift governance, component structure |
-| `system-prompts-v2/ba_system_prompt_v4_0_8k.md` | BA workflow: spec creation, tasklist management, EV/D governance |
-| `playbooks-v2/ba_playbook_v4_0.md` | BA practical guide: artifact creation, drift handling, escalation |
-| `system-prompts-v2/solution_designer_system_prompt_v2_0.md` | Solution design patterns, handoff envelope format |
-| `playbooks-v2/solution_designer_playbook_v2_0.md` | Solution design: scoping, architecture decisions, tradeoffs |
-| `system-prompts-v2/persona_evaluator_system_prompt_v2_0.md` | Persona-based evaluation methodology (embedded in qa-reviewer) |
-| `system-prompts-v2/qa_system_prompt_v2_0.md` | QA review: quick governance, TDD, hexagonal compliance |
-| `system-prompts-v2/code_review_system_prompt_v1_0.md` | Deep code review: task completion verification, bug docs, improvements |
-| `playbooks-v2/code_review_playbook_v1_0.md` | Code review practical guide: verification process, templates, patterns |
-| `system-prompts-v2/lessons_system_prompt_v2_0.md` | Lessons operationalization into gates and checklists |
-| `docs-v2/agentic_development_playbook_v1_0.md` | **Lifecycle playbook**: Persona -> Solution -> BA -> Coding -> QA -> Lessons |
+| `~/.claude/knowledge/devlessons.md` | Hard-won lessons from past projects - consult before making architectural decisions |
+| `~/.claude/prompts/system/coding_system_prompt_v4_0_hex_tdd_8k.md` | Coding standards: TDD, hexagonal architecture, atomic components |
+| `~/.claude/prompts/playbooks/coding_playbook_v4_0.md` | How to implement: task loop, drift governance, component structure |
+| `~/.claude/prompts/system/ba_system_prompt_v4_0_8k.md` | BA workflow: spec creation, tasklist management, EV/D governance |
+| `~/.claude/prompts/playbooks/ba_playbook_v4_0.md` | BA practical guide: artifact creation, drift handling, escalation |
+| `~/.claude/prompts/system/solution_designer_system_prompt_v2_0.md` | Solution design patterns, handoff envelope format |
+| `~/.claude/prompts/playbooks/solution_designer_playbook_v2_0.md` | Solution design: scoping, architecture decisions, tradeoffs |
+| `~/.claude/prompts/system/persona_evaluator_system_prompt_v2_0.md` | Persona-based evaluation methodology (embedded in qa-reviewer) |
+| `~/.claude/prompts/system/qa_system_prompt_v2_0.md` | QA review: quick governance, TDD, hexagonal compliance |
+| `~/.claude/prompts/system/code_review_system_prompt_v1_0.md` | Deep code review: task completion verification, bug docs, improvements |
+| `~/.claude/prompts/playbooks/code_review_playbook_v1_0.md` | Code review practical guide: verification process, templates, patterns |
+| `~/.claude/prompts/system/lessons_system_prompt_v2_0.md` | Lessons operationalization into gates and checklists |
+| `~/.claude/docs/agent_operating_model.md` | **Lifecycle playbook**: Persona -> Solution -> BA -> Coding -> QA -> Lessons |
 
 ### Agent Lifecycle (v2.5)
 
@@ -272,7 +272,7 @@ Agents communicate via standardized "Handoff Envelopes". Full specification: `~/
 
 **Command Locations:**
 - `/review-project`: `~/.claude/commands/review-project.md`
-- Prompt template: `/Users/naidooone/Developer/claude/prompts/project_review_prompt.md`
+- Prompt template: `~/.claude/commands/review-project.md`
 
 ### DevOps Governance (Portfolio Level)
 
@@ -761,15 +761,15 @@ The `manifest.yaml` is the single source of truth for:
 ### Legacy Projects
 
 For projects with old `{project}_spec.md` at root:
-- Migration guide: `/Users/naidooone/Developer/claude/prompts/migrations/MIGRATE_PROJECT_ARTIFACTS.md`
+- Migration guide: `~/.claude/migrations/MIGRATE_PROJECT_ARTIFACTS.md`
 
 ## Archive Information
 
 Previous v3_atomic configuration archived at:
-`/Users/naidooone/Developer/claude/prompts/archive/v3_atomic_backup_2026-01-16/`
+`~/Developer/claude-agent-framework/archive/v3_atomic_backup_2026-01-16/`
 
 Rollback instructions available at:
-`/Users/naidooone/Developer/claude/prompts/ROLLBACK_PROMPT.md`
+`~/Developer/claude-agent-framework/migrations/ROLLBACK_PROMPT.md`
 
 ## Permissions Configuration
 
@@ -848,7 +848,7 @@ When relocating development projects to a new directory:
 2. Update directory permissions in `~/.claude/settings.local.json`
 3. Restart Claude Code session
 
-**Migration Prompt Location**: `/Users/naidooone/Developer/claude/prompts/migrations/MIGRATE_DEV_FOLDERS.md`
+**Migration Prompt Location**: `~/.claude/migrations/MIGRATE_DEV_FOLDERS.md`
 
 ### Migrating Project Artifacts to .claude/ Folder
 
@@ -860,7 +860,7 @@ For projects with legacy `{project}_spec.md` artifacts at root:
 4. Create `manifest.yaml` with current state
 5. Commit migration to git
 
-**Migration Prompt Location**: `/Users/naidooone/Developer/claude/prompts/migrations/MIGRATE_PROJECT_ARTIFACTS.md`
+**Migration Prompt Location**: `~/.claude/migrations/MIGRATE_PROJECT_ARTIFACTS.md`
 
 ### Automated Migration Script
 
