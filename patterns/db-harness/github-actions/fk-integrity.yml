@@ -1,0 +1,136 @@
+# GitHub Actions Reusable Workflow: FK Integrity Check (NN-DB-2)
+#
+# Validates foreign key integrity after migrations.
+# Use this as a required check after database schema changes.
+#
+# Usage in your workflow:
+#   jobs:
+#     fk-integrity:
+#       uses: ./.github/workflows/fk-integrity.yml
+#       with:
+#         database: "sqlite:///app.db"
+#         tolerance: 0.0
+#       secrets:
+#         db_conn: ${{ secrets.DB_CONN }}
+#
+# DevOps Non-Negotiables: NN-DB-2 (Post-Migration FK Integrity)
+# Decision Reference: DEC-DEVOPS-014
+
+name: FK Integrity Check (NN-DB-2)
+
+on:
+  workflow_call:
+    inputs:
+      database:
+        description: 'Database connection (for SQLite file paths)'
+        required: false
+        type: string
+        default: ''
+      tolerance:
+        description: 'Acceptable FK violation percentage (0.0 = zero tolerance)'
+        required: false
+        type: string
+        default: '0.0'
+      python_version:
+        description: 'Python version'
+        required: false
+        type: string
+        default: '3.12'
+      db_harness_version:
+        description: 'db-harness package version'
+        required: false
+        type: string
+        default: '0.1.0'
+    secrets:
+      db_conn:
+        description: 'Database connection string (for remote DBs)'
+        required: false
+    outputs:
+      has_violations:
+        description: 'Whether FK violations were detected'
+        value: ${{ jobs.fk-check.outputs.has_violations }}
+      consistency_report:
+        description: 'Path to consistency report JSON'
+        value: ${{ jobs.fk-check.outputs.report_path }}
+
+jobs:
+  fk-check:
+    name: "NN-DB-2: FK Integrity Validation"
+    runs-on: ubuntu-latest
+
+    outputs:
+      has_violations: ${{ steps.check.outputs.has_violations }}
+      report_path: ${{ steps.check.outputs.report_path }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+          cache: 'pip'
+
+      - name: Install db-harness
+        run: pip install db-propagation-harness==${{ inputs.db_harness_version }}
+
+      - name: Determine connection string
+        id: conn
+        run: |
+          if [ -n "${{ secrets.db_conn }}" ]; then
+            echo "db=${{ secrets.db_conn }}" >> $GITHUB_OUTPUT
+          else
+            echo "db=${{ inputs.database }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run FK Integrity Check
+        id: check
+        run: |
+          mkdir -p .claude/evidence
+
+          # Run consistency check (self-comparison for FK integrity)
+          db-harness consistency \
+            "${{ steps.conn.outputs.db }}" \
+            "${{ steps.conn.outputs.db }}" \
+            --tolerance ${{ inputs.tolerance }} \
+            --output json > .claude/evidence/consistency_${{ github.run_id }}.json 2>&1 || exit_code=$?
+
+          echo "exit_code=${exit_code:-0}" >> $GITHUB_OUTPUT
+          echo "report_path=.claude/evidence/consistency_${{ github.run_id }}.json" >> $GITHUB_OUTPUT
+
+          # Check for FK violations
+          if [ "${exit_code:-0}" -eq 3 ]; then
+            echo "has_violations=true" >> $GITHUB_OUTPUT
+            echo "::error::NN-DB-2 FAILED: Foreign key violations detected"
+            cat .claude/evidence/consistency_${{ github.run_id }}.json
+            exit 3
+          else
+            echo "has_violations=false" >> $GITHUB_OUTPUT
+            echo "NN-DB-2 PASSED: No FK violations"
+          fi
+
+      - name: Generate Summary
+        if: always()
+        run: |
+          echo "## NN-DB-2: FK Integrity Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.check.outputs.has_violations }}" = "true" ]; then
+            echo "| Result | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
+            echo "| FK Violations | :x: DETECTED |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Action Required:** Fix foreign key constraint violations before deployment." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Result | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
+            echo "| FK Violations | :white_check_mark: None |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Consistency Evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: consistency-evidence-${{ github.run_id }}
+          path: .claude/evidence/consistency_*.json
+          retention-days: 365

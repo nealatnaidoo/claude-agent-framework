@@ -1,0 +1,11 @@
+# Version History Manifest
+# Tracks all snapshots for bi-temporal queries
+
+current_version: "2.6.0"
+
+snapshots:
+  - id: "2026-02-03_v2.6.0_initial-unified-repo"
+    version: "2.6.0"
+    timestamp: "2026-02-03T00:00:00Z"
+    description: "Initial unified repository - consolidated from three locations"
+    git_commit: null  # Will be set after first commit

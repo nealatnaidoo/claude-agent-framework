@@ -1,0 +1,212 @@
+# Frontend Quality Gates Pattern Template
+# Source: devlessons.md - Lessons 18, 38-43, 53-57, 59, 81, 85
+# Version: 1.0
+# Date: 2026-01-31
+
+schema_version: "1.0"
+name: "Frontend Quality Gates"
+description: "Quality gate configuration for Next.js/React frontend projects"
+
+# Non-Negotiable Gates
+gates:
+  lint:
+    name: "ESLint"
+    tool: "eslint"
+    command: "npm run lint"
+    fix_command: "npm run lint -- --fix"
+    config_file: ".eslintrc.js"
+    required: true
+    lessons:
+      - "#ESLint Error Remediation patterns"
+
+  type_check:
+    name: "TypeScript"
+    tool: "tsc"
+    command: "npx tsc --noEmit"
+    config_file: "tsconfig.json"
+    required: true
+    lessons:
+      - "#59: Next.js 'use client' directive affects all exports"
+
+  build:
+    name: "Production Build"
+    tool: "next"
+    command: "npm run build"
+    required: true
+    lessons:
+      - "#85: Next.js static generation timeouts for demo pages"
+
+  unit_tests:
+    name: "Unit Tests"
+    tool: "jest or vitest"
+    command: "npm test"
+    required: true
+    coverage_threshold: 70
+
+  e2e_tests:
+    name: "E2E Tests"
+    tool: "playwright"
+    command: "npx playwright test"
+    required: true
+    lessons:
+      - "#44: E2E test patterns for feature workflows"
+      - "#53: E2E test selectors must match actual DOM attributes"
+      - "#57: E2E tests need authentication helpers for reuse"
+
+# React/Next.js Specific Checks
+framework_checks:
+  use_client_isolation:
+    description: "Pure utility functions should not be in 'use client' files"
+    check: "Verify server-compatible utilities are in lib/ without 'use client'"
+    lesson: "#59: Next.js 'use client' affects all exports"
+
+  radix_select_empty_value:
+    description: "Radix Select cannot use empty string as value"
+    pattern: 'value=""'
+    message: "Use sentinel value like '__none__' instead of empty string"
+    lesson: "#18: Radix UI Select Empty Value Constraint"
+
+  tiptap_packages:
+    description: "TipTap editor vs rendering packages"
+    required_for_ssr:
+      - "@tiptap/html"
+    lesson: "#38: Install @tiptap/html for server-side rendering"
+
+  dynamic_rendering:
+    description: "Content pages need force-dynamic for fresh data"
+    pattern: "export const dynamic = 'force-dynamic'"
+    affected_routes:
+      - "app/p/[slug]/page.tsx"
+      - "app/page.tsx"
+    lesson: "#85: Next.js static caching shows stale data"
+
+  derived_state:
+    description: "Use useMemo for derived state, not setState in useEffect"
+    anti_pattern: "useEffect(() => { setState(computed) }, [dep])"
+    correct_pattern: "const computed = useMemo(() => ..., [dep])"
+    lesson: "#81: React setState in useEffect should use useMemo"
+
+# shadcn/ui Component Checks (Lesson #39)
+shadcn_checks:
+  verify_components_exist:
+    description: "Verify shadcn components exist before importing"
+    command: "ls components/ui/"
+    common_missing:
+      - "radio-group"
+      - "alert"
+      - "alert-dialog"
+      - "accordion"
+    add_command: "npx shadcn@latest add {component}"
+    lesson: "#39: shadcn/ui component dependencies must be added incrementally"
+
+# E2E Testing Requirements (Lessons 44, 53-57)
+e2e_requirements:
+  selectors:
+    prefer: "data-testid"
+    avoid:
+      - "CSS classes"
+      - "text content"
+    lessons:
+      - "#53: E2E test selectors must match actual DOM attributes"
+
+  authentication:
+    pattern: "tests/fixtures/auth.ts"
+    helpers:
+      - "loginAsAdmin(page)"
+      - "loginAsEditor(page)"
+      - "logout(page)"
+    lesson: "#57: E2E tests need authentication helpers for reuse"
+
+  seed_data:
+    pattern: "tests/fixtures/seed-data.ts"
+    structure: |
+      export const CONTENT = {
+        publishedPost: { slug: 'test-published-post', title: 'Test Published Post' },
+        draftPost: { slug: 'test-draft-post', title: 'Test Draft Post' },
+      };
+    lesson: "#54: Test database seed scripts must match actual schema"
+
+  port_verification:
+    description: "Check port conflicts before starting local servers"
+    pre_check: "lsof -i :3000 || true"
+    lesson: "#55: Check port conflicts before starting local servers"
+
+  playwright_config:
+    baseURL_pattern: "process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3000'"
+    lesson: "#56: Playwright config must match running server ports"
+
+# Type Safety Patterns (Lessons 58, 108, 109)
+type_safety:
+  literal_types:
+    description: "Keep Literal types synchronized across all schema files"
+    pattern: "Define shared types in a single types.ts module"
+    lesson: "#58: Pydantic Literal types must be consistent across all schema files"
+
+  api_error_typing:
+    pattern: |
+      interface ApiError {
+        body?: { detail?: string; errors?: ValidationError[] };
+      }
+      catch (error) {
+        const err = error as ApiError;
+        toast.error(err.body?.detail || "Failed");
+      }
+
+  collection_item_typing:
+    pattern: |
+      interface PublicPost {
+        id: string;
+        title: string;
+        slug: string;
+      }
+      posts.map((post: PublicPost) => ...)
+
+# Evidence Requirements
+evidence:
+  location: ".claude/evidence/"
+  required_files:
+    - "quality_gates_run.json"
+    - "test_report.json"
+  optional_files:
+    - "e2e_report.json"
+    - "coverage.json"
+
+# Quality Gate Run Script Template
+run_script: |
+  #!/bin/bash
+  # Run all frontend quality gates
+
+  set -e
+  mkdir -p .claude/evidence
+
+  echo "=== Linting ==="
+  npm run lint
+
+  echo "=== Type Checking ==="
+  npx tsc --noEmit
+
+  echo "=== Build ==="
+  npm run build
+
+  echo "=== Unit Tests ==="
+  npm test -- --coverage --json --outputFile=.claude/evidence/test_report.json
+
+  echo "=== E2E Tests ==="
+  npx playwright test --reporter=json > .claude/evidence/e2e_report.json || true
+  npx playwright test
+
+  # Generate summary
+  echo '{"status": "PASS", "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' > .claude/evidence/quality_gates_run.json
+
+  echo "=== All Quality Gates Passed ==="
+
+# Checklist for task completion
+completion_checklist:
+  - "[ ] npm run lint passes"
+  - "[ ] npx tsc --noEmit passes"
+  - "[ ] npm run build succeeds"
+  - "[ ] Unit tests pass"
+  - "[ ] E2E tests pass"
+  - "[ ] All interactive elements have data-testid attributes"
+  - "[ ] No 'use client' on pure utility functions"
+  - "[ ] evidence artifacts exist"

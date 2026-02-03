@@ -1,0 +1,62 @@
+# Lens Pack: SaaS / B2B Software
+# Use for: business software, productivity tools, team collaboration
+
+domain: saas_b2b
+description: B2B software products with buyers, admins, and end users
+
+lenses:
+  - id: buyer
+    name: Buyer / Decision Maker
+    focus: ROI, vendor evaluation, compliance
+    questions:
+      - Is the value proposition clear?
+      - Does it meet compliance requirements?
+      - Can they justify the purchase?
+    trust_sensitive: true
+
+  - id: admin
+    name: IT Admin / Implementer
+    focus: Setup, integration, security, SSO
+    questions:
+      - Is setup straightforward?
+      - Does it integrate with existing tools?
+      - Are security controls adequate?
+    trust_sensitive: true
+
+  - id: power_user
+    name: Power User / Champion
+    focus: Advanced features, customization, efficiency
+    questions:
+      - Can they customize workflows?
+      - Are advanced features discoverable?
+      - Does it make them more productive?
+    trust_sensitive: false
+
+  - id: casual_user
+    name: Casual / Reluctant User
+    focus: Onboarding, simplicity, minimum friction
+    questions:
+      - Can they use it without training?
+      - Is the learning curve manageable?
+      - Does it feel like extra work?
+    trust_sensitive: false
+
+  - id: support
+    name: Support & Success
+    focus: Troubleshooting, documentation, escalation
+    questions:
+      - Can issues be resolved quickly?
+      - Is documentation helpful?
+      - Is there a clear escalation path?
+    trust_sensitive: true
+
+lifecycle_stages:
+  - Awareness
+  - Evaluation/Trial
+  - Procurement
+  - Implementation
+  - Onboarding
+  - Adoption
+  - Expansion
+  - Renewal
+  - Churn Risk

@@ -1,0 +1,81 @@
+# Lens Pack: Quantitative Finance / Systematic Trading
+# Use for: backtesting, simulation, portfolio analytics, risk systems, trading infrastructure
+
+domain: quant_finance
+description: Cross-asset portfolio backtesting, simulation, and systematic trading systems
+
+lenses:
+  - id: data_scientist
+    name: Data Scientist
+    focus: Data quality, reproducibility, statistical rigor
+    questions:
+      - Is the data pipeline reproducible and versioned?
+      - Are transformations documented and auditable?
+      - Can experiments be reliably replicated?
+      - Are statistical assumptions clearly stated?
+      - Is there proper train/test separation to prevent leakage?
+    trust_sensitive: true
+
+  - id: quant_analyst
+    name: Quantitative Analyst
+    focus: Model correctness, risk metrics, mathematical precision
+    questions:
+      - Are calculations mathematically correct?
+      - Are risk metrics (VaR, Sharpe, drawdown) computed correctly?
+      - Is the model free from look-ahead bias?
+      - Are edge cases and boundary conditions handled?
+      - Does the model degrade gracefully with missing data?
+    trust_sensitive: true
+
+  - id: investment_manager
+    name: Investment Manager / Portfolio Manager
+    focus: Portfolio performance, reporting, decision support, compliance
+    questions:
+      - Are performance attributions clear and actionable?
+      - Can they explain results to stakeholders/investors?
+      - Are compliance constraints being respected?
+      - Is risk exposure visible and controllable?
+      - Are reports generated in a timely manner?
+    trust_sensitive: true
+
+  - id: systematic_trader
+    name: Systematic Trader
+    focus: Execution fidelity, backtesting realism, signal reliability
+    questions:
+      - Does backtest account for realistic transaction costs?
+      - Is slippage and market impact modeled appropriately?
+      - Are signals generated consistently and deterministically?
+      - Can the system handle corporate actions (splits, dividends)?
+      - Is latency acceptable for the trading frequency?
+    trust_sensitive: true
+
+  - id: risk_officer
+    name: Risk Officer / Compliance
+    focus: Risk limits, audit trails, regulatory compliance
+    questions:
+      - Are position limits enforced?
+      - Is there a complete audit trail of decisions?
+      - Are regulatory constraints (concentration, leverage) checked?
+      - Can anomalies be detected and flagged?
+      - Is there proper segregation of duties?
+    trust_sensitive: true
+
+lifecycle_stages:
+  - Research / Alpha Discovery
+  - Data Acquisition & Cleaning
+  - Model Development
+  - Backtesting & Validation
+  - Paper Trading / Simulation
+  - Production Deployment
+  - Live Monitoring
+  - Performance Review
+  - Model Retirement / Replacement
+
+validation_criteria:
+  - No look-ahead bias in any calculation
+  - Deterministic outputs given same inputs
+  - Proper handling of missing/stale data
+  - Transaction costs and slippage included
+  - Survivorship bias addressed
+  - Point-in-time data correctness
+  - Reproducible random seeds where applicable

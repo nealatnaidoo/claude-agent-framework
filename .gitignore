@@ -1,0 +1,32 @@
+# Local state (not tracked)
+# Note: These would be in ~/.claude/, not in the repo
+# Listed here for documentation purposes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Snapshots are tracked but large ones might be gitignored
+# versions/snapshots/*.tar.gz
+
+# Temporary files
+*.tmp
+*.temp
+*.log

@@ -1,0 +1,63 @@
+# Lens Pack: Creator / Publishing Platform
+# Use for: blogs, microsites, link-in-bio, content platforms, newsletters
+
+domain: creator_publishing
+description: Content creators building audience through publishing
+
+lenses:
+  - id: operator
+    name: Creator as Operator
+    focus: Cadence, publishing workflow, efficiency
+    questions:
+      - Can they publish quickly?
+      - Is the workflow efficient?
+      - Can they maintain a consistent schedule?
+    trust_sensitive: false
+
+  - id: marketer
+    name: Creator as Marketer
+    focus: Growth, conversion, attribution
+    questions:
+      - Does this help grow audience?
+      - Can they track what works?
+      - Is attribution clear?
+    trust_sensitive: true
+
+  - id: editor
+    name: Creator as Editor
+    focus: Quality, brand, versioning
+    questions:
+      - Can they maintain quality?
+      - Is versioning clear?
+      - Can they fix mistakes quickly?
+    trust_sensitive: false
+
+  - id: platform
+    name: Platform Reality
+    focus: Platform quirks, previews, anti-spam
+    questions:
+      - Will link previews work?
+      - Any platform-specific issues?
+      - Will emails land in inbox?
+    trust_sensitive: true
+
+  - id: trust
+    name: Audience Trust
+    focus: Privacy, consent, reputation
+    questions:
+      - Does this respect user privacy?
+      - Does this build or erode trust?
+      - Are commitments being kept?
+    trust_sensitive: true
+
+lifecycle_stages:
+  - Awareness
+  - Evaluation
+  - Setup
+  - Activation
+  - Core Loop
+  - Expansion
+  - Support/Recovery
+  - Monetisation
+  - Retention
+  - Churn/Win-back

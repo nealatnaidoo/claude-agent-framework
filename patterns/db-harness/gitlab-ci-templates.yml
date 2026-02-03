@@ -1,0 +1,319 @@
+# ============================================================================
+# db-harness GitLab CI Templates
+# ============================================================================
+# DevOps Governor portfolio-wide database propagation and migration gates
+#
+# Usage in project .gitlab-ci.yml:
+#   include:
+#     - local: '.gitlab/db-harness.yml'
+#   # Or reference from central repo:
+#   # - project: 'devops/ci-templates'
+#   #   file: '/db-harness/gitlab-ci-templates.yml'
+#
+# ============================================================================
+
+variables:
+  DB_HARNESS_VERSION: "0.1.0"
+  DB_HARNESS_CONFIDENCE_THRESHOLD: "0.9"
+
+# ============================================================================
+# BASE TEMPLATES
+# ============================================================================
+
+.db-harness-base:
+  image: python:3.11-slim
+  before_script:
+    - pip install -q db-propagation-harness==$DB_HARNESS_VERSION
+  artifacts:
+    paths:
+      - .claude/evidence/
+    expire_in: 1 year
+    when: always
+
+# ============================================================================
+# NN-DB-1: PRE-MIGRATION SCHEMA DRIFT CHECK
+# ============================================================================
+# BLOCKING: Detects breaking schema changes before deployment
+# Use: Before deploying migrations to any environment
+
+.db-harness-drift-check:
+  extends: .db-harness-base
+  stage: validate
+  script:
+    - |
+      echo "NN-DB-1: Schema Drift Check"
+      echo "Source: ${SOURCE_ENV:-dev}"
+      echo "Target: ${TARGET_ENV:-staging}"
+
+      mkdir -p .claude/evidence
+
+      db-harness drift \
+        "${SOURCE_CONN}" \
+        "${TARGET_CONN}" \
+        --fail-on-breaking \
+        --output json > .claude/evidence/drift_${CI_PIPELINE_ID}.json
+
+      exit_code=$?
+
+      if [ $exit_code -eq 2 ]; then
+        echo "::error::NN-DB-1 FAILED: Breaking schema changes detected"
+        cat .claude/evidence/drift_${CI_PIPELINE_ID}.json | python3 -c "import sys,json; d=json.load(sys.stdin); print('Breaking changes:', d.get('breaking_changes', []))"
+        exit 2
+      fi
+
+      echo "NN-DB-1 PASSED: No breaking schema changes"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$RUN_DB_GATES == "true"'
+
+# ============================================================================
+# NN-DB-2: POST-MIGRATION FK INTEGRITY CHECK
+# ============================================================================
+# BLOCKING: Validates foreign key integrity after migrations
+# Use: After running migrations in any environment
+
+.db-harness-fk-integrity:
+  extends: .db-harness-base
+  stage: verify
+  script:
+    - |
+      echo "NN-DB-2: FK Integrity Check"
+      echo "Database: ${TARGET_ENV:-dev}"
+
+      mkdir -p .claude/evidence
+
+      db-harness consistency \
+        "${SOURCE_CONN}" \
+        "${TARGET_CONN}" \
+        --tolerance ${TOLERANCE:-0.05} \
+        --output json > .claude/evidence/consistency_${CI_PIPELINE_ID}.json
+
+      exit_code=$?
+
+      if [ $exit_code -eq 3 ]; then
+        echo "::error::NN-DB-2 FAILED: FK violations detected"
+        cat .claude/evidence/consistency_${CI_PIPELINE_ID}.json | python3 -c "import sys,json; d=json.load(sys.stdin); print('FK violations:', d.get('fk_violations', 0))"
+        exit 3
+      fi
+
+      echo "NN-DB-2 PASSED: No FK violations"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$RUN_DB_GATES == "true"'
+
+# ============================================================================
+# NN-DB-3: PII MASKING FOR ENVIRONMENT PROPAGATION
+# ============================================================================
+# BLOCKING: Ensures no PII leaks to lower environments
+# Use: When refreshing dev/staging from production
+
+.db-harness-propagate:
+  extends: .db-harness-base
+  stage: propagate
+  script:
+    - |
+      echo "NN-DB-3: Database Propagation with PII Masking"
+      echo "Source: ${SOURCE_ENV:-production}"
+      echo "Target: ${TARGET_ENV:-dev}"
+
+      mkdir -p .claude/evidence
+
+      # Run propagation
+      db-harness propagate \
+        "${SOURCE_CONN}" \
+        "${TARGET_CONN}" \
+        --masking-rules ${MASKING_RULES:-.claude/db-harness/masking_rules.yaml} \
+        --subsetting-rules ${SUBSETTING_RULES:-.claude/db-harness/subsetting_rules.yaml} \
+        --seed ${SEED:-$CI_PIPELINE_ID} \
+        --output json > .claude/evidence/propagation_${CI_PIPELINE_ID}.json
+
+      exit_code=$?
+
+      if [ $exit_code -ne 0 ]; then
+        echo "::error::NN-DB-3 FAILED: Propagation failed"
+        cat .claude/evidence/propagation_${CI_PIPELINE_ID}.json
+        exit $exit_code
+      fi
+
+      # Verify no PII in target (post-mask verification)
+      echo "NN-DB-3b: Post-Mask PII Verification"
+      db-harness detect-pii \
+        "${TARGET_CONN}" \
+        --sample-size 1000 \
+        --output json > .claude/evidence/post_mask_pii_${CI_PIPELINE_ID}.json
+
+      # Check for high-confidence PII matches
+      pii_count=$(cat .claude/evidence/post_mask_pii_${CI_PIPELINE_ID}.json | \
+        python3 -c "import sys,json; d=json.load(sys.stdin); print(sum(1 for t in d.values() for m in t if m.get('confidence', 0) >= ${DB_HARNESS_CONFIDENCE_THRESHOLD}))")
+
+      if [ "$pii_count" -gt 0 ]; then
+        echo "::error::NN-DB-3b FAILED: $pii_count PII fields still detected after masking"
+        exit 1
+      fi
+
+      echo "NN-DB-3 PASSED: Propagation complete, no PII in target"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$RUN_DB_PROPAGATION == "true"'
+
+# ============================================================================
+# NN-DB-4: AUDIT LOG VERIFICATION
+# ============================================================================
+# WARNING (non-blocking): Verifies audit log hash chain integrity
+# Use: Periodic compliance check
+
+.db-harness-audit-verify:
+  extends: .db-harness-base
+  stage: verify
+  script:
+    - |
+      echo "NN-DB-4: Audit Log Hash Chain Verification"
+
+      mkdir -p .claude/evidence
+
+      db-harness audit \
+        --path ${AUDIT_PATH:-.claude/evidence/db_propagation} \
+        --action verify \
+        --output json > .claude/evidence/audit_verify_${CI_PIPELINE_ID}.json
+
+      exit_code=$?
+
+      if [ $exit_code -ne 0 ]; then
+        echo "::warning::NN-DB-4 WARNING: Audit log hash chain invalid"
+        echo "This is a non-blocking warning but should be investigated"
+        # Non-blocking - don't exit with error
+      else
+        echo "NN-DB-4 PASSED: Audit log hash chain valid"
+      fi
+  allow_failure: true  # Non-blocking gate
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$RUN_AUDIT_VERIFY == "true"'
+
+# ============================================================================
+# COMPOSITE JOBS FOR COMMON WORKFLOWS
+# ============================================================================
+
+# Pre-deployment validation (run before deploying migrations)
+.db-harness-pre-deploy:
+  extends: .db-harness-base
+  stage: validate
+  script:
+    - |
+      echo "=== PRE-DEPLOYMENT DATABASE VALIDATION ==="
+
+      mkdir -p .claude/evidence
+
+      # 1. Schema drift check
+      echo "Step 1/2: Schema Drift Check"
+      db-harness drift \
+        "${SOURCE_CONN}" \
+        "${TARGET_CONN}" \
+        --fail-on-breaking \
+        --output json > .claude/evidence/pre_deploy_drift_${CI_PIPELINE_ID}.json
+
+      if [ $? -eq 2 ]; then
+        echo "::error::Pre-deploy FAILED: Breaking schema drift"
+        exit 2
+      fi
+
+      # 2. PII scan (if enabled)
+      if [ "${SKIP_PII_CHECK}" != "true" ]; then
+        echo "Step 2/2: PII Detection"
+        db-harness detect-pii \
+          "${SOURCE_CONN}" \
+          --sample-size 500 \
+          --output json > .claude/evidence/pre_deploy_pii_${CI_PIPELINE_ID}.json
+        echo "PII report saved to evidence"
+      fi
+
+      echo "=== PRE-DEPLOYMENT VALIDATION PASSED ==="
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+    - if: '$RUN_PRE_DEPLOY == "true"'
+
+# Post-migration verification (run after deploying migrations)
+.db-harness-post-migrate:
+  extends: .db-harness-base
+  stage: verify
+  script:
+    - |
+      echo "=== POST-MIGRATION DATABASE VERIFICATION ==="
+
+      mkdir -p .claude/evidence
+
+      # 1. FK integrity check
+      echo "Step 1/2: FK Integrity Check"
+      db-harness consistency \
+        "${PRE_MIGRATION_CONN:-$SOURCE_CONN}" \
+        "${TARGET_CONN}" \
+        --tolerance ${TOLERANCE:-0.10} \
+        --output json > .claude/evidence/post_migrate_consistency_${CI_PIPELINE_ID}.json
+
+      if [ $? -eq 3 ]; then
+        echo "::error::Post-migration FAILED: FK violations detected"
+        exit 3
+      fi
+
+      # 2. Schema comparison (document changes)
+      echo "Step 2/2: Document Schema Changes"
+      db-harness drift \
+        "${PRE_MIGRATION_CONN:-$SOURCE_CONN}" \
+        "${TARGET_CONN}" \
+        --output json > .claude/evidence/post_migrate_drift_${CI_PIPELINE_ID}.json
+
+      echo "=== POST-MIGRATION VERIFICATION PASSED ==="
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+    - if: '$RUN_POST_MIGRATE == "true"'
+
+# Weekly environment refresh (scheduled)
+.db-harness-weekly-refresh:
+  extends: .db-harness-propagate
+  variables:
+    SOURCE_ENV: "production"
+    TARGET_ENV: "dev"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+
+# ============================================================================
+# USAGE EXAMPLES
+# ============================================================================
+#
+# Example 1: Add drift check to merge requests
+#
+#   schema-drift-check:
+#     extends: .db-harness-drift-check
+#     variables:
+#       SOURCE_CONN: "${DB_DEV_CONN}"
+#       TARGET_CONN: "${DB_STAGING_CONN}"
+#       SOURCE_ENV: "dev"
+#       TARGET_ENV: "staging"
+#
+# Example 2: Weekly production refresh
+#
+#   refresh-prod-to-dev:
+#     extends: .db-harness-weekly-refresh
+#     variables:
+#       SOURCE_CONN: "${DB_PROD_CONN}"
+#       TARGET_CONN: "${DB_DEV_CONN}"
+#       MASKING_RULES: ".claude/db-harness/masking_rules.yaml"
+#     only:
+#       - schedules
+#
+# Example 3: Post-migration verification
+#
+#   verify-migration:
+#     extends: .db-harness-post-migrate
+#     variables:
+#       SOURCE_CONN: "${DB_BACKUP_CONN}"
+#       TARGET_CONN: "${DB_PROD_CONN}"
+#       TOLERANCE: "0.05"
+#     needs: [run-migrations]
+#
+# ============================================================================

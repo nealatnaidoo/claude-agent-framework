@@ -1,0 +1,400 @@
+# GitLab CI/CD Template for Next.js Frontend Projects
+# Source: devlessons.md - Lessons 18, 38-43, 53-57, 59, 81, 85, 115
+# Version: 1.0
+# Date: 2026-01-31
+#
+# AGENT NAVIGATION GUIDE:
+# This template enforces a predictable project structure that reduces
+# code search space and enables efficient agent navigation.
+#
+# Expected Directory Structure:
+# ├── app/                    # Next.js App Router pages
+# │   ├── (public)/           # Public routes (no auth)
+# │   ├── (authenticated)/    # Protected routes
+# │   ├── admin/              # Admin pages
+# │   ├── api/                # API routes
+# │   └── layout.tsx          # Root layout
+# ├── components/
+# │   ├── ui/                 # shadcn/ui primitives
+# │   ├── forms/              # Form components
+# │   ├── layouts/            # Layout components
+# │   └── {feature}/          # Feature-specific components
+# ├── lib/
+# │   ├── api/                # API client services
+# │   ├── hooks/              # Custom React hooks
+# │   ├── utils/              # Pure utility functions (NO "use client")
+# │   └── types.ts            # Shared TypeScript types
+# ├── tests/
+# │   ├── unit/               # Jest/Vitest unit tests
+# │   ├── e2e/                # Playwright E2E tests
+# │   └── fixtures/           # Test fixtures and helpers
+# └── public/                 # Static assets
+
+stages:
+  - quality-gates
+  - build
+  - test-e2e
+  - deploy-dev
+  - deploy-prod
+
+variables:
+  NODE_VERSION: "20"
+  PLAYWRIGHT_BROWSERS_PATH: "$CI_PROJECT_DIR/.cache/playwright"
+  # Fly.io configuration
+  FLY_APP_DEV: "${CI_PROJECT_NAME}-dev"
+  FLY_APP_PROD: "${CI_PROJECT_NAME}"
+
+# Cache node_modules and Next.js build cache
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - .next/cache/
+    - .cache/playwright/
+
+# Base configuration for Node.js jobs
+.node-base:
+  image: node:${NODE_VERSION}-slim
+  before_script:
+    - npm ci
+
+# ============================================================
+# STAGE 1: QUALITY GATES
+# Lessons #5, #59, #81: Catch issues early
+# ============================================================
+
+lint:
+  extends: .node-base
+  stage: quality-gates
+  script:
+    - echo "=== ESLint ==="
+    - npm run lint
+    - echo "=== Checking for lint errors ==="
+    - npm run lint -- --max-warnings 0
+  artifacts:
+    when: always
+    paths:
+      - eslint-report.json
+    expire_in: 1 week
+
+type-check:
+  extends: .node-base
+  stage: quality-gates
+  script:
+    - echo "=== TypeScript Type Check ==="
+    - npx tsc --noEmit
+    - echo "=== Type check passed ==="
+  artifacts:
+    when: always
+    paths:
+      - tsconfig.tsbuildinfo
+    expire_in: 1 week
+
+# Lesson #59: Detect "use client" boundary violations
+client-boundary-check:
+  extends: .node-base
+  stage: quality-gates
+  script:
+    - |
+      echo "=== Checking for 'use client' boundary issues ==="
+
+      # Find utility files that shouldn't have "use client"
+      # Pure utilities in lib/utils/ should be server-safe
+      VIOLATIONS=$(grep -l "use client" lib/utils/*.ts 2>/dev/null || true)
+      if [ -n "$VIOLATIONS" ]; then
+        echo "ERROR: Found 'use client' in utility files (should be server-safe):"
+        echo "$VIOLATIONS"
+        echo ""
+        echo "Move client-only code to components/ or lib/hooks/"
+        exit 1
+      fi
+
+      echo "No client boundary violations found"
+
+# Lesson #39: Verify shadcn/ui components exist before build
+shadcn-component-check:
+  extends: .node-base
+  stage: quality-gates
+  script:
+    - |
+      echo "=== Checking shadcn/ui component imports ==="
+
+      # Extract all @/components/ui imports and verify files exist
+      IMPORTS=$(grep -roh "from ['\"]@/components/ui/[^'\"]*['\"]" app/ components/ lib/ 2>/dev/null | \
+        sed "s/from ['\"]@\/components\/ui\///" | sed "s/['\"]$//" | sort -u)
+
+      MISSING=""
+      for component in $IMPORTS; do
+        if [ ! -f "components/ui/${component}.tsx" ] && [ ! -f "components/ui/${component}/index.tsx" ]; then
+          MISSING="$MISSING\n  - $component"
+        fi
+      done
+
+      if [ -n "$MISSING" ]; then
+        echo "ERROR: Missing shadcn/ui components:"
+        echo -e "$MISSING"
+        echo ""
+        echo "Run: npx shadcn@latest add <component>"
+        exit 1
+      fi
+
+      echo "All imported shadcn/ui components exist"
+
+# Lesson #53: Verify data-testid attributes for E2E tests
+testid-coverage:
+  extends: .node-base
+  stage: quality-gates
+  script:
+    - |
+      echo "=== Checking data-testid coverage ==="
+
+      # Interactive elements that should have data-testid
+      ELEMENTS="button|input|select|form|dialog|modal|dropdown"
+
+      # Count elements without data-testid
+      MISSING=$(grep -rE "<(${ELEMENTS})" app/ components/ --include="*.tsx" | \
+        grep -v "data-testid" | wc -l)
+
+      echo "Interactive elements without data-testid: $MISSING"
+
+      # Warning threshold (not blocking, but reported)
+      if [ "$MISSING" -gt 20 ]; then
+        echo "WARNING: Consider adding data-testid to more interactive elements"
+        echo "This improves E2E test reliability (Lesson #53)"
+      fi
+
+      # List files with most missing testids
+      echo ""
+      echo "Files with most missing data-testid:"
+      grep -rlE "<(${ELEMENTS})" app/ components/ --include="*.tsx" | \
+        xargs -I {} sh -c 'echo "$(grep -E "<(button|input|select|form)" {} | grep -v data-testid | wc -l) {}"' | \
+        sort -rn | head -10
+  allow_failure: true
+
+unit-tests:
+  extends: .node-base
+  stage: quality-gates
+  script:
+    - echo "=== Running Unit Tests ==="
+    - npm test -- --coverage --passWithNoTests
+  artifacts:
+    when: always
+    reports:
+      junit: junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    paths:
+      - coverage/
+    expire_in: 1 week
+  coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
+
+# ============================================================
+# STAGE 2: BUILD
+# Lesson #85: Verify static vs dynamic rendering
+# ============================================================
+
+build:
+  extends: .node-base
+  stage: build
+  script:
+    - echo "=== Building Next.js Application ==="
+    - npm run build
+
+    - |
+      echo "=== Checking for dynamic rendering issues ==="
+      # Lesson #85: Content pages should use force-dynamic
+      CONTENT_PAGES=$(find app -name "page.tsx" -path "*/\[*\]/*" -exec grep -L "force-dynamic\|revalidate" {} \;)
+      if [ -n "$CONTENT_PAGES" ]; then
+        echo "WARNING: Dynamic route pages without explicit caching strategy:"
+        echo "$CONTENT_PAGES"
+        echo ""
+        echo "Consider adding: export const dynamic = 'force-dynamic'"
+        echo "Or: export const revalidate = 60"
+      fi
+  artifacts:
+    paths:
+      - .next/
+      - public/
+    expire_in: 1 day
+  only:
+    - main
+    - develop
+    - merge_requests
+
+# ============================================================
+# STAGE 3: E2E TESTS
+# Lessons #44, #53-57: Comprehensive E2E testing
+# ============================================================
+
+e2e-tests:
+  stage: test-e2e
+  image: mcr.microsoft.com/playwright:v1.40.0-jammy
+  needs:
+    - build
+  variables:
+    # Lesson #55: Use configurable ports
+    PORT: "3000"
+    PLAYWRIGHT_TEST_BASE_URL: "http://localhost:3000"
+  script:
+    - npm ci
+
+    - |
+      echo "=== Checking for port conflicts (Lesson #55) ==="
+      if lsof -i :${PORT} > /dev/null 2>&1; then
+        echo "ERROR: Port ${PORT} is already in use"
+        exit 1
+      fi
+
+    - echo "=== Starting Next.js server ==="
+    - npm run start &
+    - sleep 10
+
+    - |
+      echo "=== Verifying server is running ==="
+      for i in 1 2 3 4 5; do
+        if curl -s http://localhost:${PORT} > /dev/null; then
+          echo "Server is ready"
+          break
+        fi
+        echo "Waiting for server... ($i)"
+        sleep 5
+      done
+
+    - echo "=== Running Playwright E2E Tests ==="
+    - npx playwright test --reporter=html,junit
+  artifacts:
+    when: always
+    paths:
+      - playwright-report/
+      - test-results/
+    reports:
+      junit: results.xml
+    expire_in: 1 week
+  only:
+    - main
+    - develop
+    - merge_requests
+
+# ============================================================
+# STAGE 4: DEPLOY TO DEV (Automatic)
+# Lesson #115: Progressive deployment
+# ============================================================
+
+deploy-dev:
+  stage: deploy-dev
+  image: flyio/flyctl:latest
+  needs:
+    - build
+    - e2e-tests
+  script:
+    - echo "=== Deploying to dev environment ==="
+    - flyctl deploy --app ${FLY_APP_DEV}
+
+    - echo "=== Running health check ==="
+    - |
+      for i in 1 2 3 4 5; do
+        if flyctl checks list --app ${FLY_APP_DEV} | grep -q "passing"; then
+          echo "Health check passed"
+          exit 0
+        fi
+        sleep 10
+      done
+      echo "Health check failed"
+      exit 1
+  environment:
+    name: development
+    url: https://${FLY_APP_DEV}.fly.dev
+  only:
+    - develop
+
+# ============================================================
+# STAGE 5: DEPLOY TO PROD (Manual)
+# ============================================================
+
+deploy-prod:
+  stage: deploy-prod
+  image: flyio/flyctl:latest
+  needs:
+    - build
+    - e2e-tests
+  script:
+    - echo "=== Deploying to production ==="
+    - flyctl deploy --app ${FLY_APP_PROD}
+
+    - echo "=== Running health check with rollback ==="
+    - |
+      for i in 1 2 3 4 5; do
+        if flyctl checks list --app ${FLY_APP_PROD} | grep -q "passing"; then
+          echo "Health check passed"
+          exit 0
+        fi
+        sleep 10
+      done
+      echo "Health check failed - initiating rollback"
+      flyctl releases rollback --app ${FLY_APP_PROD}
+      exit 1
+  environment:
+    name: production
+    url: https://${FLY_APP_PROD}.fly.dev
+  when: manual
+  only:
+    - main
+
+# ============================================================
+# AGENT NAVIGATION PATTERNS
+# ============================================================
+#
+# This CI enforces patterns that help agents navigate code:
+#
+# 1. COMPONENT LOCATION PREDICTABILITY
+#    - UI primitives: components/ui/
+#    - Feature components: components/{feature}/
+#    - Page components: app/{route}/
+#
+# 2. TYPE LOCATION PREDICTABILITY
+#    - Shared types: lib/types.ts
+#    - API types: lib/api/types.ts
+#    - Component props: Same file or {component}.types.ts
+#
+# 3. HOOK LOCATION PREDICTABILITY
+#    - Custom hooks: lib/hooks/use{Name}.ts
+#    - Form hooks: lib/hooks/forms/
+#
+# 4. API SERVICE PREDICTABILITY
+#    - API clients: lib/api/services/{Service}Service.ts
+#    - API types: lib/api/types/{service}.ts
+#
+# 5. TEST LOCATION PREDICTABILITY
+#    - Unit tests: tests/unit/{path-to-file}.test.ts
+#    - E2E tests: tests/e2e/{feature}.spec.ts
+#    - Fixtures: tests/fixtures/{type}.ts
+#
+# 6. SELECTOR PREDICTABILITY (Lesson #53)
+#    - Interactive elements have data-testid
+#    - Pattern: data-testid="{component}-{action}"
+#    - Example: data-testid="login-submit"
+#
+# ============================================================
+# COMMON ISSUES THIS CATCHES
+# ============================================================
+#
+# 1. "use client" in utility files (Lesson #59)
+#    - Pure functions should be server-safe
+#    - Move to components if client-side needed
+#
+# 2. Missing shadcn/ui components (Lesson #39)
+#    - Must install before importing
+#    - Run: npx shadcn@latest add <component>
+#
+# 3. Dynamic pages without caching strategy (Lesson #85)
+#    - [slug] pages need explicit export const dynamic
+#    - Prevents stale data issues
+#
+# 4. Missing data-testid attributes (Lesson #53)
+#    - E2E tests become fragile
+#    - Prefer testid over CSS selectors
+#
+# 5. Port conflicts in E2E tests (Lesson #55)
+#    - Check port before starting server
+#    - Use configurable PORT variable

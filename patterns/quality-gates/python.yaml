@@ -1,0 +1,180 @@
+# Python Quality Gates Pattern Template
+# Source: devlessons.md - Lessons 4, 5, 36, 51, 87, 107
+# Version: 1.0
+# Date: 2026-01-31
+
+schema_version: "1.0"
+name: "Python Quality Gates"
+description: "Quality gate configuration for Python projects following hexagonal architecture"
+
+# Non-Negotiable Gates (must pass for task completion)
+gates:
+  lint:
+    name: "Linting"
+    tool: "ruff"
+    command: "ruff check src/ tests/"
+    fix_command: "ruff check --fix src/ tests/"
+    config_file: "pyproject.toml"
+    required: true
+    evidence_artifact: ".claude/evidence/lint_report.json"
+    lessons:
+      - "#4: Clean architecture pays dividends"
+      - "#36: Quality gate artifacts file size limits"
+
+  type_check:
+    name: "Type Checking"
+    tool: "mypy"
+    command: "mypy src/ --strict"
+    config_file: "pyproject.toml"
+    required: true
+    evidence_artifact: ".claude/evidence/mypy_report.json"
+    lessons:
+      - "#5: Run quality gates after EVERY task"
+      - "#80: MyPy requires explicit None checks"
+
+  unit_tests:
+    name: "Unit Tests"
+    tool: "pytest"
+    command: "pytest tests/unit/ -v --tb=short --json-report --json-report-file=.claude/evidence/test_report.json"
+    config_file: "pyproject.toml"
+    required: true
+    evidence_artifact: ".claude/evidence/test_report.json"
+    coverage_threshold: 80
+    lessons:
+      - "#5: Accept different testing strategies for different layers"
+      - "#97: Functional validation over unit test coverage"
+
+  integration_tests:
+    name: "Integration Tests"
+    tool: "pytest"
+    command: "pytest tests/integration/ -v --tb=short"
+    required: true
+    evidence_artifact: ".claude/evidence/integration_test_report.json"
+    lessons:
+      - "#47: Test doubles must match production adapter signatures"
+      - "#48: Integration test database schemas must be complete"
+
+  security_tests:
+    name: "Security Tests"
+    tool: "pytest"
+    command: "pytest tests/security/ -v --tb=short"
+    markers: ["security"]
+    required: true
+    evidence_artifact: ".claude/evidence/security_test_report.json"
+    lessons:
+      - "#45: Security audit test patterns"
+      - "#77: Token validation must use constant-time comparison"
+
+# Determinism Checks (Lesson #87, #107)
+determinism_checks:
+  forbidden_patterns:
+    - pattern: "datetime\\.now\\(\\)"
+      location: "src/**/core/**/*.py"
+      message: "Use TimePort injection instead of datetime.now()"
+      lesson: "#107: Centralize Time & UUID Port definitions"
+
+    - pattern: "datetime\\.utcnow\\(\\)"
+      location: "src/**/*.py"
+      message: "datetime.utcnow() is deprecated in Python 3.12+. Use datetime.now(timezone.utc)"
+      lesson: "#27: datetime.utcnow() Deprecation"
+
+    - pattern: "uuid4\\(\\)"
+      location: "src/**/core/**/*.py"
+      message: "Use UUIDPort injection instead of uuid4()"
+      lesson: "#107: Centralize Time & UUID Port definitions"
+
+    - pattern: "random\\."
+      location: "src/**/core/**/*.py"
+      message: "Use RandomPort injection for deterministic testing"
+      lesson: "#87: Prime Directive compliance"
+
+  detection_command: |
+    grep -r "datetime\.now\|datetime\.utcnow\|uuid4\|random\." src/*/core/ --include="*.py" | grep -v import | wc -l
+    # Count MUST be zero
+
+# Architecture Checks (Lesson #4, #79, #100)
+architecture_checks:
+  hexagonal:
+    core_directories:
+      - "src/domain/"
+      - "src/*/core/"
+    forbidden_imports_in_core:
+      - "fastapi"
+      - "sqlalchemy"
+      - "requests"
+      - "httpx"
+    message: "Core must not import infrastructure frameworks"
+    lesson: "#4: Clean architecture pays dividends"
+
+  atomic_components:
+    required_files:
+      - "component.py"
+      - "models.py"
+      - "ports.py"
+      - "contract.md"
+      - "__init__.py"
+    directory_pattern: "src/components/*/"
+    lessons:
+      - "#8: Atomic Component Pattern Enforcement"
+      - "#79: Atomic Components require contract.md files"
+
+# Evidence Requirements
+evidence:
+  location: ".claude/evidence/"
+  required_files:
+    - "quality_gates_run.json"
+    - "test_report.json"
+    - "test_failures.json"
+  optional_files:
+    - "coverage.json"
+    - "lint_report.json"
+    - "mypy_report.json"
+
+# Quality Gate Run Script Template
+run_script: |
+  #!/bin/bash
+  # Run all quality gates and produce evidence artifacts
+
+  set -e
+  mkdir -p .claude/evidence
+
+  echo "=== Linting ==="
+  ruff check src/ tests/ --output-format=json > .claude/evidence/lint_report.json || true
+  ruff check src/ tests/
+
+  echo "=== Type Checking ==="
+  mypy src/ --strict > .claude/evidence/mypy_report.json 2>&1 || true
+  mypy src/ --strict
+
+  echo "=== Unit Tests ==="
+  pytest tests/unit/ -v --tb=short \
+    --json-report --json-report-file=.claude/evidence/test_report.json
+
+  echo "=== Integration Tests ==="
+  pytest tests/integration/ -v --tb=short
+
+  echo "=== Security Tests ==="
+  pytest tests/security/ -v --tb=short
+
+  echo "=== Determinism Check ==="
+  VIOLATIONS=$(grep -r "datetime\.now\|datetime\.utcnow\|uuid4" src/*/core/ --include="*.py" | grep -v import | wc -l)
+  if [ "$VIOLATIONS" -gt 0 ]; then
+    echo "ERROR: Found $VIOLATIONS determinism violations in core"
+    exit 1
+  fi
+
+  # Generate summary
+  echo '{"status": "PASS", "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' > .claude/evidence/quality_gates_run.json
+
+  echo "=== All Quality Gates Passed ==="
+
+# Checklist for task completion (from lessons)
+completion_checklist:
+  - "[ ] All quality gate commands pass"
+  - "[ ] .claude/evidence/quality_gates_run.json exists with status: PASS"
+  - "[ ] .claude/evidence/test_report.json exists"
+  - "[ ] .claude/evidence/test_failures.json exists"
+  - "[ ] No determinism violations in core (datetime.now, uuid4, random)"
+  - "[ ] contract.md updated if component contract changed"
+  - "[ ] For new components: all 5 atomic files exist"
+  - "[ ] Manifest entry has status: complete"

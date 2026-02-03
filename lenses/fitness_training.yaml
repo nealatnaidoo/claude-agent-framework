@@ -1,0 +1,63 @@
+# Lens Pack: Fitness / Personal Training
+# Use for: PT apps, gym management, workout trackers, coaching platforms
+
+domain: fitness_training
+description: Personal trainers and clients in fitness coaching relationships
+
+lenses:
+  - id: coach
+    name: Trainer as Coach
+    focus: Program design, client progress, scheduling
+    questions:
+      - Can they design effective programs?
+      - Can they track client progress easily?
+      - Is scheduling frictionless?
+    trust_sensitive: false
+
+  - id: business
+    name: Trainer as Business Owner
+    focus: Billing, retention, client acquisition
+    questions:
+      - Can they manage payments easily?
+      - Can they retain clients?
+      - Is client onboarding smooth?
+    trust_sensitive: true
+
+  - id: trainee
+    name: Client as Trainee
+    focus: Workout UX, progress tracking, motivation
+    questions:
+      - Is the workout interface clear?
+      - Can they see their progress?
+      - Does it keep them motivated?
+    trust_sensitive: false
+
+  - id: payer
+    name: Client as Payer
+    focus: Value perception, subscription, cancellation
+    questions:
+      - Do they feel they're getting value?
+      - Is billing transparent?
+      - Can they cancel easily if needed?
+    trust_sensitive: true
+
+  - id: safety
+    name: Health & Safety
+    focus: Injury prevention, disclaimers, data privacy
+    questions:
+      - Are there appropriate disclaimers?
+      - Is health data protected?
+      - Are exercises demonstrated safely?
+    trust_sensitive: true
+
+lifecycle_stages:
+  - Discovery
+  - Trial/Assessment
+  - Onboarding
+  - First Workout
+  - Core Training Loop
+  - Progress Review
+  - Program Adjustment
+  - Payment/Renewal
+  - Plateau/Motivation Dip
+  - Churn/Win-back

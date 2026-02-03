@@ -1,0 +1,274 @@
+# GitLab CI/CD Template for Python FastAPI Projects
+# Source: devlessons.md - Lessons 3, 5, 115
+# Version: 1.0
+# Date: 2026-01-31
+
+# ============================================================
+# PIPELINE OVERVIEW
+# Lesson #115: Fly.io Dev/Prod CI/CD Pipeline Pattern
+# ============================================================
+#
+# Pipeline stages:
+# 1. quality-gates: lint, type check, unit tests, security tests
+# 2. integration-tests: integration tests with real adapters
+# 3. build: Docker image build
+# 4. deploy-dev: Auto-deploy to dev environment
+# 5. deploy-prod: Manual deploy to production
+#
+# Non-negotiables (from DevOps Governor):
+# - Quality gates must pass before any deployment
+# - Security scanning required
+# - Progressive deployment (auto to dev, manual to prod)
+
+stages:
+  - quality-gates
+  - integration-tests
+  - build
+  - deploy-dev
+  - deploy-prod
+
+variables:
+  PYTHON_VERSION: "3.12"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  # Fly.io configuration
+  FLY_APP_DEV: "${CI_PROJECT_NAME}-dev"
+  FLY_APP_PROD: "${CI_PROJECT_NAME}"
+
+# Cache pip packages between jobs
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .cache/pip
+    - .venv/
+
+# Base configuration for Python jobs
+.python-base:
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - python -m venv .venv
+    - source .venv/bin/activate
+    - pip install --upgrade pip
+    - pip install -e ".[dev]"
+
+# ============================================================
+# STAGE 1: QUALITY GATES
+# Lesson #5: Run quality gates after EVERY task
+# ============================================================
+
+lint:
+  extends: .python-base
+  stage: quality-gates
+  script:
+    - echo "=== Linting with ruff ==="
+    - ruff check src/ tests/
+  artifacts:
+    when: always
+    reports:
+      codequality: lint-report.json
+    expire_in: 1 week
+
+type-check:
+  extends: .python-base
+  stage: quality-gates
+  script:
+    - echo "=== Type checking with mypy ==="
+    - mypy src/ --strict
+  artifacts:
+    when: always
+    paths:
+      - mypy-report.txt
+    expire_in: 1 week
+
+unit-tests:
+  extends: .python-base
+  stage: quality-gates
+  script:
+    - echo "=== Running unit tests ==="
+    - pytest tests/unit/ -v --tb=short --junitxml=junit-report.xml --cov=src --cov-report=xml
+  artifacts:
+    when: always
+    reports:
+      junit: junit-report.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    expire_in: 1 week
+  coverage: '/TOTAL.*\s+(\d+%)/'
+
+security-tests:
+  extends: .python-base
+  stage: quality-gates
+  script:
+    - echo "=== Running security tests ==="
+    - pytest tests/security/ -v --tb=short
+    - echo "=== Security scanning with bandit ==="
+    - pip install bandit
+    - bandit -r src/ -f json -o bandit-report.json || true
+  artifacts:
+    when: always
+    paths:
+      - bandit-report.json
+    expire_in: 1 week
+
+# Lesson #87, #107: Determinism check
+determinism-check:
+  extends: .python-base
+  stage: quality-gates
+  script:
+    - echo "=== Checking for determinism violations ==="
+    - |
+      VIOLATIONS=$(grep -r "datetime\.now\|datetime\.utcnow\|uuid4" src/*/core/ --include="*.py" | grep -v import | wc -l || echo "0")
+      if [ "$VIOLATIONS" -gt 0 ]; then
+        echo "ERROR: Found $VIOLATIONS determinism violations in core"
+        grep -r "datetime\.now\|datetime\.utcnow\|uuid4" src/*/core/ --include="*.py" | grep -v import
+        exit 1
+      fi
+      echo "No determinism violations found"
+
+# ============================================================
+# STAGE 2: INTEGRATION TESTS
+# Lesson #47, #48: Integration tests with real adapters
+# ============================================================
+
+integration-tests:
+  extends: .python-base
+  stage: integration-tests
+  services:
+    - name: postgres:15
+      alias: postgres
+  variables:
+    POSTGRES_DB: test_db
+    POSTGRES_USER: test_user
+    POSTGRES_PASSWORD: test_password
+    DATABASE_URL: "postgresql://test_user:test_password@postgres:5432/test_db"
+  script:
+    - echo "=== Running integration tests ==="
+    - pytest tests/integration/ -v --tb=short
+  artifacts:
+    when: always
+    reports:
+      junit: integration-junit-report.xml
+    expire_in: 1 week
+
+# ============================================================
+# STAGE 3: BUILD
+# Lesson #3: Fly.io deployment preparation
+# ============================================================
+
+build-docker:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  script:
+    - echo "=== Building Docker image ==="
+    - docker build -t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA} .
+    - docker tag ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA} ${CI_REGISTRY_IMAGE}:latest
+    - echo "=== Testing Docker image health check ==="
+    - |
+      docker run -d --name test-container -p 8080:8080 ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}
+      sleep 10
+      curl -f http://localhost:8080/ || exit 1
+      docker stop test-container
+    - echo "=== Pushing to registry ==="
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker push ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}
+    - docker push ${CI_REGISTRY_IMAGE}:latest
+  only:
+    - main
+    - develop
+
+# ============================================================
+# STAGE 4: DEPLOY TO DEV (Automatic)
+# Lesson #115: Auto-deploy to dev, progressive deployment
+# ============================================================
+
+deploy-dev:
+  stage: deploy-dev
+  image: flyio/flyctl:latest
+  script:
+    - echo "=== Deploying to dev environment ==="
+    - flyctl deploy --app ${FLY_APP_DEV} --image ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}
+    - echo "=== Running health check ==="
+    - flyctl status --app ${FLY_APP_DEV}
+    - |
+      # Wait for deployment to be healthy
+      for i in 1 2 3 4 5; do
+        if flyctl checks list --app ${FLY_APP_DEV} | grep -q "passing"; then
+          echo "Health check passed"
+          exit 0
+        fi
+        sleep 10
+      done
+      echo "Health check failed"
+      exit 1
+  environment:
+    name: development
+    url: https://${FLY_APP_DEV}.fly.dev
+  only:
+    - develop
+  needs:
+    - lint
+    - type-check
+    - unit-tests
+    - security-tests
+    - integration-tests
+    - build-docker
+
+# ============================================================
+# STAGE 5: DEPLOY TO PROD (Manual)
+# Lesson #115: Manual approval for production
+# ============================================================
+
+deploy-prod:
+  stage: deploy-prod
+  image: flyio/flyctl:latest
+  script:
+    - echo "=== Deploying to production ==="
+    - flyctl deploy --app ${FLY_APP_PROD} --image ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}
+    - echo "=== Running health check ==="
+    - flyctl status --app ${FLY_APP_PROD}
+    - |
+      # Wait for deployment to be healthy
+      for i in 1 2 3 4 5; do
+        if flyctl checks list --app ${FLY_APP_PROD} | grep -q "passing"; then
+          echo "Health check passed"
+          exit 0
+        fi
+        sleep 10
+      done
+      echo "Health check failed - initiating rollback"
+      flyctl releases rollback --app ${FLY_APP_PROD}
+      exit 1
+  environment:
+    name: production
+    url: https://${FLY_APP_PROD}.fly.dev
+  when: manual
+  only:
+    - main
+  needs:
+    - lint
+    - type-check
+    - unit-tests
+    - security-tests
+    - integration-tests
+    - build-docker
+
+# ============================================================
+# OPTIONAL: Dependency scanning
+# ============================================================
+
+dependency-scanning:
+  stage: quality-gates
+  image: python:${PYTHON_VERSION}-slim
+  script:
+    - pip install pip-audit
+    - pip-audit --strict
+  allow_failure: true
+  artifacts:
+    when: always
+    paths:
+      - pip-audit-report.json
+    expire_in: 1 week

@@ -1,0 +1,279 @@
+"""
+Atomic Component Template
+Source: devlessons.md - Lessons 8, 12, 79, 87, 107
+Version: 1.0
+Date: 2026-01-31
+
+Usage:
+1. Copy this entire folder to src/components/{ComponentName}/
+2. Rename files and classes
+3. Fill in contract.md FIRST (TDD approach)
+4. Implement to match contract
+"""
+
+from dataclasses import dataclass
+from typing import Literal, Protocol
+
+from datetime import datetime
+
+# ============================================================
+# MODELS (models.py)
+# Lesson #8: Frozen dataclasses for inputs/outputs
+# ============================================================
+
+
+@dataclass(frozen=True)
+class ComponentInput:
+    """Immutable input for this component.
+
+    Frozen dataclass ensures:
+    - Immutability (can't modify after creation)
+    - Hashable (can be used in sets/dicts)
+    - Clear documentation of required data
+    """
+
+    # Required fields
+    id: str
+    name: str
+
+    # Optional fields with defaults
+    description: str | None = None
+
+
+@dataclass(frozen=True)
+class ComponentOutput:
+    """Immutable output from this component.
+
+    Always includes status for consistent error handling.
+    """
+
+    status: Literal["success", "failure"]
+    result: dict | None = None
+    error: str | None = None
+
+
+# ============================================================
+# PORTS (ports.py)
+# Lesson #107: Inject all dependencies via ports
+# ============================================================
+
+
+class RepositoryPort(Protocol):
+    """Protocol for data persistence.
+
+    Using Protocol enables:
+    - Type checking without inheritance
+    - Easy test doubles (fakes/stubs)
+    - Dependency inversion
+    """
+
+    def get(self, id: str) -> dict | None:
+        ...
+
+    def save(self, id: str, data: dict) -> None:
+        ...
+
+
+class TimePort(Protocol):
+    """Protocol for time operations.
+
+    Lesson #107: Never use datetime.now() directly in components.
+    Inject TimePort for deterministic testing.
+    """
+
+    def now(self) -> datetime:
+        ...
+
+
+class UUIDPort(Protocol):
+    """Protocol for UUID generation.
+
+    Lesson #107: Never use uuid4() directly in components.
+    """
+
+    def generate(self) -> str:
+        ...
+
+
+class LoggerPort(Protocol):
+    """Protocol for logging."""
+
+    def info(self, message: str, **context: object) -> None:
+        ...
+
+    def error(self, message: str, **context: object) -> None:
+        ...
+
+
+@dataclass
+class ComponentPorts:
+    """Bundle of all dependencies for this component.
+
+    All dependencies injected, none imported directly.
+    """
+
+    repository: RepositoryPort
+    time_port: TimePort
+    logger: LoggerPort
+    uuid_port: UUIDPort | None = None  # Optional dependency
+
+
+# ============================================================
+# COMPONENT (component.py)
+# Lesson #8: Single run() entry point
+# ============================================================
+
+
+def run(input: ComponentInput, ports: ComponentPorts) -> ComponentOutput:
+    """Execute the component operation.
+
+    This is the ONLY entry point. All business logic flows through here.
+
+    Design principles:
+    - Never raises exceptions - returns failure output
+    - Pure function (given same input + ports, same output)
+    - All side effects go through ports
+
+    Args:
+        input: Validated, immutable input data
+        ports: Injected dependencies
+
+    Returns:
+        Immutable output with status and result/error
+    """
+    try:
+        # 1. Log operation start
+        ports.logger.info(
+            "Starting operation",
+            component="ComponentName",
+            input_id=input.id,
+        )
+
+        # 2. Validate business rules
+        if not input.name:
+            return ComponentOutput(
+                status="failure",
+                error="Name is required",
+            )
+
+        # 3. Execute operation using ports (not direct calls)
+        existing = ports.repository.get(input.id)
+        if existing:
+            return ComponentOutput(
+                status="failure",
+                error=f"Item with id {input.id} already exists",
+            )
+
+        # 4. Create result using injected time (deterministic)
+        now = ports.time_port.now()
+        result = {
+            "id": input.id,
+            "name": input.name,
+            "description": input.description,
+            "created_at": now.isoformat(),
+        }
+
+        # 5. Persist via port
+        ports.repository.save(input.id, result)
+
+        # 6. Log success
+        ports.logger.info(
+            "Operation completed",
+            component="ComponentName",
+            input_id=input.id,
+        )
+
+        # 7. Return success output
+        return ComponentOutput(
+            status="success",
+            result=result,
+        )
+
+    except Exception as e:
+        # Never raise - return failure output
+        ports.logger.error(
+            "Operation failed",
+            component="ComponentName",
+            input_id=input.id,
+            error=str(e),
+        )
+        return ComponentOutput(
+            status="failure",
+            error=f"Internal error: {type(e).__name__}",
+        )
+
+
+# ============================================================
+# TEST DOUBLES (for testing)
+# Lesson #47: Test doubles must match production signatures
+# ============================================================
+
+
+class FakeRepository:
+    """In-memory repository for testing."""
+
+    def __init__(self) -> None:
+        self._data: dict[str, dict] = {}
+
+    def get(self, id: str) -> dict | None:
+        return self._data.get(id)
+
+    def save(self, id: str, data: dict) -> None:
+        self._data[id] = data
+
+
+class FakeTimePort:
+    """Deterministic time for testing.
+
+    Lesson #107: Use this instead of real time in tests.
+    """
+
+    def __init__(self, fixed_time: datetime) -> None:
+        self._time = fixed_time
+
+    def now(self) -> datetime:
+        return self._time
+
+
+class FakeUUIDPort:
+    """Deterministic UUID for testing."""
+
+    def __init__(self, sequence: list[str]) -> None:
+        self._sequence = sequence
+        self._index = 0
+
+    def generate(self) -> str:
+        result = self._sequence[self._index % len(self._sequence)]
+        self._index += 1
+        return result
+
+
+class NullLogger:
+    """Silent logger for tests that don't need log verification."""
+
+    def info(self, message: str, **context: object) -> None:
+        pass
+
+    def error(self, message: str, **context: object) -> None:
+        pass
+
+
+# ============================================================
+# __init__.py EXPORTS
+# Lesson #14: Re-export through __init__.py
+# ============================================================
+
+# In __init__.py:
+# from .component import run
+# from .models import ComponentInput, ComponentOutput
+# from .ports import ComponentPorts, RepositoryPort, TimePort, LoggerPort
+#
+# __all__ = [
+#     "run",
+#     "ComponentInput",
+#     "ComponentOutput",
+#     "ComponentPorts",
+#     "RepositoryPort",
+#     "TimePort",
+#     "LoggerPort",
+# ]

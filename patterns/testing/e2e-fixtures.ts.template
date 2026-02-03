@@ -1,0 +1,282 @@
+/**
+ * E2E Test Fixtures Template
+ * Source: devlessons.md - Lessons 44, 53-57, 60, 61
+ * Version: 1.0
+ * Date: 2026-01-31
+ *
+ * Usage:
+ * 1. Copy this file to tests/fixtures/
+ * 2. Customize credentials and seed data for your project
+ * 3. Import helpers in your test files
+ */
+
+import { Page } from '@playwright/test';
+
+// ============================================================
+// TEST CREDENTIALS
+// Lesson #57: Keep credentials in one place, not scattered in tests
+// ============================================================
+
+export const TEST_ADMIN = {
+  email: 'admin@example.com',
+  password: 'testpassword123',
+  role: 'admin',
+};
+
+export const TEST_EDITOR = {
+  email: 'editor@example.com',
+  password: 'testpassword123',
+  role: 'editor',
+};
+
+export const TEST_VIEWER = {
+  email: 'viewer@example.com',
+  password: 'testpassword123',
+  role: 'viewer',
+};
+
+// ============================================================
+// AUTHENTICATION HELPERS
+// Lesson #57: E2E tests need authentication helpers for reuse
+// ============================================================
+
+/**
+ * Login as admin user
+ * Uses data-testid selectors (Lesson #53)
+ */
+export async function loginAsAdmin(page: Page): Promise<void> {
+  await page.goto('/login');
+  await page.getByTestId('login-email').fill(TEST_ADMIN.email);
+  await page.getByTestId('login-password').fill(TEST_ADMIN.password);
+  await page.getByTestId('login-submit').click();
+  await page.waitForURL(/\/admin/, { timeout: 10000 });
+}
+
+/**
+ * Login as editor user
+ */
+export async function loginAsEditor(page: Page): Promise<void> {
+  await page.goto('/login');
+  await page.getByTestId('login-email').fill(TEST_EDITOR.email);
+  await page.getByTestId('login-password').fill(TEST_EDITOR.password);
+  await page.getByTestId('login-submit').click();
+  await page.waitForURL(/\/admin/, { timeout: 10000 });
+}
+
+/**
+ * Login as viewer user
+ */
+export async function loginAsViewer(page: Page): Promise<void> {
+  await page.goto('/login');
+  await page.getByTestId('login-email').fill(TEST_VIEWER.email);
+  await page.getByTestId('login-password').fill(TEST_VIEWER.password);
+  await page.getByTestId('login-submit').click();
+  await page.waitForURL(/\/dashboard/, { timeout: 10000 });
+}
+
+/**
+ * Logout current user
+ */
+export async function logout(page: Page): Promise<void> {
+  await page.getByTestId('user-menu').click();
+  await page.getByTestId('logout-button').click();
+  await page.waitForURL(/\/login/, { timeout: 5000 });
+}
+
+// ============================================================
+// SEED DATA CONSTANTS
+// Lesson #54: Test database seed scripts must match actual schema
+// Lesson #60: Realistic test data exposes type validation issues
+// ============================================================
+
+export const CONTENT = {
+  publishedPost: {
+    id: 'test-published-post-id',
+    slug: 'test-published-post',
+    title: 'Test Published Post',
+    status: 'published',
+  },
+  draftPost: {
+    id: 'test-draft-post-id',
+    slug: 'test-draft-post',
+    title: 'Test Draft Post',
+    status: 'draft',
+  },
+  archivedPost: {
+    id: 'test-archived-post-id',
+    slug: 'test-archived-post',
+    title: 'Test Archived Post',
+    status: 'archived',
+  },
+};
+
+export const PROMPTS = {
+  published: {
+    id: 'test-published-prompt-id',
+    slug: 'test-published-prompt',
+    title: 'Test Published Prompt',
+    status: 'published',
+  },
+};
+
+export const TAGS = {
+  technology: { id: 'tag-tech', name: 'technology', count: 5 },
+  tutorial: { id: 'tag-tutorial', name: 'tutorial', count: 3 },
+};
+
+// ============================================================
+// PAGE NAVIGATION HELPERS
+// ============================================================
+
+/**
+ * Navigate to admin dashboard
+ */
+export async function goToAdminDashboard(page: Page): Promise<void> {
+  await page.goto('/admin');
+  await page.waitForSelector('[data-testid="admin-dashboard"]');
+}
+
+/**
+ * Navigate to content editor
+ */
+export async function goToContentEditor(page: Page, contentId: string): Promise<void> {
+  await page.goto(`/admin/content/${contentId}`);
+  await page.waitForSelector('[data-testid="content-editor"]');
+}
+
+/**
+ * Navigate to public content page
+ * Lesson #61: E2E tests creating dynamic content may fail in production mode
+ * Use seed data for viewing tests, not dynamically created content
+ */
+export async function goToPublicContent(page: Page, slug: string): Promise<void> {
+  await page.goto(`/p/${slug}`);
+  await page.waitForSelector('article');
+}
+
+// ============================================================
+// FORM HELPERS
+// ============================================================
+
+/**
+ * Fill a form field by test ID
+ */
+export async function fillField(
+  page: Page,
+  testId: string,
+  value: string
+): Promise<void> {
+  await page.getByTestId(testId).fill(value);
+}
+
+/**
+ * Select an option in a dropdown by test ID
+ * Lesson #18: Radix Select cannot use empty string as value
+ */
+export async function selectOption(
+  page: Page,
+  testId: string,
+  value: string
+): Promise<void> {
+  await page.getByTestId(testId).click();
+  await page.getByRole('option', { name: value }).click();
+}
+
+/**
+ * Submit a form by test ID
+ */
+export async function submitForm(page: Page, testId: string): Promise<void> {
+  await page.getByTestId(testId).click();
+}
+
+// ============================================================
+// ASSERTION HELPERS
+// ============================================================
+
+/**
+ * Assert toast message appears
+ */
+export async function expectToast(
+  page: Page,
+  message: string | RegExp
+): Promise<void> {
+  const toast = page.getByRole('alert');
+  await expect(toast).toContainText(message);
+}
+
+/**
+ * Assert redirect to URL
+ */
+export async function expectRedirect(
+  page: Page,
+  urlPattern: RegExp,
+  timeout = 5000
+): Promise<void> {
+  await page.waitForURL(urlPattern, { timeout });
+}
+
+// ============================================================
+// CLEANUP HELPERS
+// ============================================================
+
+/**
+ * Delete test content created during test
+ * Use sparingly - prefer seed data over dynamic creation
+ */
+export async function cleanupTestContent(
+  page: Page,
+  contentId: string
+): Promise<void> {
+  await page.request.delete(`/api/content/${contentId}`);
+}
+
+// ============================================================
+// WAIT HELPERS
+// Lesson #55: Check port conflicts before starting local servers
+// ============================================================
+
+/**
+ * Wait for API to be ready
+ */
+export async function waitForApiReady(
+  page: Page,
+  healthEndpoint = '/api/health'
+): Promise<void> {
+  let attempts = 0;
+  const maxAttempts = 30;
+
+  while (attempts < maxAttempts) {
+    try {
+      const response = await page.request.get(healthEndpoint);
+      if (response.ok()) return;
+    } catch {
+      // API not ready yet
+    }
+    await page.waitForTimeout(1000);
+    attempts++;
+  }
+
+  throw new Error(`API not ready after ${maxAttempts} seconds`);
+}
+
+// ============================================================
+// USAGE EXAMPLE
+// ============================================================
+
+/*
+import { test, expect } from '@playwright/test';
+import { loginAsAdmin, CONTENT, goToPublicContent } from './fixtures/auth';
+
+test.describe('Content Management', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page);
+  });
+
+  test('can view published content', async ({ page }) => {
+    // Use seed data, not dynamically created content (Lesson #61)
+    await goToPublicContent(page, CONTENT.publishedPost.slug);
+    await expect(page.locator('article')).toBeVisible();
+    await expect(page.locator('h1')).toContainText(CONTENT.publishedPost.title);
+  });
+});
+*/

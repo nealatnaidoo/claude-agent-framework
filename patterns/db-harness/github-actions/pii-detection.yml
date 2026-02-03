@@ -1,0 +1,224 @@
+# GitHub Actions Reusable Workflow: PII Detection (NN-DB-3)
+#
+# Detects PII in database tables and validates masking rules coverage.
+# Use this before propagating data to lower environments.
+#
+# Usage in your workflow:
+#   jobs:
+#     pii-detection:
+#       uses: ./.github/workflows/pii-detection.yml
+#       with:
+#         database: "sqlite:///app.db"
+#         masking_rules: ".claude/db-harness/masking_rules.yaml"
+#         tables: "users,sessions"
+#       secrets:
+#         db_conn: ${{ secrets.DB_CONN }}
+#
+# DevOps Non-Negotiables: NN-DB-3 (PII Masking for Propagation)
+# Decision Reference: DEC-DEVOPS-014
+
+name: PII Detection (NN-DB-3)
+
+on:
+  workflow_call:
+    inputs:
+      database:
+        description: 'Database connection (for SQLite file paths)'
+        required: false
+        type: string
+        default: ''
+      masking_rules:
+        description: 'Path to masking rules YAML file'
+        required: false
+        type: string
+        default: '.claude/db-harness/masking_rules.yaml'
+      tables:
+        description: 'Comma-separated list of tables to scan (empty = all tables)'
+        required: false
+        type: string
+        default: ''
+      sample_size:
+        description: 'Number of rows to sample per table'
+        required: false
+        type: string
+        default: '100'
+      confidence_threshold:
+        description: 'Minimum confidence for PII detection (0.0-1.0)'
+        required: false
+        type: string
+        default: '0.9'
+      python_version:
+        description: 'Python version'
+        required: false
+        type: string
+        default: '3.12'
+      db_harness_version:
+        description: 'db-harness package version'
+        required: false
+        type: string
+        default: '0.1.0'
+    secrets:
+      db_conn:
+        description: 'Database connection string (for remote DBs)'
+        required: false
+    outputs:
+      pii_found:
+        description: 'Whether PII was detected'
+        value: ${{ jobs.pii-scan.outputs.pii_found }}
+      uncovered_fields:
+        description: 'PII fields not covered by masking rules'
+        value: ${{ jobs.pii-scan.outputs.uncovered }}
+
+jobs:
+  pii-scan:
+    name: "NN-DB-3: PII Detection & Coverage"
+    runs-on: ubuntu-latest
+
+    outputs:
+      pii_found: ${{ steps.detect.outputs.pii_found }}
+      uncovered: ${{ steps.coverage.outputs.uncovered }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+          cache: 'pip'
+
+      - name: Install db-harness
+        run: |
+          pip install db-propagation-harness==${{ inputs.db_harness_version }}
+          pip install pyyaml
+
+      - name: Determine connection string
+        id: conn
+        run: |
+          if [ -n "${{ secrets.db_conn }}" ]; then
+            echo "db=${{ secrets.db_conn }}" >> $GITHUB_OUTPUT
+          else
+            echo "db=${{ inputs.database }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run PII Detection
+        id: detect
+        run: |
+          mkdir -p .claude/evidence
+
+          TABLE_FLAG=""
+          if [ -n "${{ inputs.tables }}" ]; then
+            TABLE_FLAG="--tables ${{ inputs.tables }}"
+          fi
+
+          # Run PII detection
+          db-harness detect-pii \
+            "${{ steps.conn.outputs.db }}" \
+            $TABLE_FLAG \
+            --sample-size ${{ inputs.sample_size }} \
+            --output json > .claude/evidence/pii_detection_${{ github.run_id }}.json 2>&1 || true
+
+          # Check if any PII was found
+          if grep -q '"pii_type"' .claude/evidence/pii_detection_${{ github.run_id }}.json 2>/dev/null; then
+            echo "pii_found=true" >> $GITHUB_OUTPUT
+            echo "PII detected in database"
+          else
+            echo "pii_found=false" >> $GITHUB_OUTPUT
+            echo "No PII detected"
+          fi
+
+      - name: Check Masking Rules Coverage
+        id: coverage
+        if: steps.detect.outputs.pii_found == 'true'
+        run: |
+          python3 << 'EOF'
+          import json
+          import yaml
+          import os
+          from pathlib import Path
+
+          # Load PII detection results
+          pii_files = list(Path('.claude/evidence').glob('pii_detection_*.json'))
+          if not pii_files:
+              print("No PII detection results found")
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write("uncovered=\n")
+              exit(0)
+
+          with open(pii_files[0]) as f:
+              try:
+                  pii_results = json.load(f)
+              except json.JSONDecodeError:
+                  print("Invalid JSON in PII detection results")
+                  with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                      f.write("uncovered=\n")
+                  exit(0)
+
+          # Load masking rules
+          rules_path = "${{ inputs.masking_rules }}"
+          covered = set()
+
+          if Path(rules_path).exists():
+              with open(rules_path) as f:
+                  rules = yaml.safe_load(f)
+
+              for override in rules.get('project_overrides', []):
+                  covered.add((override['table'], override['column']))
+          else:
+              print(f"Warning: Masking rules not found at {rules_path}")
+
+          # Find uncovered high-confidence PII
+          threshold = float("${{ inputs.confidence_threshold }}")
+          uncovered = []
+
+          for table, matches in pii_results.items():
+              if isinstance(matches, list):
+                  for match in matches:
+                      if match.get('confidence', 0) >= threshold:
+                          key = (table, match['column'])
+                          if key not in covered:
+                              uncovered.append(f"{table}.{match['column']} ({match['pii_type']})")
+
+          # Output results
+          if uncovered:
+              uncovered_str = ", ".join(uncovered)
+              print(f"::warning::Uncovered high-confidence PII fields: {uncovered_str}")
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write(f"uncovered={uncovered_str}\n")
+          else:
+              print("All high-confidence PII fields are covered by masking rules")
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write("uncovered=\n")
+          EOF
+
+      - name: Generate Summary
+        if: always()
+        run: |
+          echo "## NN-DB-3: PII Detection" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.detect.outputs.pii_found }}" = "true" ]; then
+            echo "| PII Detected | :warning: Yes |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| PII Detected | :white_check_mark: No |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -n "${{ steps.coverage.outputs.uncovered }}" ]; then
+            echo "| Masking Coverage | :x: Incomplete |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Uncovered PII Fields:** ${{ steps.coverage.outputs.uncovered }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Action Required:** Update masking rules to cover detected PII." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Masking Coverage | :white_check_mark: Complete |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload PII Evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pii-evidence-${{ github.run_id }}
+          path: .claude/evidence/pii_*.json
+          retention-days: 365

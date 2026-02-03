@@ -1,0 +1,352 @@
+"""
+API Contract Tests Template
+Source: devlessons.md - Lessons 47, 48, 108, 109, 112, 113
+Version: 1.0
+Date: 2026-01-31
+
+Usage:
+1. Copy patterns to your tests/integration/ directory
+2. Customize for your API endpoints
+3. Run with pytest
+"""
+
+from datetime import datetime, timezone
+from typing import Any, Callable, Protocol
+
+import pytest
+from httpx import AsyncClient
+from pydantic import BaseModel, ValidationError
+
+# ============================================================
+# PYDANTIC RESPONSE MODELS
+# Lesson #108: API response contracts must be validated at integration points
+# ============================================================
+
+
+class ProjectResponse(BaseModel):
+    """Contract for /api/projects endpoint.
+
+    Every API endpoint MUST have a Pydantic response model that defines
+    the contract. Field names MUST match between backend and frontend.
+    """
+
+    id: str
+    name: str
+    status: str
+    updated: datetime  # Field name must match frontend expectations
+
+    class Config:
+        # Strict validation catches missing fields
+        extra = "forbid"
+
+
+class ContentResponse(BaseModel):
+    """Contract for /api/content/{id} endpoint."""
+
+    id: str
+    title: str
+    slug: str
+    status: str
+    block_type: str  # Literal type - must be consistent (Lesson #58)
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        extra = "forbid"
+
+
+class PaginatedResponse(BaseModel):
+    """Contract for paginated endpoints."""
+
+    items: list[dict[str, Any]]
+    total: int
+    page: int
+    page_size: int
+    has_more: bool
+
+
+# ============================================================
+# CONTRACT VALIDATION TESTS
+# Lesson #108: Integration tests must validate ALL fields
+# ============================================================
+
+
+class TestProjectsContract:
+    """Validate /api/projects endpoint contract."""
+
+    @pytest.mark.asyncio
+    async def test_projects_response_has_all_required_fields(
+        self, client: AsyncClient
+    ) -> None:
+        """Every item in response must match the contract.
+
+        Lesson #108: This catches field mismatches like:
+        - Backend returns 'last_updated', frontend expects 'updated'
+        - Missing required fields
+        - Extra unexpected fields
+        """
+        response = await client.get("/api/projects")
+        assert response.status_code == 200
+
+        data = response.json()
+        for project in data:
+            # This will raise ValidationError if contract is violated
+            ProjectResponse(**project)
+
+    @pytest.mark.asyncio
+    async def test_projects_empty_response_is_observable(
+        self, client: AsyncClient, empty_database: None
+    ) -> None:
+        """Lesson #110: Defensive coding without observability hides bugs.
+
+        Verify empty responses are handled correctly.
+        """
+        response = await client.get("/api/projects")
+        assert response.status_code == 200
+        assert response.json() == []
+
+
+# ============================================================
+# FILTER PARAMETER TESTS
+# Lesson #109: Filter parameters require type-checked function signatures
+# ============================================================
+
+
+class TestFilterParameters:
+    """Every filter/query parameter MUST have a test proving it works."""
+
+    @pytest.mark.asyncio
+    async def test_status_filter_actually_filters(
+        self, client: AsyncClient, seeded_database: None
+    ) -> None:
+        """Lesson #109: Filter tests must prove the filter works.
+
+        1. Create data spanning the filter range
+        2. Apply filter
+        3. Assert ONLY filtered data returned
+        """
+        # Get all items first
+        all_response = await client.get("/api/content")
+        all_items = all_response.json()
+        assert len(all_items) > 0, "Seed data should exist"
+
+        # Apply filter
+        filtered_response = await client.get(
+            "/api/content", params={"status": "published"}
+        )
+        filtered_items = filtered_response.json()
+
+        # Verify filter actually works
+        for item in filtered_items:
+            assert item["status"] == "published", (
+                f"Filter returned wrong status: {item['status']}"
+            )
+
+        # Verify we got fewer items than total (filter did something)
+        # This catches the case where filter is ignored
+        if any(item["status"] != "published" for item in all_items):
+            assert len(filtered_items) < len(all_items), (
+                "Filter appears to return all items - is it implemented?"
+            )
+
+    @pytest.mark.asyncio
+    async def test_date_range_filter(
+        self, client: AsyncClient, seeded_database: None
+    ) -> None:
+        """Test date range filter with boundary conditions."""
+        today = datetime.now(timezone.utc).date().isoformat()
+
+        response = await client.get(
+            "/api/content",
+            params={"created_after": today},
+        )
+        items = response.json()
+
+        for item in items:
+            created = datetime.fromisoformat(item["created_at"].replace("Z", "+00:00"))
+            assert created.date().isoformat() >= today
+
+    @pytest.mark.asyncio
+    async def test_pagination_parameters(
+        self, client: AsyncClient, seeded_database: None
+    ) -> None:
+        """Test pagination works correctly."""
+        # Get first page
+        page1 = await client.get("/api/content", params={"page": 1, "page_size": 2})
+        page1_data = page1.json()
+
+        # Get second page
+        page2 = await client.get("/api/content", params={"page": 2, "page_size": 2})
+        page2_data = page2.json()
+
+        # Pages should be different
+        page1_ids = {item["id"] for item in page1_data["items"]}
+        page2_ids = {item["id"] for item in page2_data["items"]}
+        assert page1_ids.isdisjoint(page2_ids), "Pagination returned duplicate items"
+
+
+# ============================================================
+# CALLBACK TYPE SAFETY
+# Lesson #109: Protocol-based callback typing
+# ============================================================
+
+
+class DriftCallback(Protocol):
+    """Type-safe callback signature.
+
+    Lesson #109: Use Protocol-based callback typing to catch
+    signature mismatches at type-check time.
+    """
+
+    def __call__(self, project_id: str | None, days: int) -> list[dict[str, Any]]:
+        ...
+
+
+def set_drift_callback(callback: DriftCallback) -> None:
+    """Register a drift callback with type-safe signature."""
+    # mypy --strict will catch signature mismatches
+    pass
+
+
+# ============================================================
+# TEST DOUBLES MATCHING PRODUCTION SIGNATURES
+# Lesson #47: Test doubles must match production adapter signatures
+# ============================================================
+
+
+class ContentRepositoryPort(Protocol):
+    """Port interface for content repository."""
+
+    async def get_by_id(self, content_id: str) -> dict[str, Any] | None:
+        ...
+
+    async def get_by_slug(self, slug: str) -> dict[str, Any] | None:
+        ...
+
+    async def list_by_status(
+        self, status: str, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        ...
+
+
+class FakeContentRepository:
+    """Test double that matches production interface.
+
+    Lesson #47: Signature must EXACTLY match the Protocol.
+    """
+
+    def __init__(self, items: list[dict[str, Any]] | None = None) -> None:
+        self._items = items or []
+
+    async def get_by_id(self, content_id: str) -> dict[str, Any] | None:
+        for item in self._items:
+            if item["id"] == content_id:
+                return item
+        return None
+
+    async def get_by_slug(self, slug: str) -> dict[str, Any] | None:
+        for item in self._items:
+            if item["slug"] == slug:
+                return item
+        return None
+
+    async def list_by_status(
+        self, status: str, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        return [item for item in self._items if item["status"] == status][:limit]
+
+
+# ============================================================
+# RUNTIME CONTRACT VALIDATION
+# Lesson #113: Runtime contract validation for dynamic API responses
+# ============================================================
+
+
+def validate_response_contract(
+    response_data: dict[str, Any],
+    model: type[BaseModel],
+    context: str = "",
+) -> None:
+    """Validate API response against Pydantic model at runtime.
+
+    Lesson #113: Use this for dynamic API responses where compile-time
+    checking isn't sufficient.
+    """
+    try:
+        model(**response_data)
+    except ValidationError as e:
+        raise AssertionError(
+            f"Response contract violation{f' in {context}' if context else ''}: {e}"
+        )
+
+
+# ============================================================
+# UI CONTROLS INTEGRATION TESTS
+# Lesson #112: UI controls without backend integration tests are dead code
+# ============================================================
+
+
+class TestUIControlsBackendIntegration:
+    """Verify UI controls actually affect backend behavior."""
+
+    @pytest.mark.asyncio
+    async def test_status_dropdown_changes_content_status(
+        self, client: AsyncClient, test_content_id: str
+    ) -> None:
+        """Lesson #112: UI control must have backend test."""
+        # Simulate what the UI dropdown does
+        response = await client.patch(
+            f"/api/content/{test_content_id}",
+            json={"status": "published"},
+        )
+        assert response.status_code == 200
+
+        # Verify the change persisted
+        verify = await client.get(f"/api/content/{test_content_id}")
+        assert verify.json()["status"] == "published"
+
+    @pytest.mark.asyncio
+    async def test_filter_dropdown_returns_filtered_results(
+        self, client: AsyncClient
+    ) -> None:
+        """Verify filter UI control has working backend."""
+        # If UI has a "Show only published" checkbox, test it here
+        response = await client.get("/api/content", params={"status": "published"})
+        assert response.status_code == 200
+
+        # Every returned item should match the filter
+        for item in response.json():
+            assert item["status"] == "published"
+
+
+# ============================================================
+# FIXTURES
+# ============================================================
+
+
+@pytest.fixture
+async def client() -> AsyncClient:
+    """Create test client."""
+    from src.main import app  # Your FastAPI app
+
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        yield ac
+
+
+@pytest.fixture
+def seeded_database() -> None:
+    """Lesson #54: Test database seed scripts must match actual schema."""
+    # Seed with realistic data that matches production structure
+    pass
+
+
+@pytest.fixture
+def empty_database() -> None:
+    """Clean database for empty state tests."""
+    pass
+
+
+@pytest.fixture
+def test_content_id() -> str:
+    """Return ID of test content created in seeded_database."""
+    return "test-content-id"

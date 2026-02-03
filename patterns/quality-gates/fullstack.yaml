@@ -1,0 +1,274 @@
+# Full-Stack Quality Gates Pattern Template
+# Source: devlessons.md - Combined Python + Frontend + Integration patterns
+# Version: 1.0
+# Date: 2026-01-31
+
+schema_version: "1.0"
+name: "Full-Stack Quality Gates"
+description: "Quality gate configuration for full-stack projects (Python backend + Next.js frontend)"
+
+# Project Structure
+project_structure:
+  backend:
+    root: "src/"
+    tests: "tests/"
+    config: "pyproject.toml"
+  frontend:
+    root: "frontend/"
+    tests: "frontend/tests/"
+    config: "frontend/package.json"
+
+# Backend Gates
+backend_gates:
+  lint:
+    command: "ruff check src/ tests/"
+    required: true
+
+  type_check:
+    command: "mypy src/ --strict"
+    required: true
+
+  unit_tests:
+    command: "pytest tests/unit/ -v"
+    required: true
+
+  integration_tests:
+    command: "pytest tests/integration/ -v"
+    required: true
+
+  security_tests:
+    command: "pytest tests/security/ -v"
+    required: true
+
+# Frontend Gates
+frontend_gates:
+  lint:
+    command: "cd frontend && npm run lint"
+    required: true
+
+  type_check:
+    command: "cd frontend && npx tsc --noEmit"
+    required: true
+
+  build:
+    command: "cd frontend && npm run build"
+    required: true
+
+  unit_tests:
+    command: "cd frontend && npm test"
+    required: true
+
+# Integration Gates (Backend + Frontend)
+integration_gates:
+  api_contract_tests:
+    description: "Verify frontend types match backend schemas"
+    lessons:
+      - "#108: API response contracts must be validated at integration points"
+      - "#109: Filter parameters require type-checked function signatures"
+      - "#113: Runtime contract validation for dynamic API responses"
+
+  e2e_tests:
+    command: "cd frontend && npx playwright test"
+    required: true
+    lessons:
+      - "#44: E2E test patterns for feature workflows"
+      - "#61: E2E tests creating dynamic content may fail in production mode"
+
+# API Contract Validation (Lessons 108, 109, 113)
+api_contracts:
+  description: "Every API endpoint must have contract validation"
+
+  backend_pattern: |
+    # Every API endpoint MUST have:
+    # 1. Pydantic response model - defines the contract
+    # 2. Integration test validating ALL fields
+
+    from pydantic import BaseModel
+
+    class ProjectResponse(BaseModel):
+        id: str
+        name: str
+        status: str
+        updated: datetime  # Field naming must match frontend
+
+    def test_projects_response_has_all_required_fields():
+        response = client.get("/api/projects")
+        for project in response.json():
+            ProjectResponse(**project)  # Validates contract
+
+  frontend_pattern: |
+    // TypeScript types should be generated from Pydantic
+    // Never hand-write frontend types - generate them
+
+    interface ProjectResponse {
+      id: string;
+      name: string;
+      status: string;
+      updated: string;  // Must match backend field name
+    }
+
+  filter_tests: |
+    # Every filter/query parameter MUST have a test proving it works
+    def test_filter_actually_filters():
+        # Create data spanning the filter range
+        # Apply filter
+        # Assert ONLY filtered data returned
+
+# Schema Synchronization (Lesson 58, 108)
+schema_sync:
+  literal_types:
+    description: "Keep Literal/enum types synchronized between backend and frontend"
+    backend_location: "src/domain/types.py"
+    frontend_location: "frontend/lib/types.ts"
+    sync_check: |
+      # Verify types match
+      # Backend: Literal["draft", "published", "archived"]
+      # Frontend: type Status = "draft" | "published" | "archived"
+    lesson: "#58: Pydantic Literal types must be consistent"
+
+  field_naming:
+    description: "API field names must match between layers"
+    anti_pattern:
+      backend: "last_updated"
+      frontend: "updated"
+    correct_pattern:
+      backend: "updated"
+      frontend: "updated"
+    lesson: "#108: API response contracts must be validated"
+
+# Observability Requirements (Lesson 110)
+observability:
+  description: "Defensive coding without observability hides data flow bugs"
+  requirements:
+    - "Log when falling back to defaults"
+    - "Add metrics for empty response scenarios"
+    - "Include request context in error logs"
+  anti_pattern: |
+    # BAD: Silent default
+    def get_projects():
+        result = api.fetch()
+        return result or []  # Silently returns empty
+  correct_pattern: |
+    # GOOD: Observable default
+    def get_projects():
+        result = api.fetch()
+        if not result:
+            logger.warning("API returned empty result for projects")
+            metrics.increment("projects.empty_response")
+        return result or []
+  lesson: "#110: Defensive coding without observability hides data flow bugs"
+
+# Database Verification (Lesson 116)
+database_checks:
+  description: "Verify which database the backend uses"
+  check: |
+    # Multiple database files may exist - verify the correct one is used
+    # Common locations:
+    # - /data/app.db (production, Fly.io volume)
+    # - ./data/app.db (local development)
+    # - ./test.db (testing)
+  lesson: "#116: Multiple database files - verify which database the backend uses"
+
+# Combined Run Script
+run_script: |
+  #!/bin/bash
+  # Run all full-stack quality gates
+
+  set -e
+  mkdir -p .claude/evidence
+
+  echo "========================================="
+  echo "=== BACKEND QUALITY GATES ==="
+  echo "========================================="
+
+  echo "=== Backend Linting ==="
+  ruff check src/ tests/
+
+  echo "=== Backend Type Checking ==="
+  mypy src/ --strict
+
+  echo "=== Backend Unit Tests ==="
+  pytest tests/unit/ -v --tb=short \
+    --json-report --json-report-file=.claude/evidence/backend_test_report.json
+
+  echo "=== Backend Integration Tests ==="
+  pytest tests/integration/ -v --tb=short
+
+  echo "=== Backend Security Tests ==="
+  pytest tests/security/ -v --tb=short
+
+  echo "=== Determinism Check ==="
+  VIOLATIONS=$(grep -r "datetime\.now\|datetime\.utcnow\|uuid4" src/*/core/ --include="*.py" | grep -v import | wc -l || echo "0")
+  if [ "$VIOLATIONS" -gt 0 ]; then
+    echo "ERROR: Found $VIOLATIONS determinism violations in core"
+    exit 1
+  fi
+
+  echo "========================================="
+  echo "=== FRONTEND QUALITY GATES ==="
+  echo "========================================="
+
+  cd frontend
+
+  echo "=== Frontend Linting ==="
+  npm run lint
+
+  echo "=== Frontend Type Checking ==="
+  npx tsc --noEmit
+
+  echo "=== Frontend Build ==="
+  npm run build
+
+  echo "=== Frontend Unit Tests ==="
+  npm test -- --passWithNoTests
+
+  cd ..
+
+  echo "========================================="
+  echo "=== E2E TESTS ==="
+  echo "========================================="
+
+  cd frontend
+  npx playwright test
+  cd ..
+
+  # Generate summary
+  echo '{"status": "PASS", "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'", "backend": "pass", "frontend": "pass", "e2e": "pass"}' > .claude/evidence/quality_gates_run.json
+
+  echo "========================================="
+  echo "=== ALL QUALITY GATES PASSED ==="
+  echo "========================================="
+
+# Evidence Requirements
+evidence:
+  location: ".claude/evidence/"
+  required_files:
+    - "quality_gates_run.json"
+    - "backend_test_report.json"
+  optional_files:
+    - "frontend_test_report.json"
+    - "e2e_report.json"
+    - "coverage.json"
+
+# Full Checklist
+completion_checklist:
+  backend:
+    - "[ ] ruff check passes"
+    - "[ ] mypy --strict passes"
+    - "[ ] Unit tests pass"
+    - "[ ] Integration tests pass"
+    - "[ ] Security tests pass"
+    - "[ ] No determinism violations in core"
+
+  frontend:
+    - "[ ] npm run lint passes"
+    - "[ ] tsc --noEmit passes"
+    - "[ ] npm run build succeeds"
+    - "[ ] Unit tests pass"
+    - "[ ] All interactive elements have data-testid"
+
+  integration:
+    - "[ ] E2E tests pass"
+    - "[ ] API contract tests validate all fields"
+    - "[ ] Schema types synchronized between layers"
+    - "[ ] Evidence artifacts exist"

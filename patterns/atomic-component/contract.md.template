@@ -1,0 +1,203 @@
+# {ComponentName} Contract
+
+> **Source**: devlessons.md - Lessons 8, 12, 79
+> **Version**: 1.0
+> **Date**: {YYYY-MM-DD}
+
+## Purpose
+
+{One sentence describing what this component does - be specific}
+
+## Input (RunRequest)
+
+```python
+@dataclass(frozen=True)
+class {ComponentName}Input:
+    """Immutable input for {ComponentName}.
+
+    All fields required unless marked Optional.
+    """
+    # Required fields
+    field_name: FieldType  # Description of field
+
+    # Optional fields
+    optional_field: Optional[FieldType] = None  # Description
+```
+
+### Field Validation Rules
+
+| Field | Type | Validation | Error |
+|-------|------|------------|-------|
+| `field_name` | `str` | Non-empty, max 100 chars | `ValueError` |
+| `optional_field` | `Optional[int]` | If present, must be > 0 | `ValueError` |
+
+## Output (RunResponse)
+
+```python
+@dataclass(frozen=True)
+class {ComponentName}Output:
+    """Immutable output from {ComponentName}.
+
+    Always contains status and result or error.
+    """
+    status: Literal["success", "failure"]
+    result: Optional[ResultType] = None
+    error: Optional[str] = None
+```
+
+### Output Guarantees
+
+- If `status == "success"`: `result` is always populated, `error` is None
+- If `status == "failure"`: `error` describes what went wrong, `result` is None
+- Output is immutable - cannot be modified after creation
+
+## Ports (Dependencies)
+
+```python
+class {ComponentName}Ports(Protocol):
+    """Dependencies injected into {ComponentName}.
+
+    All dependencies are Protocol interfaces, not concrete implementations.
+    This enables:
+    - Testing with fakes/stubs
+    - Swapping implementations without changing component
+    - Dependency inversion (core doesn't depend on infrastructure)
+    """
+
+    @property
+    def repository(self) -> RepositoryPort:
+        """Data persistence - injected, not imported."""
+        ...
+
+    @property
+    def time_port(self) -> TimePort:
+        """Current time - injected for determinism (Lesson #107)."""
+        ...
+
+    @property
+    def logger(self) -> LoggerPort:
+        """Logging - injected for testability."""
+        ...
+```
+
+### Port Implementations
+
+| Port | Production | Test |
+|------|------------|------|
+| `RepositoryPort` | `SQLiteRepository` | `InMemoryRepository` |
+| `TimePort` | `SystemTimeAdapter` | `FakeTimeAdapter` |
+| `LoggerPort` | `StructuredLogger` | `NullLogger` |
+
+## Entry Point
+
+```python
+def run(input: {ComponentName}Input, ports: {ComponentName}Ports) -> {ComponentName}Output:
+    """Execute {ComponentName} operation.
+
+    This is the ONLY entry point. All logic flows through here.
+
+    Args:
+        input: Validated, immutable input data
+        ports: Injected dependencies
+
+    Returns:
+        Immutable output with status and result/error
+
+    Raises:
+        Never raises - errors returned in output.error
+    """
+```
+
+## Error Cases
+
+| Condition | Output Status | Error Message |
+|-----------|---------------|---------------|
+| Input validation fails | `failure` | `"Invalid input: {details}"` |
+| Repository unavailable | `failure` | `"Repository error: {details}"` |
+| Business rule violation | `failure` | `"Rule violated: {rule_name}"` |
+| Unexpected error | `failure` | `"Internal error: {sanitized_message}"` |
+
+### Error Handling Philosophy
+
+1. **Never raise exceptions** from `run()` - return failure output instead
+2. **Log errors** via `ports.logger` before returning
+3. **Sanitize error messages** - don't expose internal details
+4. **Include context** - what operation, what state
+
+## Business Rules
+
+1. **Rule Name**: Description of the rule
+   - When: Condition that triggers the rule
+   - Then: What happens
+   - Example: {Concrete example}
+
+2. **Another Rule**: Description
+   - When: Condition
+   - Then: Outcome
+
+## Determinism Guarantees
+
+> **Lesson #87, #107**: Core components must be deterministic
+
+This component is deterministic because:
+
+- [ ] No `datetime.now()` - uses `ports.time_port`
+- [ ] No `uuid4()` - uses `ports.uuid_port` (if applicable)
+- [ ] No `random.*` - uses `ports.random_port` (if applicable)
+- [ ] No module-level mutable state
+- [ ] All I/O goes through injected ports
+
+## Testing Evidence
+
+### Unit Tests
+
+| Test | File | Description |
+|------|------|-------------|
+| `test_run_success` | `tests/unit/test_{component}.py` | Happy path |
+| `test_run_invalid_input` | `tests/unit/test_{component}.py` | Input validation |
+| `test_run_repository_error` | `tests/unit/test_{component}.py` | Error handling |
+
+### Integration Tests
+
+| Test | File | Description |
+|------|------|-------------|
+| `test_with_real_repository` | `tests/integration/test_{component}.py` | Real adapter |
+
+### Contracts Verified By
+
+- `mypy --strict` - Type safety
+- `pytest tests/unit/test_{component}.py` - Behavior
+- `pytest tests/integration/test_{component}.py` - Integration
+
+## File Structure
+
+```
+src/components/{ComponentName}/
+├── __init__.py      # Public exports: run, Input, Output, Ports
+├── component.py     # Contains run() function
+├── models.py        # Input, Output dataclasses
+├── ports.py         # Protocol interfaces
+└── contract.md      # This file
+```
+
+## Change Log
+
+| Date | Version | Change | Author |
+|------|---------|--------|--------|
+| {YYYY-MM-DD} | 1.0 | Initial contract | {Author} |
+
+---
+
+## Implementation Checklist
+
+Before marking this component complete:
+
+- [ ] `contract.md` defines all inputs, outputs, ports, and errors
+- [ ] `models.py` has frozen dataclasses matching contract
+- [ ] `ports.py` has Protocol interfaces for all dependencies
+- [ ] `component.py` has `run()` function matching contract signature
+- [ ] `__init__.py` exports public API
+- [ ] Unit tests cover all error cases
+- [ ] No determinism violations (datetime.now, uuid4, random)
+- [ ] mypy --strict passes
+- [ ] Component registered in manifest

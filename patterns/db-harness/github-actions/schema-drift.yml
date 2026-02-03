@@ -1,0 +1,158 @@
+# GitHub Actions Reusable Workflow: Schema Drift Detection (NN-DB-1)
+#
+# Detects breaking schema changes between database environments.
+# Use this as a required check before deployments.
+#
+# Usage in your workflow:
+#   jobs:
+#     schema-drift:
+#       uses: ./.github/workflows/schema-drift.yml
+#       with:
+#         source_db: "sqlite:///dev.db"
+#         target_db: "sqlite:///staging.db"
+#         fail_on_breaking: true
+#       secrets:
+#         source_conn: ${{ secrets.DB_DEV_CONN }}
+#         target_conn: ${{ secrets.DB_STAGING_CONN }}
+#
+# DevOps Non-Negotiables: NN-DB-1 (Pre-Migration Schema Drift)
+# Decision Reference: DEC-DEVOPS-014
+
+name: Schema Drift Check (NN-DB-1)
+
+on:
+  workflow_call:
+    inputs:
+      source_db:
+        description: 'Source database connection (for SQLite file paths)'
+        required: false
+        type: string
+        default: ''
+      target_db:
+        description: 'Target database connection (for SQLite file paths)'
+        required: false
+        type: string
+        default: ''
+      fail_on_breaking:
+        description: 'Fail if breaking changes detected'
+        required: false
+        type: boolean
+        default: true
+      python_version:
+        description: 'Python version'
+        required: false
+        type: string
+        default: '3.12'
+      db_harness_version:
+        description: 'db-harness package version'
+        required: false
+        type: string
+        default: '0.1.0'
+    secrets:
+      source_conn:
+        description: 'Source database connection string (for remote DBs)'
+        required: false
+      target_conn:
+        description: 'Target database connection string (for remote DBs)'
+        required: false
+    outputs:
+      has_breaking_changes:
+        description: 'Whether breaking changes were detected'
+        value: ${{ jobs.drift-check.outputs.has_breaking }}
+      drift_report:
+        description: 'Path to drift report JSON'
+        value: ${{ jobs.drift-check.outputs.report_path }}
+
+jobs:
+  drift-check:
+    name: "NN-DB-1: Schema Drift Detection"
+    runs-on: ubuntu-latest
+
+    outputs:
+      has_breaking: ${{ steps.drift.outputs.has_breaking }}
+      report_path: ${{ steps.drift.outputs.report_path }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+          cache: 'pip'
+
+      - name: Install db-harness
+        run: pip install db-propagation-harness==${{ inputs.db_harness_version }}
+
+      - name: Determine connection strings
+        id: conn
+        run: |
+          # Use secrets if provided, otherwise use inputs (for SQLite file paths)
+          if [ -n "${{ secrets.source_conn }}" ]; then
+            echo "source=${{ secrets.source_conn }}" >> $GITHUB_OUTPUT
+          else
+            echo "source=${{ inputs.source_db }}" >> $GITHUB_OUTPUT
+          fi
+
+          if [ -n "${{ secrets.target_conn }}" ]; then
+            echo "target=${{ secrets.target_conn }}" >> $GITHUB_OUTPUT
+          else
+            echo "target=${{ inputs.target_db }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Schema Drift Check
+        id: drift
+        run: |
+          mkdir -p .claude/evidence
+
+          FAIL_FLAG=""
+          if [ "${{ inputs.fail_on_breaking }}" = "true" ]; then
+            FAIL_FLAG="--fail-on-breaking"
+          fi
+
+          # Run drift detection
+          db-harness drift \
+            "${{ steps.conn.outputs.source }}" \
+            "${{ steps.conn.outputs.target }}" \
+            $FAIL_FLAG \
+            --output json > .claude/evidence/drift_${{ github.run_id }}.json 2>&1 || exit_code=$?
+
+          echo "exit_code=${exit_code:-0}" >> $GITHUB_OUTPUT
+          echo "report_path=.claude/evidence/drift_${{ github.run_id }}.json" >> $GITHUB_OUTPUT
+
+          # Check for breaking changes
+          if [ "${exit_code:-0}" -eq 2 ]; then
+            echo "has_breaking=true" >> $GITHUB_OUTPUT
+            echo "::error::NN-DB-1 FAILED: Breaking schema changes detected"
+            cat .claude/evidence/drift_${{ github.run_id }}.json
+            exit 2
+          else
+            echo "has_breaking=false" >> $GITHUB_OUTPUT
+            echo "NN-DB-1 PASSED: No breaking schema changes"
+          fi
+
+      - name: Generate Summary
+        if: always()
+        run: |
+          echo "## NN-DB-1: Schema Drift Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.drift.outputs.has_breaking }}" = "true" ]; then
+            echo "| Result | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Breaking Changes | :x: DETECTED |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Action Required:** Review and resolve schema differences before deployment." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Result | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Breaking Changes | :white_check_mark: None |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Drift Evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: drift-evidence-${{ github.run_id }}
+          path: .claude/evidence/drift_*.json
+          retention-days: 365

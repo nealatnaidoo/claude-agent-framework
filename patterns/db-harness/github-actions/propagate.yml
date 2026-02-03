@@ -1,0 +1,254 @@
+# GitHub Actions Reusable Workflow: Database Propagation
+#
+# Full database propagation workflow with PII masking and subsetting.
+# Use this to refresh lower environments with production data.
+#
+# Usage in your workflow:
+#   jobs:
+#     propagate:
+#       uses: ./.github/workflows/propagate.yml
+#       with:
+#         source_db: "sqlite:///prod.db"
+#         target_db: "sqlite:///dev.db"
+#         masking_rules: ".claude/db-harness/masking_rules.yaml"
+#       secrets:
+#         source_conn: ${{ secrets.DB_PROD_CONN }}
+#         target_conn: ${{ secrets.DB_DEV_CONN }}
+#
+# DevOps Non-Negotiables: NN-DB-3 (PII Masking for Propagation)
+# Decision Reference: DEC-DEVOPS-009, DEC-DEVOPS-010, DEC-DEVOPS-011
+
+name: Database Propagation
+
+on:
+  workflow_call:
+    inputs:
+      source_db:
+        description: 'Source database connection (for SQLite file paths)'
+        required: false
+        type: string
+        default: ''
+      target_db:
+        description: 'Target database connection (for SQLite file paths)'
+        required: false
+        type: string
+        default: ''
+      masking_rules:
+        description: 'Path to masking rules YAML file'
+        required: false
+        type: string
+        default: '.claude/db-harness/masking_rules.yaml'
+      subsetting_rules:
+        description: 'Path to subsetting rules YAML file (optional)'
+        required: false
+        type: string
+        default: ''
+      seed:
+        description: 'Random seed for deterministic masking'
+        required: false
+        type: string
+        default: '42'
+      dry_run:
+        description: 'Perform dry run without writing to target'
+        required: false
+        type: boolean
+        default: false
+      skip_pii_detection:
+        description: 'Skip automatic PII detection (use explicit rules only)'
+        required: false
+        type: boolean
+        default: false
+      skip_schema_check:
+        description: 'Skip schema drift check before propagation'
+        required: false
+        type: boolean
+        default: false
+      python_version:
+        description: 'Python version'
+        required: false
+        type: string
+        default: '3.12'
+      db_harness_version:
+        description: 'db-harness package version'
+        required: false
+        type: string
+        default: '0.1.0'
+      # Fly.io configuration
+      use_fly_proxy:
+        description: 'Use Fly.io proxy for database access'
+        required: false
+        type: boolean
+        default: false
+      fly_app_name:
+        description: 'Fly.io app name for proxy'
+        required: false
+        type: string
+        default: ''
+      fly_proxy_port:
+        description: 'Fly.io proxy port'
+        required: false
+        type: string
+        default: '5432'
+    secrets:
+      source_conn:
+        description: 'Source database connection string (for remote DBs)'
+        required: false
+      target_conn:
+        description: 'Target database connection string (for remote DBs)'
+        required: false
+      fly_api_token:
+        description: 'Fly.io API token'
+        required: false
+    outputs:
+      success:
+        description: 'Whether propagation succeeded'
+        value: ${{ jobs.propagate.outputs.success }}
+      rows_propagated:
+        description: 'Number of rows propagated'
+        value: ${{ jobs.propagate.outputs.rows }}
+
+jobs:
+  propagate:
+    name: "Database Propagation"
+    runs-on: ubuntu-latest
+
+    outputs:
+      success: ${{ steps.propagate.outputs.success }}
+      rows: ${{ steps.propagate.outputs.rows }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+          cache: 'pip'
+
+      - name: Install db-harness
+        run: pip install db-propagation-harness==${{ inputs.db_harness_version }}
+
+      - name: Setup Fly.io Proxy
+        if: inputs.use_fly_proxy == true
+        run: |
+          echo "Setting up Fly.io proxy..."
+          curl -L https://fly.io/install.sh | sh
+          export FLYCTL_INSTALL="$HOME/.fly"
+          export PATH="$FLYCTL_INSTALL/bin:$PATH"
+          echo "$HOME/.fly/bin" >> $GITHUB_PATH
+
+          flyctl auth token ${{ secrets.fly_api_token }}
+          flyctl proxy ${{ inputs.fly_proxy_port }}:${{ inputs.fly_app_name }}.internal:${{ inputs.fly_proxy_port }} &
+
+          # Wait for proxy with health check
+          for i in {1..10}; do
+            if nc -z localhost ${{ inputs.fly_proxy_port }} 2>/dev/null; then
+              echo "Fly.io proxy ready on port ${{ inputs.fly_proxy_port }}"
+              break
+            fi
+            echo "Waiting for proxy... ($i/10)"
+            sleep 2
+          done
+
+      - name: Determine connection strings
+        id: conn
+        run: |
+          if [ -n "${{ secrets.source_conn }}" ]; then
+            echo "source=${{ secrets.source_conn }}" >> $GITHUB_OUTPUT
+          else
+            echo "source=${{ inputs.source_db }}" >> $GITHUB_OUTPUT
+          fi
+
+          if [ -n "${{ secrets.target_conn }}" ]; then
+            echo "target=${{ secrets.target_conn }}" >> $GITHUB_OUTPUT
+          else
+            echo "target=${{ inputs.target_db }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Database Propagation
+        id: propagate
+        run: |
+          mkdir -p .claude/evidence
+
+          # Build command flags
+          FLAGS=""
+
+          if [ -f "${{ inputs.masking_rules }}" ]; then
+            FLAGS="$FLAGS --masking-rules ${{ inputs.masking_rules }}"
+          fi
+
+          if [ -n "${{ inputs.subsetting_rules }}" ] && [ -f "${{ inputs.subsetting_rules }}" ]; then
+            FLAGS="$FLAGS --subsetting-rules ${{ inputs.subsetting_rules }}"
+          fi
+
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            FLAGS="$FLAGS --dry-run"
+          fi
+
+          if [ "${{ inputs.skip_pii_detection }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-pii-detection"
+          fi
+
+          if [ "${{ inputs.skip_schema_check }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-schema-check"
+          fi
+
+          # Run propagation
+          db-harness propagate \
+            "${{ steps.conn.outputs.source }}" \
+            "${{ steps.conn.outputs.target }}" \
+            --seed ${{ inputs.seed }} \
+            $FLAGS \
+            --output json | tee .claude/evidence/propagation_${{ github.run_id }}.json
+
+          # Check success
+          if grep -q '"success": true' .claude/evidence/propagation_${{ github.run_id }}.json; then
+            echo "success=true" >> $GITHUB_OUTPUT
+
+            # Extract row count if available
+            rows=$(grep -o '"total_rows": [0-9]*' .claude/evidence/propagation_${{ github.run_id }}.json | grep -o '[0-9]*' || echo "unknown")
+            echo "rows=$rows" >> $GITHUB_OUTPUT
+
+            echo "Propagation completed successfully"
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+            echo "rows=0" >> $GITHUB_OUTPUT
+            echo "::error::Propagation failed"
+            exit 1
+          fi
+
+      - name: Generate Summary
+        if: always()
+        run: |
+          echo "## Database Propagation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dry Run | ${{ inputs.dry_run }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Skip PII Detection | ${{ inputs.skip_pii_detection }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Seed | ${{ inputs.seed }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Run ID | ${{ github.run_id }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.propagate.outputs.success }}" = "true" ]; then
+            echo "### Result: :white_check_mark: Success" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Rows propagated: ${{ steps.propagate.outputs.rows }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Result: :x: Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check the propagation evidence artifact for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Propagation Evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: propagation-evidence-${{ github.run_id }}
+          path: .claude/evidence/propagation_*.json
+          retention-days: 365
+
+      - name: Cleanup Fly.io Proxy
+        if: always() && inputs.use_fly_proxy == true
+        run: |
+          pkill -f "flyctl proxy" || true

@@ -1,0 +1,281 @@
+# ============================================================================
+# DevOps Governor - Baseline PII Masking Rules
+# ============================================================================
+# Portfolio-wide baseline for PII masking across all projects
+#
+# Projects SHOULD extend this baseline rather than creating rules from scratch.
+# Project-specific overrides are documented in project's masking_rules.yaml.
+#
+# Usage:
+#   version: "1.0"
+#   baseline_version: "2026-Q1"
+#   extends: "~/.claude/devops/patterns/db-harness/baseline_masking_rules.yaml"
+#   project_overrides:
+#     - table: "custom_table"
+#       column: "custom_field"
+#       masking_strategy: "faker"
+#       faker_provider: "email"
+#
+# ============================================================================
+
+schema_version: "1.0"
+baseline_version: "2026-Q1"
+created: "2026-02-02"
+last_updated: "2026-02-02"
+
+# ============================================================================
+# COMMON PII PATTERNS
+# ============================================================================
+# These patterns apply to ANY project by default
+
+common_patterns:
+  # Email addresses
+  email:
+    column_patterns:
+      - "email"
+      - "email_address"
+      - "user_email"
+      - "contact_email"
+    masking_strategy: "faker"
+    faker_provider: "email"
+    preserve_format: true
+    preserve_null: true
+
+  # Phone numbers
+  phone:
+    column_patterns:
+      - "phone"
+      - "phone_number"
+      - "mobile"
+      - "mobile_number"
+      - "telephone"
+      - "cell"
+    masking_strategy: "faker"
+    faker_provider: "phone_number"
+    preserve_format: true
+    preserve_null: true
+
+  # Personal names
+  first_name:
+    column_patterns:
+      - "first_name"
+      - "firstname"
+      - "given_name"
+    masking_strategy: "faker"
+    faker_provider: "first_name"
+    preserve_null: true
+
+  last_name:
+    column_patterns:
+      - "last_name"
+      - "lastname"
+      - "surname"
+      - "family_name"
+    masking_strategy: "faker"
+    faker_provider: "last_name"
+    preserve_null: true
+
+  full_name:
+    column_patterns:
+      - "name"
+      - "full_name"
+      - "fullname"
+      - "display_name"
+      - "displayname"
+    masking_strategy: "faker"
+    faker_provider: "name"
+    preserve_null: true
+
+  # Addresses
+  address:
+    column_patterns:
+      - "address"
+      - "street_address"
+      - "address_line_1"
+      - "address_line_2"
+      - "street"
+    masking_strategy: "faker"
+    faker_provider: "street_address"
+    preserve_null: true
+
+  city:
+    column_patterns:
+      - "city"
+      - "town"
+    masking_strategy: "faker"
+    faker_provider: "city"
+    preserve_null: true
+
+  postal_code:
+    column_patterns:
+      - "postal_code"
+      - "postcode"
+      - "zip"
+      - "zip_code"
+    masking_strategy: "faker"
+    faker_provider: "postcode"
+    preserve_null: true
+
+  # Government IDs (high sensitivity - use hash or null)
+  ssn:
+    column_patterns:
+      - "ssn"
+      - "social_security"
+      - "social_security_number"
+      - "sin"  # Social Insurance Number (Canada)
+      - "national_id"
+      - "tax_id"
+    masking_strategy: "redact"  # Visible masking for audit
+    preserve_null: true
+
+  # Financial data (high sensitivity)
+  credit_card:
+    column_patterns:
+      - "card_number"
+      - "credit_card"
+      - "cc_number"
+      - "pan"  # Primary Account Number
+    masking_strategy: "redact"
+    preserve_null: true
+
+  bank_account:
+    column_patterns:
+      - "account_number"
+      - "bank_account"
+      - "iban"
+      - "routing_number"
+    masking_strategy: "hash"
+    preserve_null: true
+
+  # Authentication credentials (MUST be hashed or nulled)
+  password:
+    column_patterns:
+      - "password"
+      - "password_hash"
+      - "hashed_password"
+    masking_strategy: "hash"
+    preserve_null: true
+
+  api_keys:
+    column_patterns:
+      - "api_key"
+      - "api_secret"
+      - "secret_key"
+      - "access_token"
+      - "refresh_token"
+      - "token"
+      - "auth_token"
+    masking_strategy: "hash"
+    preserve_null: true
+
+  session_tokens:
+    column_patterns:
+      - "session_id"
+      - "session_token"
+      - "token_hash"
+    masking_strategy: "hash"
+    preserve_null: true
+
+  # IP addresses (privacy concern)
+  ip_address:
+    column_patterns:
+      - "ip"
+      - "ip_address"
+      - "client_ip"
+      - "user_ip"
+      - "remote_addr"
+    masking_strategy: "null"  # Remove entirely
+    preserve_null: true
+
+  # Date of birth
+  dob:
+    column_patterns:
+      - "dob"
+      - "date_of_birth"
+      - "birth_date"
+      - "birthday"
+    masking_strategy: "faker"
+    faker_provider: "date_of_birth"
+    preserve_null: true
+
+# ============================================================================
+# TABLES TO ALWAYS EXCLUDE FROM MASKING
+# ============================================================================
+# These tables typically contain system/config data, not PII
+
+exclude_tables:
+  - "_migrations"
+  - "alembic_version"
+  - "schema_migrations"
+  - "django_migrations"
+  - "ar_internal_metadata"
+  - "settings"
+  - "site_settings"
+  - "configuration"
+  - "feature_flags"
+  - "permissions"
+  - "roles"
+  - "countries"
+  - "currencies"
+  - "timezones"
+  - "languages"
+
+# ============================================================================
+# COLUMNS TO NEVER MASK (system columns)
+# ============================================================================
+
+exclude_columns:
+  - "id"
+  - "uuid"
+  - "created_at"
+  - "updated_at"
+  - "deleted_at"
+  - "version"
+  - "status"
+  - "type"
+  - "slug"
+
+# ============================================================================
+# CONFIDENCE THRESHOLDS
+# ============================================================================
+
+detection_thresholds:
+  # Only auto-mask fields with confidence >= this threshold
+  auto_mask_minimum: 0.90
+
+  # Fields below this are ignored (likely false positives)
+  ignore_below: 0.50
+
+  # Fields between ignore and auto_mask require manual review
+  review_range:
+    min: 0.50
+    max: 0.90
+
+# ============================================================================
+# NOTES FOR PROJECT MAINTAINERS
+# ============================================================================
+#
+# 1. EXTENDING BASELINE:
+#    Your project's masking_rules.yaml should extend this file.
+#    Only add project-specific overrides.
+#
+# 2. ADDING NEW PII TYPES:
+#    If you discover a new PII pattern, submit a PR to update this baseline.
+#    All projects benefit from portfolio-wide improvements.
+#
+# 3. EXCEPTIONS:
+#    If your project needs to NOT mask something in the baseline,
+#    document the reason in your project's masking_rules.yaml:
+#
+#    exceptions:
+#      - table: "users"
+#        column: "email"
+#        reason: "Test environment uses test@example.com domain"
+#        approved_by: "DevOps Governor DEC-XXX"
+#
+# 4. COMPLIANCE:
+#    Projects handling EU data must mask ALL PII types.
+#    Projects handling health data (HIPAA) have additional requirements.
+#    Consult DevOps Governor for compliance-specific rules.
+#
+# ============================================================================

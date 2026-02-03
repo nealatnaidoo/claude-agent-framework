@@ -1,0 +1,314 @@
+# DevOps Governor Manifest Schema
+# Version: 1.0
+# Purpose: Validates the DevOps macro agent manifest at ~/.claude/devops/manifest.yaml
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://claude.local/schemas/devops_manifest.schema.yaml"
+title: "DevOps Governor Manifest Schema"
+description: "Schema for the macro-level DevOps Governor manifest"
+
+type: object
+required:
+  - schema_version
+  - created
+  - last_updated
+  - canonical_pattern_version
+  - non_negotiables
+  - deployment_permissions
+  - consultation_triggers
+  - projects
+  - patterns
+  - decisions
+  - evolution
+
+properties:
+  schema_version:
+    type: string
+    description: "Schema version for this manifest"
+    pattern: "^[0-9]+\\.[0-9]+$"
+    examples: ["1.0", "1.1"]
+
+  created:
+    type: string
+    format: date-time
+    description: "ISO timestamp when manifest was created"
+
+  last_updated:
+    type: string
+    format: date-time
+    description: "ISO timestamp of last update"
+
+  # ============================================================================
+  # Pattern Versioning
+  # ============================================================================
+  canonical_pattern_version:
+    type: string
+    description: "Current version of canonical CI/CD patterns"
+    pattern: "^[0-9]+\\.[0-9]+$"
+
+  pattern_updated:
+    type: string
+    format: date-time
+    description: "When patterns were last updated"
+
+  # ============================================================================
+  # Non-Negotiables
+  # ============================================================================
+  non_negotiables:
+    type: object
+    description: "Rules that MUST be met for any project to be compliant"
+    required:
+      - quality_gates
+      - security_scanning
+      - deployment
+      - metrics
+    properties:
+      quality_gates:
+        type: array
+        description: "Required quality gate checks"
+        items:
+          type: object
+          required: [name, description, required]
+          properties:
+            name:
+              type: string
+              enum: [lint, type_check, unit_tests, security_tests]
+            description:
+              type: string
+            required:
+              type: boolean
+
+      security_scanning:
+        type: array
+        description: "Required security scanning checks"
+        items:
+          type: object
+          required: [name, description, required]
+          properties:
+            name:
+              type: string
+              enum: [sast, secret_detection, dependency_scanning]
+            description:
+              type: string
+            required:
+              type: boolean
+
+      deployment:
+        type: array
+        description: "Required deployment controls"
+        items:
+          type: object
+          required: [name, description, required]
+          properties:
+            name:
+              type: string
+              enum: [environment_separation, progressive_deployment, health_checks, rollback_documentation]
+            description:
+              type: string
+            required:
+              type: boolean
+
+      metrics:
+        type: array
+        description: "Required metrics tracking"
+        items:
+          type: object
+          required: [name, description, required]
+          properties:
+            name:
+              type: string
+              enum: [test_coverage, pipeline_success_rate]
+            description:
+              type: string
+            required:
+              type: boolean
+
+  # ============================================================================
+  # Deployment Permissions
+  # ============================================================================
+  deployment_permissions:
+    type: object
+    description: "Who can execute deployments"
+    required:
+      - allowed_agents
+      - deployment_request_required
+    properties:
+      allowed_agents:
+        type: array
+        items:
+          type: string
+          enum: [devops-governor]
+        description: "Only devops-governor is allowed"
+
+      deployment_request_required:
+        type: boolean
+        default: true
+
+      request_format:
+        type: string
+        description: "Documentation of request format"
+
+  # ============================================================================
+  # Consultation Requirements
+  # ============================================================================
+  consultation_triggers:
+    type: object
+    description: "When other agents must consult DevOps Governor"
+    properties:
+      solution_designer:
+        type: array
+        items:
+          type: string
+        description: "Triggers for Solution Designer consultation"
+
+      business_analyst:
+        type: array
+        items:
+          type: string
+        description: "Triggers for BA consultation"
+
+  consultation_workflow:
+    type: string
+    description: "Documentation of consultation workflow"
+
+  # ============================================================================
+  # Project Registry
+  # ============================================================================
+  projects:
+    type: object
+    required:
+      - registered_count
+      - registry_file
+    properties:
+      registered_count:
+        type: integer
+        minimum: 0
+
+      registry_file:
+        type: string
+        description: "Path to project registry file"
+
+  # ============================================================================
+  # Active Work
+  # ============================================================================
+  active_migrations:
+    type: array
+    description: "In-progress CI/CD migrations"
+    items:
+      type: object
+      required: [project, status]
+      properties:
+        project:
+          type: string
+        status:
+          type: string
+          enum: [pending, in_progress, complete, blocked]
+        started:
+          type: string
+          format: date-time
+        notes:
+          type: string
+
+  pending_audits:
+    type: array
+    description: "Projects pending DevOps audit"
+    items:
+      type: object
+      properties:
+        project:
+          type: string
+        requested:
+          type: string
+          format: date-time
+
+  pending_consultations:
+    type: array
+    description: "Pending consultation requests"
+    items:
+      type: object
+      properties:
+        project:
+          type: string
+        requesting_agent:
+          type: string
+        requested:
+          type: string
+          format: date-time
+
+  # ============================================================================
+  # Pattern Templates
+  # ============================================================================
+  patterns:
+    type: object
+    description: "Available CI/CD pattern templates"
+    properties:
+      gitlab_ci:
+        type: array
+        items:
+          type: object
+          required: [name, file]
+          properties:
+            name:
+              type: string
+            file:
+              type: string
+
+      github_actions:
+        type: array
+        items:
+          type: object
+          required: [name, file]
+          properties:
+            name:
+              type: string
+            file:
+              type: string
+
+      quality_gates:
+        type: array
+        items:
+          type: object
+          required: [name, file]
+          properties:
+            name:
+              type: string
+            file:
+              type: string
+
+  # ============================================================================
+  # Decision Tracking
+  # ============================================================================
+  decisions:
+    type: object
+    required:
+      - last_decision_id
+      - decisions_file
+    properties:
+      last_decision_id:
+        type: string
+        pattern: "^DEC-DEVOPS-[0-9]+$"
+
+      decisions_file:
+        type: string
+
+  evolution:
+    type: object
+    required:
+      - evolution_file
+    properties:
+      evolution_file:
+        type: string
+
+# ============================================================================
+# Alignment with Project Manifest
+# ============================================================================
+# This macro manifest differs from project manifests in:
+# 1. It manages portfolio-wide concerns, not single projects
+# 2. It has non_negotiables that projects must meet
+# 3. It has deployment_permissions (exclusive to this agent)
+# 4. It tracks patterns and templates
+#
+# Common elements shared with project manifests:
+# - schema_version, created, last_updated
+# - decisions and evolution tracking
+# - Outstanding work tracking (active_migrations vs outstanding.tasks)

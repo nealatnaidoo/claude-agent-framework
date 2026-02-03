@@ -1,0 +1,869 @@
+# Project Manifest Schema v1.2
+# Location: {project_root}/.claude/manifest.yaml
+# Purpose: Single source of truth for project state, restart checkpoint, artifact tracking,
+#          and agent routing (internal + visiting)
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "claude://schemas/project-manifest/v1.2"
+title: "Claude Project Manifest"
+description: "Tracks project state, artifact versions, agent routing, compliance requirements, and outstanding work"
+
+type: object
+required:
+  - schema_version
+  - project_slug
+  - created
+  - phase
+  - artifact_versions
+
+properties:
+  # ============================================================
+  # METADATA
+  # ============================================================
+  schema_version:
+    type: string
+    enum: ["1.0", "1.1", "1.2"]
+    description: "Manifest schema version for migration compatibility"
+
+  project_slug:
+    type: string
+    pattern: "^[a-z][a-z0-9_]*$"
+    description: "Lowercase snake_case identifier used in artifact filenames"
+    examples: ["risk_engine", "agentic_hud", "invoice_parser"]
+
+  project_name:
+    type: string
+    description: "Human-readable project name"
+
+  created:
+    type: string
+    format: date-time
+    description: "ISO 8601 timestamp when project was initialized"
+
+  last_updated:
+    type: string
+    format: date-time
+    description: "ISO 8601 timestamp of last manifest update"
+
+  # ============================================================
+  # PROJECT PHASE
+  # ============================================================
+  phase:
+    type: string
+    enum:
+      - solution_design   # Solution Designer active
+      - ba               # BA creating/updating artifacts
+      - coding           # Implementation in progress
+      - qa               # QA review active
+      - code_review      # Deep code review active
+      - remediation      # Fixing issues from reviews
+      - complete         # All tasks done, reviews passed
+      - paused           # Work suspended (record reason)
+    description: "Current workflow phase"
+
+  phase_started:
+    type: string
+    format: date-time
+    description: "When current phase began"
+
+  pause_reason:
+    type: string
+    description: "Why project is paused (required if phase=paused)"
+
+  # ============================================================
+  # MULTI-VARIANT SUPPORT
+  # ============================================================
+  variants:
+    type: array
+    description: "For projects with multiple work streams"
+    items:
+      type: object
+      properties:
+        slug:
+          type: string
+          description: "Variant identifier (e.g., 'audience_growth', 'newsletter')"
+        status:
+          type: string
+          enum: [active, paused, complete]
+
+  # ============================================================
+  # FEATURE BACKLOG (v1.2 addition)
+  # ============================================================
+  # Enables BA to work ahead, creating specs for features before coding capacity is available
+  feature_backlog:
+    type: array
+    description: "Features fully specified by BA, ready for coding when capacity available"
+    items:
+      type: object
+      required: [slug, status, spec_file, tasklist_file, priority]
+      properties:
+        slug:
+          type: string
+          pattern: "^[a-z][a-z0-9_-]*$"
+          description: "Feature identifier"
+        name:
+          type: string
+          description: "Human-readable feature name"
+        status:
+          type: string
+          enum:
+            - ready           # Fully specified, ready for worktree
+            - in_progress     # Worktree spawned, coding active
+            - blocked         # Waiting on dependency
+            - complete        # Merged to main
+          default: ready
+        priority:
+          type: integer
+          minimum: 1
+          description: "Lower number = higher priority (1 = highest)"
+        spec_file:
+          type: string
+          description: "Path to feature spec in main .claude/artifacts/"
+        tasklist_file:
+          type: string
+          description: "Path to feature tasklist in main .claude/artifacts/"
+        tasks:
+          type: array
+          items:
+            type: string
+            pattern: "^T[0-9]{3}$"
+          description: "Task IDs assigned to this feature"
+        dependencies:
+          type: array
+          items:
+            type: string
+          description: "Feature slugs that must complete first"
+        created:
+          type: string
+          format: date-time
+        devops_approved:
+          type: boolean
+          description: "Has DevOps Governor approved the stack/deployment?"
+        solution_envelope:
+          type: string
+          description: "Path to solution envelope for this feature"
+        worktree:
+          type: string
+          description: "Worktree name if spawned (links to active_worktrees)"
+
+  backlog_governance:
+    type: object
+    description: "Rules for backlog management"
+    properties:
+      auto_spawn:
+        type: boolean
+        default: false
+        description: "Automatically spawn worktrees when capacity available"
+      max_backlog:
+        type: integer
+        default: 10
+        description: "Maximum features in backlog before warning"
+      require_devops_approval:
+        type: boolean
+        default: true
+        description: "Features need DevOps stamp before entering backlog"
+
+  # ============================================================
+  # WORKTREE MANAGEMENT (v1.2 addition)
+  # ============================================================
+  # Enables parallel development using git worktrees
+  worktree:
+    type: object
+    description: "If this manifest is in a worktree, contains worktree metadata"
+    properties:
+      is_worktree:
+        type: boolean
+        description: "True if this is a worktree, false if main"
+        default: false
+      name:
+        type: string
+        description: "Worktree identifier (matches feature slug)"
+        pattern: "^[a-z][a-z0-9_-]*$"
+      branch:
+        type: string
+        description: "Git branch for this worktree"
+      main_worktree_path:
+        type: string
+        description: "Relative path to main worktree (e.g., '../myproject')"
+      created:
+        type: string
+        format: date-time
+      feature_scope:
+        type: array
+        description: "Task IDs assigned to this worktree"
+        items:
+          type: string
+          pattern: "^T[0-9]{3}$"
+
+  active_worktrees:
+    type: array
+    description: "Worktrees spawned from this main worktree (only in main manifest)"
+    items:
+      type: object
+      required: [name, path, branch, phase]
+      properties:
+        name:
+          type: string
+          description: "Worktree identifier"
+        path:
+          type: string
+          description: "Relative path to worktree"
+        branch:
+          type: string
+          description: "Git branch"
+        phase:
+          type: string
+          enum: [coding, qa, code_review, remediation, complete, merged]
+        created:
+          type: string
+          format: date-time
+        tasks:
+          type: array
+          description: "Task IDs assigned to this worktree"
+          items:
+            type: string
+        last_sync:
+          type: string
+          format: date-time
+          description: "When worktree last synced with main"
+
+  worktree_governance:
+    type: object
+    description: "Rules for worktree management (only in main manifest)"
+    properties:
+      max_parallel:
+        type: integer
+        minimum: 1
+        maximum: 10
+        default: 3
+        description: "Maximum concurrent worktrees"
+      auto_cleanup:
+        type: boolean
+        default: true
+        description: "Remove worktrees after successful merge"
+      merge_strategy:
+        type: string
+        enum: [merge, squash, rebase]
+        default: squash
+      require_qa_before_merge:
+        type: boolean
+        default: true
+
+  # ============================================================
+  # AGENT ROUTING (v1.1 addition)
+  # ============================================================
+  agent_routing:
+    type: object
+    description: "Instructions for internal and visiting agents - READ FIRST"
+    properties:
+      internal_agents:
+        type: array
+        description: "List of internal agent types"
+        items:
+          type: string
+          enum:
+            - solution_designer
+            - business_analyst
+            - coding_agent
+            - qa_reviewer
+            - code_review_agent
+            - lessons_advisor
+
+      internal_agent_protocol:
+        type: object
+        properties:
+          entry_point:
+            type: string
+            const: "manifest.yaml"
+          must_read:
+            type: array
+            items:
+              type: string
+          must_comply:
+            type: array
+            items:
+              type: string
+          prompt_location:
+            type: string
+
+      visiting_agents:
+        type: object
+        properties:
+          recognized_types:
+            type: array
+            items:
+              type: string
+              enum:
+                - security_auditor
+                - performance_analyst
+                - accessibility_auditor
+                - external_reviewer
+                - domain_expert
+                - compliance_auditor
+                - test_specialist
+
+      visiting_agent_protocol:
+        type: object
+        properties:
+          entry_point:
+            type: string
+            const: "manifest.yaml"
+          must_read:
+            type: array
+            items:
+              type: string
+          must_comply:
+            type: array
+            items:
+              type: string
+          prompt_location:
+            type: string
+          output_location:
+            type: string
+          can_do:
+            type: array
+            items:
+              type: string
+          must_not:
+            type: array
+            items:
+              type: string
+
+  # ============================================================
+  # COMPLIANCE REQUIREMENTS (v1.1 addition)
+  # ============================================================
+  compliance_requirements:
+    type: object
+    description: "Non-negotiable standards for all agents"
+    properties:
+      prime_directive:
+        type: object
+        properties:
+          statement:
+            type: string
+          applies_to:
+            type: string
+            enum: [all_agents, internal_only]
+          violations_are:
+            type: string
+            enum: [blocking, warning]
+
+      hexagonal_architecture:
+        type: object
+        properties:
+          core_rules:
+            type: array
+            items:
+              type: string
+          visiting_agent_note:
+            type: string
+
+      determinism:
+        type: object
+        properties:
+          forbidden_in_core:
+            type: array
+            items:
+              type: string
+          required_pattern:
+            type: string
+          visiting_agent_note:
+            type: string
+
+      testing_requirements:
+        type: object
+        properties:
+          tdd_mandate:
+            type: string
+          coverage_expectation:
+            type: string
+          evidence_artifacts:
+            type: array
+            items:
+              type: string
+          visiting_agent_note:
+            type: string
+
+      quality_gates:
+        type: object
+        properties:
+          must_pass:
+            type: array
+            items:
+              type: string
+          evidence_artifact:
+            type: string
+          visiting_agent_note:
+            type: string
+
+  # ============================================================
+  # PRIORITY SCALES (v1.1 addition)
+  # ============================================================
+  priority_scales:
+    type: object
+    description: "Domain-specific priority classification"
+    properties:
+      governance:
+        $ref: "#/$defs/priority_scale"
+      security:
+        $ref: "#/$defs/priority_scale"
+      performance:
+        $ref: "#/$defs/priority_scale"
+      accessibility:
+        $ref: "#/$defs/priority_scale"
+      domain:
+        $ref: "#/$defs/priority_scale"
+
+  # ============================================================
+  # ARTIFACT VERSIONS (sequenced, versioned)
+  # ============================================================
+  artifact_versions:
+    type: object
+    description: "Current version of each artifact type"
+    properties:
+      solution_envelope:
+        $ref: "#/$defs/artifact_version"
+      spec:
+        $ref: "#/$defs/artifact_version"
+      tasklist:
+        $ref: "#/$defs/artifact_version"
+      rules:
+        $ref: "#/$defs/artifact_version"
+      quality_gates:
+        $ref: "#/$defs/artifact_version"
+      lessons_applied:
+        $ref: "#/$defs/artifact_version"
+      coding_prompt:
+        $ref: "#/$defs/artifact_version"
+      evolution:
+        $ref: "#/$defs/artifact_version"
+      decisions:
+        $ref: "#/$defs/artifact_version"
+    additionalProperties:
+      $ref: "#/$defs/artifact_version"
+      description: "Support for variant-specific artifacts (e.g., spec_newsletter)"
+
+  # ============================================================
+  # OUTSTANDING WORK
+  # ============================================================
+  outstanding:
+    type: object
+    properties:
+      tasks:
+        type: array
+        description: "Tasks from tasklist not yet completed"
+        items:
+          type: object
+          required: [id, status]
+          properties:
+            id:
+              type: string
+              pattern: "^T[0-9]{3}$"
+              description: "Task ID (e.g., T001, T002)"
+            status:
+              type: string
+              enum: [pending, in_progress, blocked, completed]
+            variant:
+              type: string
+              description: "Which variant this task belongs to"
+            blocked_by:
+              type: array
+              items:
+                type: string
+              description: "IDs of blocking tasks or remediation items"
+            assignee:
+              type: string
+              description: "Agent or session handling this task"
+            completed_date:
+              type: string
+              format: date
+
+      remediation:
+        type: array
+        description: "Items from reviews requiring fixes"
+        items:
+          type: object
+          required: [id, source, priority, status]
+          properties:
+            id:
+              type: string
+              pattern: "^(BUG|IMPROVE)-[0-9]{3}$"
+              description: "Remediation ID (e.g., BUG-001, IMPROVE-002)"
+            source:
+              type: string
+              enum:
+                # Internal agents
+                - qa_review
+                - code_review
+                - project_review
+                # Visiting agents
+                - security_review
+                - perf_review
+                - a11y_review
+                - external_review
+                - domain_review
+                - compliance_review
+                - test_review
+                # CI/CD and verification
+                - gitlab_ci_review
+                - github_actions_review
+                - test_isolation_review
+                - verification_report
+            priority:
+              type: string
+              enum: [critical, high, medium, low]
+            status:
+              type: string
+              enum: [pending, in_progress, resolved, deferred, wont_fix]
+            summary:
+              type: string
+              description: "One-line description"
+            file:
+              type: string
+              description: "Primary file affected"
+            created:
+              type: string
+              format: date
+            resolved:
+              type: string
+              format: date
+            resolution:
+              type: string
+              description: "How it was resolved"
+
+  # ============================================================
+  # REVIEW HISTORY
+  # ============================================================
+  reviews:
+    type: object
+    properties:
+      last_qa_review:
+        $ref: "#/$defs/review_record"
+
+      last_code_review:
+        type: object
+        allOf:
+          - $ref: "#/$defs/review_record"
+        properties:
+          json_file:
+            type: string
+            description: "Path to machine-readable JSON summary"
+          specs_reviewed:
+            type: array
+            items:
+              type: string
+          spec_fidelity_score:
+            type: integer
+          task_completion_score:
+            type: integer
+
+      last_project_review:
+        $ref: "#/$defs/review_record"
+
+      # v1.1 addition: External reviews
+      external:
+        type: array
+        description: "Reviews from visiting agents"
+        items:
+          type: object
+          properties:
+            type:
+              type: string
+              enum:
+                - security_review
+                - perf_review
+                - a11y_review
+                - external_review
+                - domain_review
+                - compliance_review
+                - test_review
+                # CI/CD and verification
+                - gitlab_ci_review
+                - github_actions_review
+                - test_isolation_review
+                - verification_report
+            date:
+              type: string
+              format: date-time
+            result:
+              type: string
+              enum: [pass, pass_with_notes, needs_work, blocked]
+            report_file:
+              type: string
+            findings_count:
+              type: integer
+            critical_count:
+              type: integer
+            high_count:
+              type: integer
+            agent_type:
+              type: string
+              const: "visiting"
+
+  # ============================================================
+  # EVIDENCE ARTIFACTS
+  # ============================================================
+  evidence:
+    type: object
+    description: "Latest quality gate evidence files"
+    properties:
+      quality_gates_run:
+        type: string
+        description: "Path to quality_gates_run.json"
+      test_report:
+        type: string
+        description: "Path to test_report.json"
+      test_failures:
+        type: string
+        description: "Path to test_failures.json"
+      lint_report:
+        type: string
+        description: "Path to lint_report.json"
+      coverage:
+        type: string
+        description: "Path to coverage.json (optional)"
+
+  # ============================================================
+  # SESSION TRACKING
+  # ============================================================
+  sessions:
+    type: array
+    description: "Session history for audit trail"
+    items:
+      type: object
+      properties:
+        session_id:
+          type: string
+        started:
+          type: string
+          format: date-time
+        ended:
+          type: string
+          format: date-time
+        agent:
+          type: string
+          description: "Which agent was active"
+        agent_type:
+          type: string
+          enum: [internal, visiting]
+        tasks_completed:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+
+# ============================================================
+# DEFINITIONS
+# ============================================================
+$defs:
+  artifact_version:
+    type: object
+    properties:
+      version:
+        type: integer
+        minimum: 1
+        description: "Version number (v1, v2, etc.)"
+      file:
+        type: string
+        description: "Current filename with full path"
+      created:
+        type: string
+        format: date-time
+      updated:
+        type: string
+        format: date-time
+      hash:
+        type: string
+        description: "SHA256 hash for change detection"
+
+  review_record:
+    type: object
+    properties:
+      date:
+        type: string
+        format: date-time
+      result:
+        type: string
+        enum: [pass, pass_with_notes, needs_work, blocked]
+      report_file:
+        type: string
+        description: "Path to review report"
+      task_reviewed:
+        type: string
+        description: "Task ID that was reviewed (optional)"
+
+  priority_scale:
+    type: object
+    properties:
+      critical:
+        type: array
+        items:
+          type: string
+      high:
+        type: array
+        items:
+          type: string
+      medium:
+        type: array
+        items:
+          type: string
+      low:
+        type: array
+        items:
+          type: string
+
+# ============================================================
+# EXAMPLE
+# ============================================================
+examples:
+  - schema_version: "1.1"
+    project_slug: "research_lab"
+    project_name: "Research Lab"
+    created: "2026-01-15T10:00:00Z"
+    last_updated: "2026-01-31T14:30:00Z"
+    phase: "coding"
+    phase_started: "2026-01-20T09:00:00Z"
+
+    agent_routing:
+      internal_agents:
+        - solution_designer
+        - business_analyst
+        - coding_agent
+        - qa_reviewer
+        - code_review_agent
+        - lessons_advisor
+      internal_agent_protocol:
+        entry_point: "manifest.yaml"
+        must_read:
+          - "agent_routing"
+          - "artifact_versions"
+          - "outstanding.remediation"
+          - "outstanding.tasks"
+        must_comply:
+          - "prime_directive"
+          - "hexagonal_architecture"
+          - "tdd_requirements"
+          - "quality_gates"
+        prompt_location: "~/.claude/agents/{agent_name}.md"
+      visiting_agents:
+        recognized_types:
+          - security_auditor
+          - performance_analyst
+          - accessibility_auditor
+          - external_reviewer
+          - domain_expert
+      visiting_agent_protocol:
+        entry_point: "manifest.yaml"
+        must_read:
+          - "agent_routing.visiting_agent_protocol"
+          - "compliance_requirements"
+          - "priority_scales"
+          - "outstanding.remediation"
+        must_comply:
+          - "id_sequencing_protocol"
+          - "output_format_requirements"
+        prompt_location: "~/.claude/agents/visiting-agent-template.md"
+        output_location: ".claude/remediation/{type}_review_YYYY-MM-DD.md"
+        can_do:
+          - "read all project files"
+          - "run tests and quality gates"
+          - "run analysis tools"
+          - "create review reports"
+        must_not:
+          - "modify source code"
+          - "mark tasks complete"
+          - "change workflow phase"
+
+    compliance_requirements:
+      prime_directive:
+        statement: "Every change must be task-scoped, atomic, deterministic, hexagonal, and evidenced."
+        applies_to: "all_agents"
+        violations_are: "blocking"
+      hexagonal_architecture:
+        core_rules:
+          - "Core depends only on ports"
+          - "Adapters implement ports"
+          - "No framework imports in core"
+        visiting_agent_note: "Flag violations, do not fix"
+      determinism:
+        forbidden_in_core:
+          - "datetime.now()"
+          - "uuid4()"
+          - "random.*"
+        required_pattern: "Inject via TimePort, UUIDPort"
+        visiting_agent_note: "Flag as HIGH priority"
+      quality_gates:
+        must_pass:
+          - "lint"
+          - "type check"
+          - "tests"
+        evidence_artifact: ".claude/evidence/quality_gates_run.json"
+        visiting_agent_note: "Missing/failing is CRITICAL"
+
+    priority_scales:
+      governance:
+        critical:
+          - "Quality gates not running"
+          - "No tests for changes"
+          - "Hexagonal violation"
+        high:
+          - "Determinism violation"
+          - "TDD violation"
+        medium:
+          - "Missing type hints"
+        low:
+          - "Style inconsistency"
+      security:
+        critical:
+          - "RCE"
+          - "SQL Injection"
+          - "Auth bypass"
+        high:
+          - "XSS"
+          - "CSRF"
+        medium:
+          - "Info disclosure"
+        low:
+          - "Missing headers"
+
+    artifact_versions:
+      spec:
+        version: 1
+        file: ".claude/artifacts/002_spec_v1.md"
+        created: "2026-01-16T09:00:00Z"
+      tasklist:
+        version: 1
+        file: ".claude/artifacts/003_tasklist_v1.md"
+        created: "2026-01-16T10:00:00Z"
+
+    outstanding:
+      tasks:
+        - id: "T003"
+          status: "in_progress"
+      remediation:
+        - id: "BUG-001"
+          source: "qa_review"
+          priority: "high"
+          status: "pending"
+          summary: "Test failures"
+          created: "2026-01-30"
+
+    reviews:
+      last_qa_review:
+        date: "2026-01-30T14:00:00Z"
+        result: "needs_work"
+        report_file: ".claude/remediation/qa_2026-01-30.md"
+      external:
+        - type: "security_review"
+          date: "2026-01-31T10:00:00Z"
+          result: "needs_work"
+          report_file: ".claude/remediation/security_review_2026-01-31.md"
+          findings_count: 3
+          critical_count: 1
+          agent_type: "visiting"
+
+    evidence:
+      quality_gates_run: ".claude/evidence/quality_gates_run.json"
+      test_report: ".claude/evidence/test_report.json"
+      test_failures: ".claude/evidence/test_failures.json"

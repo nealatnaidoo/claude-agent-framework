@@ -1,0 +1,410 @@
+# Agent Prompt Schema v1.0
+# Location: ~/.claude/schemas/agent_prompt.schema.yaml
+# Purpose: Validates agent prompt files conform to the agent operating model
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "claude://schemas/agent-prompt/v1.0"
+title: "Claude Agent Prompt Schema"
+description: "Validates structure and content of agent prompt files"
+
+# ============================================================
+# VALIDATION RULES
+# ============================================================
+# This schema defines what the validation script checks.
+# Agent prompts are markdown files, so this schema is used
+# as a reference specification, not direct YAML validation.
+
+version: "1.0"
+last_updated: "2026-01-31"
+
+# ============================================================
+# REQUIRED SECTIONS
+# ============================================================
+
+required_sections:
+  frontmatter:
+    description: "YAML frontmatter at top of file"
+    required: true
+    fields:
+      name:
+        required: true
+        pattern: "^[a-z][a-z0-9-]*$"
+        description: "Lowercase hyphenated agent name"
+      description:
+        required: true
+        max_length: 200
+        description: "One-line description for Task tool"
+      tools:
+        required: true
+        description: "Comma-separated list of allowed tools"
+        valid_tools:
+          - Read
+          - Write
+          - Edit
+          - Glob
+          - Grep
+          - Bash
+          - WebFetch
+          - WebSearch
+          - Task
+          - NotebookEdit
+      model:
+        required: true
+        enum: ["sonnet", "opus", "haiku"]
+        description: "Model to use for this agent"
+
+  identity:
+    description: "Identity declaration section"
+    required: true
+    must_appear_after: "frontmatter"
+    must_appear_before: "main_heading"
+    valid_types:
+      - internal
+      - visiting
+    must_include:
+      - "permission_table"
+      - "not_a_visiting_agent" # for internal
+      # OR
+      - "not_an_internal_agent" # for visiting
+
+  entry_protocol:
+    description: "Startup/entry protocol section"
+    required: true
+    must_reference:
+      - "manifest.yaml"
+    must_include:
+      - "read manifest first"
+      - "artifact paths from manifest"
+    forbidden_patterns:
+      - "{project}_spec.md"
+      - "{project}_tasklist.md"
+      - "artifacts/test_report.json"
+      - "artifacts/quality_gates_run.json"
+
+  output_locations:
+    description: "Where agent writes its outputs"
+    required: true
+    valid_paths:
+      artifacts: ".claude/artifacts/"
+      evidence: ".claude/evidence/"
+      remediation: ".claude/remediation/"
+      evolution: ".claude/evolution/"
+    forbidden_paths:
+      - "artifacts/" # without .claude prefix
+      - "{project_root}/artifacts/"
+      - "evidence/" # without .claude prefix
+
+# ============================================================
+# CONDITIONAL REQUIREMENTS
+# ============================================================
+
+conditional_requirements:
+  if_creates_bugs_or_improvements:
+    required_sections:
+      - "id_sequencing"
+    must_include:
+      - "search for existing IDs"
+      - "increment from highest"
+      - "project-global"
+      - "never reused"
+
+  if_internal_agent:
+    identity_must_include:
+      - "INTERNAL agent"
+      - "core development workflow" # OR "MACRO" for devops-governor
+    permissions:
+      # EXCLUSIVE PERMISSIONS - only one agent per capability
+      exclusive_permissions:
+        source_code:
+          allowed_only: "coding_agent"
+          all_others_must_say: "NO - Coding Agent only"
+        deployments:
+          allowed_only: "devops_governor"
+          all_others_must_say: "NO - DevOps Governor only"
+      # Standard permissions for most internal agents
+      standard_deny_for_non_coding:
+        - "Create/modify source code"
+      standard_deny_for_non_devops:
+        - "Execute deployments"
+
+  if_visiting_agent:
+    identity_must_include:
+      - "VISITING agent"
+      - "not an internal agent"
+      - "ANALYZE and REPORT"
+    permissions_must_deny:
+      - "Create/modify source code"
+      - "Control workflow phase"
+      - "Mark tasks complete"
+
+# ============================================================
+# FORBIDDEN PATTERNS
+# ============================================================
+
+forbidden_patterns:
+  hardcoded_paths:
+    patterns:
+      - regex: "{project}_spec\\.md"
+        reason: "Use manifest.artifact_versions.spec.file"
+      - regex: "{project}_tasklist\\.md"
+        reason: "Use manifest.artifact_versions.tasklist.file"
+      - regex: "artifacts/test_report\\.json"
+        reason: "Use .claude/evidence/test_report.json"
+      - regex: "artifacts/quality_gates"
+        reason: "Use .claude/evidence/quality_gates_run.json"
+      - regex: "{project_slug}_"
+        reason: "All paths should come from manifest"
+
+  skip_manifest:
+    patterns:
+      - regex: "read spec first"
+        reason: "Must read manifest first, then spec path from manifest"
+      - regex: "read tasklist first"
+        reason: "Must read manifest first"
+    unless_section: "entry_protocol" # OK if entry protocol exists and reads manifest
+
+  wrong_locations:
+    patterns:
+      - regex: "^artifacts/"
+        context: "output paths"
+        reason: "Should be .claude/artifacts/"
+      - regex: "^evidence/"
+        context: "output paths"
+        reason: "Should be .claude/evidence/"
+      - regex: "^remediation/"
+        context: "output paths"
+        reason: "Should be .claude/remediation/"
+
+# ============================================================
+# REQUIRED CONTENT BY AGENT TYPE
+# ============================================================
+
+agent_type_requirements:
+  solution_designer:
+    must_output:
+      - ".claude/artifacts/001_solution_envelope_v{N}.md"
+    must_update:
+      - "manifest.artifact_versions.solution_envelope"
+      - "manifest.phase"
+
+  business_analyst:
+    must_output:
+      - ".claude/artifacts/002_spec_v{N}.md"
+      - ".claude/artifacts/003_tasklist_v{N}.md"
+      - ".claude/artifacts/004_rules_v{N}.yaml"
+      - ".claude/artifacts/005_quality_gates_v{N}.md"
+    must_update:
+      - "manifest.artifact_versions.*"
+      - "manifest.outstanding.tasks"
+      - "manifest.phase"
+
+  coding_agent:
+    scope: "MICRO (project)"
+    exclusive_permission: "source code modification"
+    must_output:
+      - "source code"
+      - ".claude/evidence/*.json"
+    must_update:
+      - "manifest.outstanding.tasks"
+      - "manifest.last_updated"
+    must_reference:
+      - "TDD"
+      - "hexagonal"
+      - "determinism"
+    input_constraint:
+      accepts_from: "BA artifacts only (spec, tasklist)"
+      rejects: "direct user coding requests"
+      redirect_message: "Please work with the BA agent to create a specification first"
+
+  devops_governor:
+    scope: "MACRO (portfolio)"
+    exclusive_permission: "deployment execution"
+    must_output:
+      - "~/.claude/devops/manifest.yaml updates"
+      - "~/.claude/devops/decisions.md entries"
+    must_update:
+      - "DevOps manifest"
+      - "project registry"
+    must_reference:
+      - "non_negotiables"
+      - "consultation workflow"
+    entry_point: "~/.claude/devops/manifest.yaml"
+    cannot_do:
+      - "write application source code (src/, lib/, app/)"
+    can_do:
+      - "write CI/CD configs (.gitlab-ci.yml, fly.toml, Dockerfile)"
+
+  qa_reviewer:
+    must_output:
+      - ".claude/remediation/qa_YYYY-MM-DD.md"
+    must_update:
+      - "manifest.reviews.last_qa_review"
+      - "manifest.outstanding.remediation"
+    must_include:
+      - "ID sequencing protocol"
+      - "Prime Directive compliance"
+
+  code_review_agent:
+    must_output:
+      - ".claude/remediation/code_review_YYYY-MM-DD.md"
+    must_update:
+      - "manifest.reviews.last_code_review"
+      - "manifest.outstanding.remediation"
+    must_include:
+      - "ID sequencing protocol"
+      - "Prime Directive compliance"
+      - "Task completion verification"
+
+  lessons_advisor:
+    must_output:
+      - ".claude/artifacts/006_lessons_applied_v{N}.md"
+    must_update:
+      - "manifest.artifact_versions.lessons_applied"
+    must_reference:
+      - "devlessons.md"
+
+  visiting_agent:
+    must_output:
+      - ".claude/remediation/{type}_review_YYYY-MM-DD.md"
+    must_update:
+      - "manifest.reviews.external"
+      - "manifest.outstanding.remediation"
+    must_not:
+      - "modify source code"
+      - "change workflow phase"
+      - "mark tasks complete"
+
+# ============================================================
+# VALIDATION SCRIPT INTERFACE
+# ============================================================
+
+validation_script:
+  location: "~/.claude/scripts/validate_agents.py"
+  usage: "python validate_agents.py [agent_file.md]"
+  exit_codes:
+    0: "All validations passed"
+    1: "Validation errors found"
+    2: "File not found or unreadable"
+
+  checks:
+    - name: "frontmatter_valid"
+      description: "YAML frontmatter exists and has required fields"
+      severity: "error"
+
+    - name: "identity_section_exists"
+      description: "Identity section present after frontmatter"
+      severity: "error"
+
+    - name: "identity_type_declared"
+      description: "Agent declares internal or visiting"
+      severity: "error"
+
+    - name: "entry_protocol_exists"
+      description: "Startup protocol section present"
+      severity: "error"
+
+    - name: "manifest_read_first"
+      description: "Entry protocol reads manifest first"
+      severity: "error"
+
+    - name: "no_hardcoded_paths"
+      description: "No forbidden hardcoded path patterns"
+      severity: "error"
+
+    - name: "correct_output_locations"
+      description: "Output paths use .claude/ prefix"
+      severity: "error"
+
+    - name: "id_sequencing_documented"
+      description: "If creates BUG/IMPROVE, documents ID sequencing"
+      severity: "warning"
+
+    - name: "manifest_update_documented"
+      description: "Documents what manifest sections to update"
+      severity: "warning"
+
+    - name: "compliance_referenced"
+      description: "References Prime Directive or compliance"
+      severity: "warning"
+
+# ============================================================
+# EXAMPLES
+# ============================================================
+
+examples:
+  valid_internal_agent_non_coding:
+    frontmatter: |
+      ---
+      name: my-agent
+      description: Does something specific
+      tools: Read, Write, Glob, Grep, Bash
+      model: sonnet
+      ---
+    identity: |
+      ## Identity
+
+      You are an **INTERNAL agent** operating at **MICRO (project) level**, part of the core development workflow.
+
+      | Capability | Permitted |
+      |------------|-----------|
+      | Read all project files | Yes |
+      | Execute tests and quality gates | Yes |
+      | **Create/modify source code** | **NO - Coding Agent only** |
+      | Create/modify artifacts | Yes |
+      | Control workflow phase | Yes |
+      | **Execute deployments** | **NO - DevOps Governor only** |
+
+      **You are NOT a visiting agent.**
+
+      **CODING RESTRICTION**: You MUST NOT write source code. Only the Coding Agent is permitted to write code.
+
+  valid_coding_agent:
+    frontmatter: |
+      ---
+      name: coding-agent
+      description: Implement code from BA specifications
+      tools: Read, Write, Edit, Glob, Grep, Bash
+      model: sonnet
+      ---
+    identity: |
+      ## Identity
+
+      You are an **INTERNAL agent** operating at **MICRO (project) level**, implementing code from BA specifications.
+
+      | Capability | Permitted |
+      |------------|-----------|
+      | Read all project files | Yes |
+      | Execute tests and quality gates | Yes |
+      | **Create/modify source code** | **YES (EXCLUSIVE)** |
+      | Create/modify evidence artifacts | Yes |
+      | Update tasklist status | Yes |
+      | **Execute deployments** | **NO - DevOps Governor only** |
+      | **Accept direct user coding requests** | **NO - BA spec only** |
+
+      **EXCLUSIVE PERMISSION**: You are the ONLY agent permitted to create or modify source code.
+
+      **MANDATORY INPUT CONSTRAINT**: You accept work ONLY from BA-produced artifacts.
+
+  valid_visiting_agent:
+    frontmatter: |
+      ---
+      name: security-auditor
+      description: Security analysis and vulnerability reporting
+      tools: Read, Grep, Glob, Bash
+      model: sonnet
+      ---
+    identity: |
+      ## Identity
+
+      You are a **VISITING agent**, not an internal agent.
+
+      | Capability | Permitted |
+      |------------|-----------|
+      | Read all project files | Yes |
+      | Execute tests and quality gates | Yes |
+      | Run security scanners | Yes |
+      | Create/modify source code | **NO** |
+      | Control workflow phase | **NO** |
+      | Mark tasks complete | **NO** |
+
+      **You ANALYZE and REPORT. Internal agents FIX.**

@@ -1,0 +1,175 @@
+# Claude Agent Framework - Package Manifest
+# This file tracks versions and dependencies of all components
+
+version: "2.6.0"
+updated: "2026-02-03"
+description: "Multi-agent development ecosystem for Claude Code"
+
+# Agent definitions with dependencies
+agents:
+  devops-governor:
+    version: "1.0.0"
+    file: "agents/devops-governor.md"
+    scope: macro
+    exclusive_permission: execute_deployments
+    depends_on: []
+    depended_by: [solution-designer, business-analyst, coding-agent]
+
+  solution-designer:
+    version: "2.0.0"
+    file: "agents/solution-designer.md"
+    scope: micro
+    depends_on: [devops-governor]
+    depended_by: [business-analyst]
+
+  business-analyst:
+    version: "4.0.0"
+    file: "agents/business-analyst.md"
+    scope: micro
+    depends_on: [solution-designer, devops-governor]
+    depended_by: [coding-agent]
+
+  coding-agent:
+    version: "4.0.0"
+    file: "agents/coding-agent.md"
+    scope: micro
+    exclusive_permission: write_source_code
+    depends_on: [business-analyst]
+    depended_by: [qa-reviewer, code-review-agent]
+
+  qa-reviewer:
+    version: "2.0.0"
+    file: "agents/qa-reviewer.md"
+    scope: micro
+    depends_on: [coding-agent]
+    depended_by: [code-review-agent]
+
+  code-review-agent:
+    version: "1.0.0"
+    file: "agents/code-review-agent.md"
+    scope: micro
+    depends_on: [qa-reviewer, coding-agent]
+    depended_by: [lessons-advisor]
+
+  lessons-advisor:
+    version: "2.0.0"
+    file: "agents/lessons-advisor.md"
+    scope: micro
+    depends_on: []
+    depended_by: []
+
+  visiting-agent-template:
+    version: "1.0.0"
+    file: "agents/visiting-agent-template.md"
+    scope: template
+    depends_on: []
+    depended_by: []
+
+# System prompts (methodology documentation)
+prompts:
+  ba_system:
+    version: "4.0.0"
+    file: "prompts/system/ba_system_prompt_v4_0_8k.md"
+
+  coding_system:
+    version: "4.0.0"
+    file: "prompts/system/coding_system_prompt_v4_0_hex_tdd_8k.md"
+
+  solution_designer_system:
+    version: "2.0.0"
+    file: "prompts/system/solution_designer_system_prompt_v2_0.md"
+
+  qa_system:
+    version: "2.0.0"
+    file: "prompts/system/qa_system_prompt_v2_0.md"
+
+  code_review_system:
+    version: "1.0.0"
+    file: "prompts/system/code_review_system_prompt_v1_0.md"
+
+  lessons_system:
+    version: "2.0.0"
+    file: "prompts/system/lessons_system_prompt_v2_0.md"
+
+  persona_evaluator_system:
+    version: "2.0.0"
+    file: "prompts/system/persona_evaluator_system_prompt_v2_0.md"
+
+# Playbooks (practical guides)
+playbooks:
+  ba_playbook:
+    version: "4.0.0"
+    file: "prompts/playbooks/ba_playbook_v4_0.md"
+
+  coding_playbook:
+    version: "4.0.0"
+    file: "prompts/playbooks/coding_playbook_v4_0.md"
+
+  solution_designer_playbook:
+    version: "2.0.0"
+    file: "prompts/playbooks/solution_designer_playbook_v2_0.md"
+
+  qa_playbook:
+    version: "2.0.0"
+    file: "prompts/playbooks/qa_playbook_v2_0.md"
+
+  code_review_playbook:
+    version: "1.0.0"
+    file: "prompts/playbooks/code_review_playbook_v1_0.md"
+
+  lessons_playbook:
+    version: "2.0.0"
+    file: "prompts/playbooks/lessons_playbook_v2_0.md"
+
+  persona_evaluator_playbook:
+    version: "2.0.0"
+    file: "prompts/playbooks/persona_evaluator_playbook_v2_0.md"
+
+# Validation schemas
+schemas:
+  agent_prompt:
+    version: "1.0.0"
+    file: "schemas/agent_prompt.schema.yaml"
+
+  project_manifest:
+    version: "1.2.0"
+    file: "schemas/project_manifest.schema.yaml"
+
+  devops_manifest:
+    version: "1.0.0"
+    file: "schemas/devops_manifest.schema.yaml"
+
+# Persona lens packs
+lenses:
+  creator_publishing:
+    version: "1.0.0"
+    file: "lenses/creator_publishing.yaml"
+
+  fitness_training:
+    version: "1.0.0"
+    file: "lenses/fitness_training.yaml"
+
+  quant_finance:
+    version: "1.0.0"
+    file: "lenses/quant_finance.yaml"
+
+  saas_b2b:
+    version: "1.0.0"
+    file: "lenses/saas_b2b.yaml"
+
+# Knowledge base
+knowledge:
+  devlessons:
+    version: "117"  # Lesson count as version
+    file: "knowledge/devlessons.md"
+    last_updated: "2026-02-01"
+
+# Compatibility requirements
+compatibility:
+  claude_code_min: "1.0.0"
+  python_min: "3.10"
+
+# Exclusive permissions map (for governance validation)
+exclusive_permissions:
+  write_source_code: coding-agent
+  execute_deployments: devops-governor

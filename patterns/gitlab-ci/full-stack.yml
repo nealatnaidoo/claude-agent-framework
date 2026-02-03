@@ -1,0 +1,322 @@
+# Canonical GitLab CI/CD Template: Full-Stack (Python + Next.js)
+# Version: 1.1
+# Last Updated: 2026-01-31
+#
+# This is the CANONICAL template. Projects should derive from this.
+# Changes to this template require DEC-DEVOPS-XXX decision record.
+#
+# PRE-DEPLOYMENT NOTE (DEC-DEVOPS-006):
+# Before pushing code that modifies Dockerfile or dependencies, developers
+# should run local Docker validation:
+#   ~/.claude/scripts/local_docker_validate.sh --port 8080 --health /health
+#
+# For CI-built images (this pipeline), local validation is optional since
+# the build stage validates the Dockerfile. The skip_reason "ci_built" applies.
+
+stages:
+  - quality
+  - test
+  - security
+  - build
+  - deploy-dev
+  - smoke-test-dev
+  - deploy-prod
+  - smoke-test-prod
+
+# ============================================================================
+# Global Configuration
+# ============================================================================
+
+variables:
+  # Python
+  PYTHON_VERSION: "3.12"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+  # Node.js
+  NODE_VERSION: "20"
+  NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.cache/npm"
+
+  # Docker
+  DOCKER_HOST: tcp://docker:2376
+  DOCKER_TLS_CERTDIR: "/certs"
+
+  # Deployment (override per project)
+  # FLY_API_TOKEN: $FLY_API_TOKEN
+  # DEV_BACKEND_URL: "https://your-app-dev.fly.dev"
+  # PROD_BACKEND_URL: "https://your-app.fly.dev"
+
+# Cache templates
+.python-cache: &python-cache
+  cache:
+    key: python-${CI_COMMIT_REF_SLUG}
+    paths:
+      - .cache/pip
+      - .venv
+
+.node-cache: &node-cache
+  cache:
+    key: node-${CI_COMMIT_REF_SLUG}
+    paths:
+      - .cache/npm
+      - frontend/node_modules
+
+default:
+  image: python:${PYTHON_VERSION}-slim
+
+# ============================================================================
+# Stage 1: Quality Gates (NON-NEGOTIABLE)
+# ============================================================================
+
+lint:
+  stage: quality
+  <<: *python-cache
+  before_script:
+    - pip install --upgrade pip
+    - pip install ".[dev]"
+  script:
+    - ruff check . --output-format=gitlab > gl-code-quality-report.json || true
+    - ruff check .
+  artifacts:
+    reports:
+      codequality: gl-code-quality-report.json
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+type-check:
+  stage: quality
+  <<: *python-cache
+  before_script:
+    - pip install --upgrade pip
+    - pip install ".[dev]"
+  script:
+    - mypy src --ignore-missing-imports
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+frontend-lint:
+  stage: quality
+  image: node:${NODE_VERSION}-alpine
+  <<: *node-cache
+  before_script:
+    - cd frontend && npm ci
+  script:
+    - npm run lint
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+frontend-build:
+  stage: quality
+  image: node:${NODE_VERSION}-alpine
+  <<: *node-cache
+  before_script:
+    - cd frontend && npm ci
+  script:
+    - npm run build
+  artifacts:
+    paths:
+      - frontend/.next
+    expire_in: 1 hour
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ============================================================================
+# Stage 2: Testing (NON-NEGOTIABLE)
+# ============================================================================
+
+unit-tests:
+  stage: test
+  <<: *python-cache
+  before_script:
+    - pip install --upgrade pip
+    - pip install ".[dev]"
+  script:
+    - mkdir -p artifacts
+    - pytest tests/ --junitxml=junit-report.xml --cov=src --cov-report=xml:coverage.xml -q
+  artifacts:
+    when: always
+    reports:
+      junit: junit-report.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+  coverage: '/TOTAL.*\s+(\d+%)/'
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+security-tests:
+  stage: test
+  <<: *python-cache
+  before_script:
+    - pip install --upgrade pip
+    - pip install ".[dev]"
+  script:
+    - pytest tests/ -k "sanitiz or xss or redirect or upload or forbidden" -v
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ============================================================================
+# Stage 3: Security Scanning (NON-NEGOTIABLE)
+# ============================================================================
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+
+sast:
+  stage: security
+  variables:
+    SAST_EXCLUDED_PATHS: "tests/, .venv/, node_modules/, .next/"
+
+# ============================================================================
+# Stage 4: Build
+# ============================================================================
+
+build-backend:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA -t $CI_REGISTRY_IMAGE/backend:latest .
+    - docker push $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/backend:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+build-frontend:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - cd frontend
+    - docker build -t $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA -t $CI_REGISTRY_IMAGE/frontend:latest .
+    - docker push $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/frontend:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ============================================================================
+# Stage 5-6: Deploy Dev (AUTOMATIC)
+# ============================================================================
+
+deploy-backend-dev:
+  stage: deploy-dev
+  image: alpine:latest
+  environment:
+    name: development
+    url: $DEV_BACKEND_URL
+  before_script:
+    - apk add --no-cache curl
+    - curl -L https://fly.io/install.sh | sh
+    - export PATH="$HOME/.fly/bin:$PATH"
+  script:
+    - flyctl deploy --config fly.dev.toml --remote-only
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+deploy-frontend-dev:
+  stage: deploy-dev
+  image: alpine:latest
+  environment:
+    name: development
+    url: $DEV_FRONTEND_URL
+  before_script:
+    - apk add --no-cache curl
+    - curl -L https://fly.io/install.sh | sh
+    - export PATH="$HOME/.fly/bin:$PATH"
+  script:
+    - cd frontend && flyctl deploy --config fly.dev.toml --remote-only
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+smoke-test-dev:
+  stage: smoke-test-dev
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - sleep 30
+    - |
+      for i in 1 2 3 4 5; do
+        curl -sf $DEV_BACKEND_URL/health && break || sleep 10
+      done
+    - |
+      for i in 1 2 3 4 5; do
+        curl -sf $DEV_FRONTEND_URL/ && break || sleep 10
+      done
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ============================================================================
+# Stage 7-8: Deploy Prod (MANUAL)
+# ============================================================================
+
+deploy-backend-prod:
+  stage: deploy-prod
+  image: alpine:latest
+  environment:
+    name: production
+    url: $PROD_BACKEND_URL
+  before_script:
+    - apk add --no-cache curl
+    - curl -L https://fly.io/install.sh | sh
+    - export PATH="$HOME/.fly/bin:$PATH"
+  script:
+    - flyctl deploy --remote-only
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+  needs:
+    - smoke-test-dev
+
+deploy-frontend-prod:
+  stage: deploy-prod
+  image: alpine:latest
+  environment:
+    name: production
+    url: $PROD_FRONTEND_URL
+  before_script:
+    - apk add --no-cache curl
+    - curl -L https://fly.io/install.sh | sh
+    - export PATH="$HOME/.fly/bin:$PATH"
+  script:
+    - cd frontend && flyctl deploy --remote-only
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+  needs:
+    - smoke-test-dev
+
+smoke-test-prod:
+  stage: smoke-test-prod
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - sleep 30
+    - |
+      for i in 1 2 3 4 5; do
+        curl -sf $PROD_BACKEND_URL/health && break || sleep 10
+      done
+    - |
+      for i in 1 2 3 4 5; do
+        curl -sf $PROD_FRONTEND_URL/ && break || sleep 10
+      done
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+  needs:
+    - deploy-backend-prod
+    - deploy-frontend-prod

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "example-server": {
+      "command": "bash",
+      "args": [
+        "-c",
+        "# Configure your MCP server here\n# Example: export API_KEY=$(security find-generic-password -s 'MY_API_KEY' -w)\npython -m my_mcp_server"
+      ]
+    }
+  }
+}

@@ -1,0 +1,35 @@
+# DevOps Governor Portfolio Manifest
+# This file tracks your active portfolio state
+# Location: ~/.claude/devops/manifest.yaml
+
+version: "1.0"
+updated: null  # Will be set on first use
+
+non_negotiables:
+  quality_gates:
+    - lint
+    - type_check
+    - unit_tests
+    - security_tests
+  security:
+    - sast_enabled
+    - secret_detection
+    - dependency_scanning
+  deployment:
+    - environment_separation
+    - progressive_deployment
+    - health_checks
+    - rollback_documented
+  metrics:
+    - test_coverage_tracked
+    - pipeline_success_rate
+
+pending_consultations: []
+# Example:
+# - project: my-project
+#   requested: 2026-02-01
+#   type: stack_approval
+#   status: pending
+
+active_projects: []
+# Populated from project_registry.yaml

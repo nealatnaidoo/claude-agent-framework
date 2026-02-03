@@ -1,0 +1,16 @@
+# DevOps Project Registry
+# Tracks all projects under portfolio governance
+# Location: ~/.claude/devops/project_registry.yaml
+
+projects: []
+# Example entry:
+# - name: my-project
+#   path: ~/Developer/my-project
+#   registered: 2026-02-01
+#   stack:
+#     language: python
+#     framework: fastapi
+#     deployment: fly.io
+#   ci_platform: github-actions
+#   status: active
+#   last_audit: null
