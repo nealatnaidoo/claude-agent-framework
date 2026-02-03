@@ -44,7 +44,7 @@
       "checksum": "7e48a18e4bba0016",
       "version": "1.0.0",
       "valid_from": "2026-02-03T22:57:37.318615+00:00",
-      "valid_to": null,
+      "valid_to": "2026-02-03T23:42:47.598327+00:00",
       "recorded_at": "2026-02-03T22:57:37.318615+00:00",
       "change_type": "initial",
       "change_summary": "Initial tracking"
@@ -524,7 +524,7 @@
       "checksum": "fa8f2f487c4d2a1d",
       "version": "1.0.1",
       "valid_from": "2026-02-03T23:29:45.757620+00:00",
-      "valid_to": null,
+      "valid_to": "2026-02-03T23:42:47.598327+00:00",
       "recorded_at": "2026-02-03T23:29:45.757620+00:00",
       "change_type": "modified",
       "change_summary": "Updated (checksum changed from 03ce591b1c7fa6d3)"
@@ -552,6 +552,30 @@
       "recorded_at": "2026-02-03T23:37:27.202155+00:00",
       "change_type": "modified",
       "change_summary": "Updated (checksum changed from 79bc6f5bc9bd246b)"
+    },
+    {
+      "component_type": "agents",
+      "component_name": "business-analyst",
+      "file_path": "agents/business-analyst.md",
+      "checksum": "600a22583961ef6e",
+      "version": "1.0.1",
+      "valid_from": "2026-02-03T23:42:47.598327+00:00",
+      "valid_to": null,
+      "recorded_at": "2026-02-03T23:42:47.598327+00:00",
+      "change_type": "modified",
+      "change_summary": "Updated (checksum changed from 7e48a18e4bba0016)"
+    },
+    {
+      "component_type": "agents",
+      "component_name": "solution-designer",
+      "file_path": "agents/solution-designer.md",
+      "checksum": "ed6d38be409874ab",
+      "version": "1.0.2",
+      "valid_from": "2026-02-03T23:42:47.598327+00:00",
+      "valid_to": null,
+      "recorded_at": "2026-02-03T23:42:47.598327+00:00",
+      "change_type": "modified",
+      "change_summary": "Updated (checksum changed from fa8f2f487c4d2a1d)"
     }
   ],
   "snapshots": []

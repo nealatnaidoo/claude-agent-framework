@@ -6,7 +6,7 @@ model: sonnet
 scope: micro
 depends_on: [persona-evaluator, devops-governor]
 depended_by: [business-analyst]
-version: 2.1.0
+version: 2.2.0
 ---
 
 ## Identity
@@ -153,6 +153,34 @@ Using atomic components model:
 - Ports/adapters needed
 - Data stores and source-of-truth
 - Integration points
+
+### Step D.5: Identify Adjacent Impact Zones (Drift Prevention)
+
+For each proposed component, identify **adjacent code** that implementation will likely touch:
+
+**Purpose**: Reduce Tier 2 drift by explicitly acknowledging scope adjacencies upfront.
+
+| Component | Primary Scope | Adjacent Zones | Rationale |
+|-----------|---------------|----------------|-----------|
+| UserAuth | `src/auth/` | `src/middleware/`, `src/models/user.py` | Auth touches request pipeline and user model |
+| PaymentProcessor | `src/payments/` | `src/orders/`, `src/notifications/` | Payment completion triggers order update and notifications |
+
+**For each adjacent zone, specify:**
+1. **Why it's adjacent**: What connection exists?
+2. **Expected touch points**: Specific files/functions
+3. **Boundary recommendation**: Include in task scope OR separate task?
+
+**Output in envelope:**
+```markdown
+## Adjacent Impact Zones
+
+### C1: {Component}
+- **Adjacent**: `{path}` - {reason}
+- **Touch Points**: `{file}:{function}`
+- **Recommendation**: include_in_scope | separate_task | document_only
+```
+
+This enables BA to create properly-scoped tasks that anticipate natural implementation boundaries.
 
 ### Step E: Define Acceptance Evidence
 - What "done" means per flow

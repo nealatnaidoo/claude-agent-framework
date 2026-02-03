@@ -24,14 +24,14 @@ agents:
     depended_by: [solution-designer, business-analyst, coding-agent]
 
   solution-designer:
-    version: "2.1.0"
+    version: "2.2.0"
     file: "agents/solution-designer.md"
     scope: micro
     depends_on: [persona-evaluator, devops-governor]
     depended_by: [business-analyst]
 
   business-analyst:
-    version: "4.0.0"
+    version: "4.1.0"
     file: "agents/business-analyst.md"
     scope: micro
     depends_on: [solution-designer, devops-governor]

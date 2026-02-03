@@ -3,6 +3,10 @@ name: business-analyst
 description: Creates implementation-grade project artifacts (spec, tasklist, rules, quality gates). Use when starting a new project or updating BA artifacts after drift.
 tools: Read, Write, Glob, Grep, Bash
 model: sonnet
+scope: micro
+depends_on: [solution-designer, devops-governor]
+depended_by: [coding-agent]
+version: 4.1.0
 ---
 
 ## Identity
@@ -168,6 +172,40 @@ When creating artifacts:
    - `outstanding.tasks` populated from tasklist
    - `phase: coding` when ready for implementation
 
+## Drift-Aware Task Design (Tier 2 Prevention)
+
+Before creating the tasklist, review the **Adjacent Impact Zones** from the Solution Envelope. Design tasks to minimize Tier 2 drift situations.
+
+### Principles
+
+1. **Include adjacent code in task scope** when:
+   - Changes are tightly coupled (same transaction, same request)
+   - Testing requires both pieces to work together
+   - Separating would create artificial boundaries
+
+2. **Create separate dependent tasks** when:
+   - Adjacent code is substantial (>30 min work)
+   - Different expertise or review needs
+   - Clear interface boundary exists
+
+3. **Document expected minor adjustments** when:
+   - Boilerplate/utility code might be needed
+   - Import reorganization is likely
+   - Type hints may need updates
+
+### Task Template Addition
+
+Each task should include an **Adjacent Scope** section:
+
+```markdown
+### Adjacent Scope (Tier 2 Prevention)
+- **Included**: `{files explicitly in scope for this task}`
+- **Expected Minor**: `{files where Tier 1 adjustments are anticipated}`
+- **Out of Scope**: `{adjacent files that are separate tasks}`
+```
+
+This gives the Coding Agent explicit permission for anticipated adjacencies, reducing halt-and-assess friction.
+
 ## Tasklist Format
 
 Tasks in `003_tasklist_vN.md` must be structured for TaskCreate hydration:
@@ -192,6 +230,11 @@ Tasks in `003_tasklist_vN.md` must be structured for TaskCreate hydration:
 
 ### Files to Create/Modify
 - `src/path/to/file.py`
+
+### Adjacent Scope (Tier 2 Prevention)
+- **Included**: {files explicitly in scope}
+- **Expected Minor**: {files where Tier 1 adjustments OK}
+- **Out of Scope**: {do not touch - separate task}
 
 ---
 ```
