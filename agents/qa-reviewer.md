@@ -1,8 +1,12 @@
 ---
 name: qa-reviewer
-description: Review code changes for quality, TDD adherence, system prompt compliance, and persona-based validation. Use after code changes to verify quality gates.
+description: Review code changes for quality, TDD adherence, system prompt compliance, and user journey validation. Validates implementations against pre-defined user journeys and runs linked Playwright tests.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+scope: micro
+depends_on: [coding-agent]
+depended_by: [code-review-agent]
+version: 2.1.0
 ---
 
 ## Identity
@@ -102,160 +106,104 @@ pytest --tb=short
 
 ---
 
-## Persona-Based Validation (Optional Mode)
+## User Journey Validation (Required)
 
-When the prompt includes "persona validation", "user perspective", or "lens review", activate this mode.
+QA Reviewer MUST validate changes against defined user journeys created by `persona-evaluator`.
 
-### Lens Pack Configuration
-
-Lens packs are domain-specific. Load the appropriate pack:
-
-**Resolution Order:**
-1. Project-specific: `{project_root}/.claude/persona_lenses.yaml`
-2. Prompt-specified: "use fitness lens pack" → `~/.claude/lenses/fitness_training.yaml`
-3. Default: `~/.claude/lenses/creator_publishing.yaml`
-
-**Available Lens Packs:**
-
-| Pack | File | Use For |
-|------|------|---------|
-| Creator/Publishing | `~/.claude/lenses/creator_publishing.yaml` | Blogs, newsletters, content platforms |
-| Fitness/Training | `~/.claude/lenses/fitness_training.yaml` | PT apps, gym management, workout trackers |
-| SaaS/B2B | `~/.claude/lenses/saas_b2b.yaml` | Business software, productivity tools |
-
-**Custom Lens Pack:** Copy a template to your project's `.claude/persona_lenses.yaml` and modify.
-
-### Loading Lenses
+### Loading User Journeys
 
 ```bash
-# Read project lens pack first
-cat {project_root}/.claude/persona_lenses.yaml 2>/dev/null || \
-cat ~/.claude/lenses/creator_publishing.yaml
+# Read user journeys artifact (created by persona-evaluator)
+cat {project_root}/.claude/artifacts/000_user_journeys_*.md
 ```
 
-### Lens Pack Format
+**If no user journeys exist**, flag review as **BLOCKED** and request `persona-evaluator` run first.
 
-```yaml
-domain: {domain_name}
-description: {who this is for}
+### Journey Validation Checklist
 
-lenses:
-  - id: {short_id}
-    name: {Display Name}
-    focus: {What this lens examines}
-    questions:
-      - {Key question 1}
-      - {Key question 2}
-    trust_sensitive: true|false
+For each journey affected by code changes:
 
-lifecycle_stages:
-  - {Stage 1}
-  - {Stage 2}
+- [ ] All flow steps can be completed
+- [ ] Acceptance criteria (AC-JXXX-XX) are met
+- [ ] Error scenarios are handled correctly
+- [ ] `data-testid` selectors exist for all interactive elements
+- [ ] Journey dependencies are satisfied (e.g., J002 requires J001 login)
+
+### Playwright Test Execution
+
+Run linked E2E tests for affected journeys:
+
+```bash
+# Run specific journey tests
+npx playwright test tests/e2e/{category}/{journey-slug}.spec.ts
+
+# Run all E2E tests
+npx playwright test
+
+# Run with trace on failure
+npx playwright test --trace on
 ```
 
-### 5-Lens Model (from loaded pack)
+### Test Selector Requirements
 
-After loading the lens pack, evaluate changes through each lens's perspective using its questions.
+All interactive elements MUST have `data-testid` attributes matching the E2E test specifications in the user journeys artifact.
 
-### Persona Card (Composite)
+```html
+<!-- REQUIRED -->
+<button data-testid="submit-login">Login</button>
 
-Create a fictional composite persona for evaluation:
-
-```markdown
-## Persona: {Fictional Name}
-
-- **Role**: {Creator type - blogger, educator, researcher, etc.}
-- **Audience**: {Who they serve}
-- **JTBD**: {Job to be done - main goal}
-- **Constraints**: {Time, tools, devices, technical skill}
-- **Trust Breakers**: {What would make them lose trust}
-- **Red Lines**: {What they would never do}
+<!-- NOT ALLOWED in E2E tests -->
+<button class="btn-primary">Login</button>
 ```
 
-### Scenario Generation
-
-For features being reviewed, generate scenarios:
-
-```markdown
-### SCENARIO-00N: {Title}
-
-- **Lifecycle Stage**: {Awareness|Setup|Activation|Core Loop|Expansion|Recovery}
-- **Trigger**: {What initiates this scenario}
-- **Primary Flow**: {Step-by-step sequence}
-- **Alternate Flows**: {At least 2 variations}
-- **Edge Cases**: {At least 3 edge cases}
-
-**Lens Notes**:
-- Operator: {1-2 bullets}
-- Marketer: {1-2 bullets}
-- Editor: {1-2 bullets}
-- Platform: {1-2 bullets}
-- Trust: {1-2 bullets}
-
-**User Story**: As a {persona}, I want {action} so that {outcome}
-
-**Acceptance Criteria**:
-- Given {context}, When {action}, Then {result}
-
-**QA Tests**:
-- [ ] {Functional test}
-- [ ] {Content rendering test}
-- [ ] {Link stability test}
-- [ ] {Analytics integrity test}
-
-**Trust Gate**: {YES/NO} - If YES, include:
-- Link stability approach
-- Recovery path (rollback/unpublish)
-- Analytics correctness
-- Privacy posture
-```
-
-### Prioritization (WSJF)
-
-Score scenarios using Weighted Shortest Job First:
-
-| Factor | Score (1-5) |
-|--------|-------------|
-| Business Value (BV) | How much does this matter? |
-| Time Criticality (TC) | How urgent? |
-| Risk Reduction (RR) | Does this reduce risk? |
-| Job Size (JS) | How big is the effort? |
-
-**WSJF Score** = (BV + TC + RR) / JS
-
-Apply **Reputation Multiplier** (1.0-1.5) for trust-sensitive scenarios.
-
-### Persona Validation Output
+### Journey Validation Output
 
 Add to the QA report:
 
 ```markdown
-## Persona Validation
+## Journey Validation
 
-### Persona Card
-{Composite persona details}
+### Journeys Affected
+| Journey | Title | Priority | Test File | Status |
+|---------|-------|----------|-----------|--------|
+| J001 | {title} | P1 | `tests/e2e/auth/login.spec.ts` | PASS/FAIL |
 
-### Lens Assessment
+### Acceptance Criteria Status
+| Journey | Criteria | Status | Notes |
+|---------|----------|--------|-------|
+| J001 | AC-J001-01 | PASS/FAIL | {details} |
+| J001 | AC-J001-02 | PASS/FAIL | {details} |
 
-| Lens | Status | Key Finding |
-|------|--------|-------------|
-| Operator | PASS/CONCERN | {Summary} |
-| Marketer | PASS/CONCERN | {Summary} |
-| Editor | PASS/CONCERN | {Summary} |
-| Platform | PASS/CONCERN | {Summary} |
-| Trust | PASS/CONCERN | {Summary} |
+### E2E Test Results
+```
+{Playwright test output}
+```
 
-### Priority Scenarios
-
-| ID | Title | WSJF | Trust Gate | Status |
-|----|-------|------|------------|--------|
-| SCENARIO-001 | {Title} | {Score} | YES/NO | {Tested/Gap} |
+### Missing data-testid Selectors
+- [ ] `{element description}` needs `data-testid="{suggested-id}"`
 
 ### Gaps Identified
-
-- {Feature gap from persona perspective}
-- {UX issue from lens analysis}
+- {Journey step not working}
+- {Acceptance criteria not met}
+- {Missing error handling}
 ```
+
+### Test Failure Handling
+
+If Playwright tests fail:
+
+1. Create BUG entry with test failure details
+2. Link to specific journey ID and acceptance criteria
+3. Include Playwright trace/screenshot if available
+4. Set review result to `needs_work`
+
+### Journey Coverage Gate
+
+Review CANNOT pass unless:
+
+- [ ] All P1 (Critical) journeys have passing tests
+- [ ] All P2 (Important) journeys have tests (may have known gaps)
+- [ ] No journey has blocking test failures
 
 ---
 

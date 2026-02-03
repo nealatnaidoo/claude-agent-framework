@@ -7,6 +7,14 @@ description: "Multi-agent development ecosystem for Claude Code"
 
 # Agent definitions with dependencies
 agents:
+  persona-evaluator:
+    version: "1.0.0"
+    file: "agents/persona-evaluator.md"
+    scope: micro
+    exclusive_permission: define_user_journeys
+    depends_on: []
+    depended_by: [solution-designer]
+
   devops-governor:
     version: "1.0.0"
     file: "agents/devops-governor.md"
@@ -16,10 +24,10 @@ agents:
     depended_by: [solution-designer, business-analyst, coding-agent]
 
   solution-designer:
-    version: "2.0.0"
+    version: "2.1.0"
     file: "agents/solution-designer.md"
     scope: micro
-    depends_on: [devops-governor]
+    depends_on: [persona-evaluator, devops-governor]
     depended_by: [business-analyst]
 
   business-analyst:
@@ -38,14 +46,14 @@ agents:
     depended_by: [qa-reviewer, code-review-agent]
 
   qa-reviewer:
-    version: "2.0.0"
+    version: "2.1.0"
     file: "agents/qa-reviewer.md"
     scope: micro
     depends_on: [coding-agent]
     depended_by: [code-review-agent]
 
   code-review-agent:
-    version: "1.0.0"
+    version: "2.1.0"
     file: "agents/code-review-agent.md"
     scope: micro
     depends_on: [qa-reviewer, coding-agent]
@@ -173,3 +181,4 @@ compatibility:
 exclusive_permissions:
   write_source_code: coding-agent
   execute_deployments: devops-governor
+  define_user_journeys: persona-evaluator

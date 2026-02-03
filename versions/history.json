@@ -20,7 +20,7 @@
       "checksum": "ba1d6788d2a3fe73",
       "version": "1.0.0",
       "valid_from": "2026-02-03T22:57:37.318615+00:00",
-      "valid_to": null,
+      "valid_to": "2026-02-03T23:29:45.757620+00:00",
       "recorded_at": "2026-02-03T22:57:37.318615+00:00",
       "change_type": "initial",
       "change_summary": "Initial tracking"
@@ -68,7 +68,7 @@
       "checksum": "03ce591b1c7fa6d3",
       "version": "1.0.0",
       "valid_from": "2026-02-03T22:57:37.318615+00:00",
-      "valid_to": null,
+      "valid_to": "2026-02-03T23:29:45.757620+00:00",
       "recorded_at": "2026-02-03T22:57:37.318615+00:00",
       "change_type": "initial",
       "change_summary": "Initial tracking"
@@ -80,7 +80,7 @@
       "checksum": "64bac99e631d3edd",
       "version": "1.0.0",
       "valid_from": "2026-02-03T22:57:37.318615+00:00",
-      "valid_to": null,
+      "valid_to": "2026-02-03T23:29:45.757620+00:00",
       "recorded_at": "2026-02-03T22:57:37.318615+00:00",
       "change_type": "initial",
       "change_summary": "Initial tracking"
@@ -492,6 +492,54 @@
       "recorded_at": "2026-02-03T22:57:37.318615+00:00",
       "change_type": "initial",
       "change_summary": "Initial tracking"
+    },
+    {
+      "component_type": "agents",
+      "component_name": "code-review-agent",
+      "file_path": "agents/code-review-agent.md",
+      "checksum": "f73a4f27e0e663eb",
+      "version": "1.0.1",
+      "valid_from": "2026-02-03T23:29:45.757620+00:00",
+      "valid_to": null,
+      "recorded_at": "2026-02-03T23:29:45.757620+00:00",
+      "change_type": "modified",
+      "change_summary": "Updated (checksum changed from ba1d6788d2a3fe73)"
+    },
+    {
+      "component_type": "agents",
+      "component_name": "persona-evaluator",
+      "file_path": "agents/persona-evaluator.md",
+      "checksum": "8f9e834d23be1462",
+      "version": "1.0.0",
+      "valid_from": "2026-02-03T23:29:45.757620+00:00",
+      "valid_to": null,
+      "recorded_at": "2026-02-03T23:29:45.757620+00:00",
+      "change_type": "initial",
+      "change_summary": "Initial version"
+    },
+    {
+      "component_type": "agents",
+      "component_name": "solution-designer",
+      "file_path": "agents/solution-designer.md",
+      "checksum": "fa8f2f487c4d2a1d",
+      "version": "1.0.1",
+      "valid_from": "2026-02-03T23:29:45.757620+00:00",
+      "valid_to": null,
+      "recorded_at": "2026-02-03T23:29:45.757620+00:00",
+      "change_type": "modified",
+      "change_summary": "Updated (checksum changed from 03ce591b1c7fa6d3)"
+    },
+    {
+      "component_type": "agents",
+      "component_name": "qa-reviewer",
+      "file_path": "agents/qa-reviewer.md",
+      "checksum": "523e65e927880094",
+      "version": "1.0.1",
+      "valid_from": "2026-02-03T23:29:45.757620+00:00",
+      "valid_to": null,
+      "recorded_at": "2026-02-03T23:29:45.757620+00:00",
+      "change_type": "modified",
+      "change_summary": "Updated (checksum changed from 64bac99e631d3edd)"
     }
   ],
   "snapshots": []

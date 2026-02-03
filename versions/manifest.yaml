@@ -9,3 +9,9 @@ snapshots:
     timestamp: "2026-02-03T00:00:00Z"
     description: "Initial unified repository - consolidated from three locations"
     git_commit: null  # Will be set after first commit
+
+  - id: "2026-02-03_232447_v2.6.0_pre-persona-evaluator-integration"
+    version: "2.6.0"
+    timestamp: "2026-02-03T23:24:48Z"
+    description: "pre-persona-evaluator-integration"
+    file: "snapshots/2026-02-03_232447_v2.6.0_pre-persona-evaluator-integration.tar.gz"
