@@ -22,6 +22,7 @@ Agents are classified by scope:
 | Agent | Domain | Exclusive Permission | Prompt File |
 |-------|--------|---------------------|-------------|
 | `devops-governor` | CI/CD & Deployment | **Execute deployments** | `~/.claude/agents/devops-governor.md` |
+| `compliance-verifier` | Governance Verification | - (visiting agent) | `~/.claude/agents/compliance-verifier.md` |
 
 **Macro agents** manage consistency across all projects. Other agents MUST consult them for their domain.
 
@@ -287,6 +288,19 @@ Agents communicate via standardized "Handoff Envelopes". Full specification: `~/
 **Command Locations:**
 - `/review-project`: `~/.claude/commands/review-project.md`
 - Prompt template: `~/.claude/commands/review-project.md`
+
+**Framework Compliance Verification:**
+```bash
+# Validate all agent prompts
+python ~/.claude/scripts/validate_agents.py
+
+# Run full compliance check (invoke compliance-verifier agent)
+"Run compliance verification"
+"Full compliance check with simulations"
+"Quick smoke test for governance"
+```
+
+Reports are stored in: `~/.claude/compliance/compliance_report_YYYY-MM-DD.md`
 
 ### DevOps Governance (Portfolio Level)
 
