@@ -1,7 +1,7 @@
 # Development Lessons Learned
 
 **Project**: Little Research Lab + dbxloader (Databricks POC) + Matrix Risk Engine + Agentic HUD Extension
-**Date**: 2026-01-31 (updated with D2 diagramming lesson 117)
+**Date**: 2026-02-04 (updated with agent CLI tools architecture lesson 118)
 **Purpose**: Capture hard-won lessons to inform future projects and avoid repeating mistakes.
 
 ---
@@ -112,6 +112,7 @@
 115. [Fly.io Dev/Prod CI/CD Pipeline Pattern](#lesson-115-flyio-devprod-cicd-pipeline-pattern)
 116. [Multiple Database Files - Verify Which Database the Backend Uses](#lesson-116-multiple-database-files---verify-which-database-the-backend-uses)
 117. [D2 Diagram-as-Code for Architecture Documentation](#lesson-117-d2-diagram-as-code-for-architecture-documentation)
+118. [Agent CLI Tools Architecture - Scripts vs Packages](#lesson-118-agent-cli-tools-architecture---scripts-vs-packages)
 
 ---
 
@@ -1257,6 +1258,115 @@ pwd
 - [ ] Test slash commands after creating/modifying them
 - [ ] Use simple commands in `!` backticks - prefer pipes over nested substitution
 - [ ] When command fails with "permission check failed", check for `$()` in the pattern
+
+---
+
+### Lesson 57: Unifying Multi-Location Agent Configurations into a Single Installable Repository
+
+**What happened (claude-agent-framework, 2026-02-03):**
+
+Over time, an organically-grown Claude agent ecosystem became spread across three locations: `~/.claude/` (agents, docs, schemas), `~/Developer/claude/prompts/` (system prompts, playbooks, devlessons.md), and `~/.dotfiles/claude/.claude/` (CLAUDE.md, settings). This fragmentation made it impossible to version the system as a whole, share it via GitHub, or roll back to a previous known-good state. Updating one component required knowing which of three directories to modify.
+
+**The fix:**
+
+Consolidate everything into a single git repository with symlink-based installation:
+
+```
+claude-agent-framework/
+├── agents/           # Agent prompt definitions
+├── prompts/
+│   ├── system/       # System prompts (methodology)
+│   └── playbooks/    # Practical guides
+├── schemas/          # Validation schemas
+├── docs/             # Governance documentation
+├── lenses/           # Persona lens packs
+├── patterns/         # CI/CD and architecture patterns
+├── scripts/
+│   ├── install.sh    # Creates symlinks to ~/.claude/
+│   ├── snapshot.sh   # Creates timestamped backup
+│   └── rollback.sh   # Restores from snapshot
+├── knowledge/
+│   └── devlessons.md # Accumulated lessons
+├── config/           # Templates for local config
+├── versions/         # Bi-temporal version tracking
+├── manifest.yaml     # Component versions and dependencies
+└── CLAUDE.md         # Global instructions
+```
+
+The installer creates symlinks from `~/.claude/` to the repo, keeping a single source of truth:
+
+```bash
+# Content is symlinked (version controlled)
+~/.claude/agents -> ~/Developer/claude-agent-framework/agents/
+
+# State stays local (not tracked)
+~/.claude/devops/manifest.yaml  # Your portfolio state
+~/.claude/settings.local.json   # Machine-specific config
+```
+
+**Key design decisions:**
+1. **Symlinks for content** - Changes to repo apply immediately via `git pull`
+2. **Local state preserved** - devops state, settings, history not tracked in repo
+3. **Config templates** - Repo has `.template` files; installer copies to local if missing
+4. **Backup on install** - Previous state saved to `~/.claude-backup-YYYYMMDD-HHMMSS/`
+
+### Future Checklist:
+- [ ] Separate content (shareable) from state (instance-specific) from config (machine-specific)
+- [ ] Use symlinks for single source of truth - enables instant updates via git pull
+- [ ] Include install.sh that creates symlinks and backup, uninstall.sh that removes them
+- [ ] Create snapshot/rollback scripts for version management before symlinking
+- [ ] Keep manifest.yaml with component versions and dependency graph
+- [ ] Template config files (`.template`) that get copied on first install, never overwritten
+- [ ] Update all hardcoded paths in CLAUDE.md to use `~/.claude/` symlink paths
+
+---
+
+### Lesson 118: Agent CLI Tools Architecture - Scripts vs Packages
+
+**What happened (claude-agent-framework, 2026-02-04):**
+
+When building a multi-agent framework with various CLI tools (validation scripts, deployment helpers, database utilities), the question arose: where should these tools live? Initially, tools were scattered or there was uncertainty about whether to include everything in the framework repo or create separate packages.
+
+The solution was a two-tier approach: **framework scripts** for simple, framework-specific utilities stay in `scripts/` folder, while **external packages** with their own dependencies and broader reusability become separate repositories. A central `tools/registry.yaml` manifest tracks all tools regardless of location.
+
+**The decision criteria:**
+
+| Criteria | Script (in framework) | Separate Repo |
+|----------|----------------------|---------------|
+| Lines of code | < 500 | > 500 |
+| Dependencies | Minimal (stdlib only) | Has own deps |
+| Reuse outside framework | No | Yes |
+| Versioning needs | Follow framework | Independent |
+| Testing requirements | Simple | Comprehensive |
+
+**The registry pattern:**
+
+```yaml
+# tools/registry.yaml
+schema_version: "1.0"
+
+scripts:
+  validate_agents:
+    path: "scripts/validate_agents.py"
+    description: "Validate agent prompts against schema"
+    used_by: [devops-governor, qa-reviewer]
+
+packages:
+  db-harness:
+    repository: "https://github.com/org/db-harness"
+    version: "1.0.0"
+    install: "pip install git+https://github.com/org/db-harness.git@v1.0.0"
+    used_by: [devops-governor]
+    gates_implemented: [NN-DB-1, NN-DB-2, NN-DB-3, NN-DB-4]
+```
+
+### Future Checklist:
+- [ ] Keep simple framework-specific scripts (<500 LOC, stdlib) in `scripts/` folder
+- [ ] Create separate repos for tools with dependencies or broader reusability (>500 LOC)
+- [ ] Maintain `tools/registry.yaml` as central manifest of all tools (scripts + packages)
+- [ ] Include `used_by` field to track which agents depend on each tool
+- [ ] Include `decision_ref` to link tools to decision records
+- [ ] For packages: specify version, install command, and gates/features implemented
 
 ---
 
