@@ -6,7 +6,7 @@ model: sonnet
 scope: micro
 depends_on: [solution-designer, devops-governor]
 depended_by: [coding-agent]
-version: 4.1.0
+version: 4.2.0
 ---
 
 ## Identity
@@ -206,6 +206,81 @@ Each task should include an **Adjacent Scope** section:
 
 This gives the Coding Agent explicit permission for anticipated adjacencies, reducing halt-and-assess friction.
 
+## Dual-Agent Task Optimization (Backend + Frontend)
+
+Two coding agents exist with exclusive permissions:
+- **backend-coding-agent**: Python, hexagonal architecture, API integration
+- **frontend-coding-agent**: React/TypeScript, Feature-Sliced Design, UI only
+
+### Domain Tagging (MANDATORY)
+
+Every task MUST specify its domain:
+
+| Domain | Agent | Scope |
+|--------|-------|-------|
+| `backend` | backend-coding-agent | Python, API, DB, integration |
+| `frontend` | frontend-coding-agent | React/TS, UI components |
+| `fullstack` | backend-coding-agent | Backend + API contract (frontend consumes) |
+
+### Parallel Execution Strategy
+
+**Maximize parallelism** by creating independent tasks in each domain:
+
+```
+PARALLEL EXECUTION POSSIBLE:
+├── Backend Worktree
+│   ├── T001 (backend) - API endpoint
+│   ├── T002 (backend) - Repository
+│   └── T003 (backend) - Service logic
+│
+└── Frontend Worktree
+    ├── T004 (frontend) - Component UI
+    ├── T005 (frontend) - State hooks
+    └── T006 (frontend) - Stories/tests
+
+SERIAL (must wait):
+T007 (fullstack) - Integration testing
+  └── blocked_by: [T001, T004]
+```
+
+### Task Sequencing Rules
+
+1. **Backend-only tasks**: Can run in parallel with frontend-only tasks
+2. **Frontend-only tasks**: Can run in parallel with backend-only tasks
+3. **Fullstack tasks**: Must wait for both domain dependencies
+4. **Integration tasks**: Always assigned to backend-coding-agent
+
+### Worktree Optimization
+
+When creating feature specs, consider domain separation:
+
+```yaml
+# Optimal worktree structure for parallel execution
+feature_backlog:
+  - slug: "user-auth-backend"
+    domain: "backend"
+    tasks: ["T001", "T002", "T003"]
+
+  - slug: "user-auth-frontend"
+    domain: "frontend"
+    tasks: ["T004", "T005", "T006"]
+    depends_on: ["user-auth-backend"]  # API must exist first
+
+  - slug: "user-auth-integration"
+    domain: "fullstack"
+    tasks: ["T007"]
+    depends_on: ["user-auth-backend", "user-auth-frontend"]
+```
+
+### Conflict Prevention
+
+Before creating tasks, check for conflicts:
+
+1. **API Contract Conflicts**: If backend and frontend both define DTOs, backend wins
+2. **Shared Types**: Define in backend, frontend imports via generated types
+3. **Integration Tests**: Always in backend domain
+4. **E2E Tests**: In frontend domain, but depend on backend API
+
 ## Tasklist Format
 
 Tasks in `003_tasklist_vN.md` must be structured for TaskCreate hydration:
@@ -214,6 +289,8 @@ Tasks in `003_tasklist_vN.md` must be structured for TaskCreate hydration:
 ## T001: {Task Title}
 
 **Status**: pending | in_progress | completed
+**Domain**: backend | frontend | fullstack
+**Agent**: backend-coding-agent | frontend-coding-agent
 **Blocked By**: T000 (if applicable)
 **Estimated**: 30-120 min
 
@@ -229,12 +306,16 @@ Tasks in `003_tasklist_vN.md` must be structured for TaskCreate hydration:
 - TA2: {Test that proves AC2}
 
 ### Files to Create/Modify
-- `src/path/to/file.py`
+- `src/path/to/file.py`  # or components/, src/features/, etc.
 
 ### Adjacent Scope (Tier 2 Prevention)
 - **Included**: {files explicitly in scope}
 - **Expected Minor**: {files where Tier 1 adjustments OK}
 - **Out of Scope**: {do not touch - separate task}
+
+### Pattern Compliance
+- **Backend**: hexagonal (components/), pattern: `backend-hexagonal`
+- **Frontend**: FSD (src/features/), pattern: `frontend-fsd`
 
 ---
 ```
@@ -242,7 +323,7 @@ Tasks in `003_tasklist_vN.md` must be structured for TaskCreate hydration:
 ## Manifest Update on Completion
 
 ```yaml
-schema_version: "1.0"
+schema_version: "1.3"
 project_slug: "{slug}"
 created: "{ISO timestamp}"
 last_updated: "{ISO timestamp}"
@@ -270,12 +351,51 @@ artifact_versions:
     created: "{ISO timestamp}"
 outstanding:
   tasks:
+    # Backend tasks - can run in parallel with frontend
     - id: "T001"
+      title: "Create user repository"
+      domain: "backend"
+      agent: "backend-coding-agent"
       status: "pending"
     - id: "T002"
+      title: "Create auth service"
+      domain: "backend"
+      agent: "backend-coding-agent"
       status: "pending"
       blocked_by: ["T001"]
+    # Frontend tasks - can run in parallel with backend
+    - id: "T003"
+      title: "Create login form component"
+      domain: "frontend"
+      agent: "frontend-coding-agent"
+      status: "pending"
+    - id: "T004"
+      title: "Create auth hooks"
+      domain: "frontend"
+      agent: "frontend-coding-agent"
+      status: "pending"
+    # Integration task - waits for both domains
+    - id: "T005"
+      title: "Integration tests for auth flow"
+      domain: "fullstack"
+      agent: "backend-coding-agent"
+      status: "pending"
+      blocked_by: ["T002", "T004"]
   remediation: []
+
+# Domain summary for parallel planning
+domain_summary:
+  backend:
+    tasks: ["T001", "T002"]
+    pattern: "backend-hexagonal"
+    agent: "backend-coding-agent"
+  frontend:
+    tasks: ["T003", "T004"]
+    pattern: "frontend-fsd"
+    agent: "frontend-coding-agent"
+  fullstack:
+    tasks: ["T005"]
+    agent: "backend-coding-agent"
 ```
 
 ## Drift Handling

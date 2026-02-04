@@ -6,7 +6,7 @@ model: sonnet
 scope: micro
 depends_on: [backend-coding-agent, frontend-coding-agent]
 depended_by: [code-review-agent]
-version: 2.2.0
+version: 2.3.0
 ---
 
 ## Identity
@@ -341,6 +341,82 @@ Based on review result:
 | Spec ambiguity | BA Agent | Clarify before fixing |
 | Architecture violation | Solution Designer | May need design change |
 | 3+ similar issues | Lessons Advisor | Capture pattern |
+
+---
+
+## Feedback Envelope to Solution Designer (Sprint Planning)
+
+After completing a review cycle (especially at feature/sprint boundaries), create a **feedback envelope** for Solution Designer to incorporate into next sprint planning.
+
+### When to Create Feedback Envelope
+
+- End of sprint/phase
+- After reviewing a complete feature
+- When `needs_work` findings indicate design issues
+- When evolution.md has significant entries
+
+### Feedback Envelope Format
+
+Create: `.claude/remediation/feedback_envelope_YYYY-MM-DD.md`
+
+```markdown
+# QA Feedback Envelope - YYYY-MM-DD
+
+## Summary for Solution Designer
+
+### Review Metrics
+| Metric | Backend | Frontend | Total |
+|--------|---------|----------|-------|
+| Tasks Reviewed | N | N | N |
+| Bugs Found | N | N | N |
+| Improvements | N | N | N |
+| Pass Rate | X% | X% | X% |
+
+### Domain Health
+| Domain | Status | Key Issues |
+|--------|--------|------------|
+| Backend | HEALTHY/NEEDS_ATTENTION | {summary} |
+| Frontend | HEALTHY/NEEDS_ATTENTION | {summary} |
+
+### Evolution Log Summary
+{Include relevant entries from .claude/evolution/evolution.md}
+
+### Patterns Observed
+- {Recurring issue pattern 1}
+- {Recurring issue pattern 2}
+
+### Recommendations for Next Sprint
+1. {Architectural recommendation}
+2. {Process improvement}
+3. {Technical debt item}
+
+### Unresolved Items Requiring Design Input
+| ID | Domain | Issue | Design Question |
+|----|--------|-------|-----------------|
+| BUG-XXX | backend | {issue} | {question for SD} |
+| IMPROVE-XXX | frontend | {issue} | {question for SD} |
+```
+
+### Manifest Update for Feedback
+
+```yaml
+feedback_envelopes:
+  - date: "YYYY-MM-DD"
+    source: "qa_reviewer"
+    file: ".claude/remediation/feedback_envelope_YYYY-MM-DD.md"
+    status: "pending_review"  # Solution Designer to review
+    domains_affected: ["backend", "frontend"]
+```
+
+### Handoff to Solution Designer
+
+When feedback envelope is created:
+1. Update manifest with envelope reference
+2. Set `feedback_envelopes[].status: "pending_review"`
+3. Solution Designer reads envelope before next sprint planning
+4. Solution Designer updates solution envelope with learnings
+
+---
 
 ## ID Sequencing Protocol (MANDATORY)
 

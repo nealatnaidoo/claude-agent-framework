@@ -6,7 +6,7 @@ model: sonnet
 scope: micro
 depends_on: [qa-reviewer, backend-coding-agent, frontend-coding-agent]
 depended_by: [lessons-advisor]
-version: 2.2.0
+version: 2.3.0
 ---
 
 ## Identity
@@ -320,6 +320,98 @@ Based on review result:
 | Missing AC | BA Agent | Add AC to spec |
 | Architecture violation | Solution Designer | May need design change |
 | 3+ similar bugs | Lessons Advisor | Capture pattern in devlessons.md |
+
+---
+
+## Feedback Envelope to Solution Designer (Feature Completion)
+
+After completing a deep code review (especially for features), create a **comprehensive feedback envelope** for Solution Designer.
+
+### When to Create Feedback Envelope
+
+- After reviewing a complete feature
+- When multiple related bugs indicate design issues
+- When evolution.md shows scope drift patterns
+- At sprint/phase boundaries
+
+### Feedback Envelope Format
+
+Create: `.claude/remediation/code_review_feedback_YYYY-MM-DD.md`
+
+```markdown
+# Code Review Feedback Envelope - YYYY-MM-DD
+
+## Summary for Solution Designer
+
+### Feature Completion Status
+| Feature | Tasks | Completion | Quality |
+|---------|-------|------------|---------|
+| {feature} | T001-T005 | 100% | PASS/NEEDS_WORK |
+
+### Domain Analysis
+| Domain | Code Quality | Test Coverage | Architecture Compliance |
+|--------|--------------|---------------|------------------------|
+| Backend | A/B/C | X% | COMPLIANT/VIOLATIONS |
+| Frontend | A/B/C | X% | COMPLIANT/VIOLATIONS |
+
+### Evolution Log Analysis
+**Drift Entries Since Last Review:**
+{Summarize entries from .claude/evolution/evolution.md}
+
+**Recurring Drift Patterns:**
+- {Pattern 1 - what keeps causing drift}
+- {Pattern 2}
+
+### Bugs by Root Cause
+| Root Cause | Count | Domain | Recommendation |
+|------------|-------|--------|----------------|
+| Spec gap | N | backend | Improve AC specificity |
+| Architecture | N | frontend | Review FSD boundaries |
+| Integration | N | both | Define API contracts earlier |
+
+### Technical Debt Identified
+| ID | Domain | Description | Effort | Impact |
+|----|--------|-------------|--------|--------|
+| DEBT-001 | backend | {description} | S/M/L | high/med/low |
+
+### Recommendations for Solution Designer
+
+**Architecture:**
+1. {Architectural improvement needed}
+
+**Process:**
+1. {Process improvement for BA/coding workflow}
+
+**Next Sprint Priorities:**
+1. {Priority 1 - what to address first}
+2. {Priority 2}
+
+### Questions for Solution Designer
+- {Design question 1}
+- {Design question 2}
+```
+
+### Manifest Update
+
+```yaml
+feedback_envelopes:
+  - date: "YYYY-MM-DD"
+    source: "code_review_agent"
+    file: ".claude/remediation/code_review_feedback_YYYY-MM-DD.md"
+    status: "pending_review"
+    feature_reviewed: "{feature_name}"
+    evolution_entries_included: ["EV-001", "EV-002"]
+```
+
+### Integration with Sprint Planning
+
+Solution Designer SHOULD:
+1. Read all pending feedback envelopes before sprint planning
+2. Update solution envelope with architectural learnings
+3. Mark envelopes as `status: "incorporated"` after processing
+4. Create IMPROVE tasks for technical debt items
+
+---
 
 ## Hard Rules
 

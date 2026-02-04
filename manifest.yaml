@@ -24,14 +24,14 @@ agents:
     depended_by: [solution-designer, business-analyst, backend-coding-agent, frontend-coding-agent]
 
   solution-designer:
-    version: "2.2.0"
+    version: "2.3.0"
     file: "agents/solution-designer.md"
     scope: micro
     depends_on: [persona-evaluator, devops-governor]
     depended_by: [business-analyst]
 
   business-analyst:
-    version: "4.1.0"
+    version: "4.2.0"
     file: "agents/business-analyst.md"
     scope: micro
     depends_on: [solution-designer, devops-governor]
@@ -54,14 +54,14 @@ agents:
     depended_by: [qa-reviewer, code-review-agent]
 
   qa-reviewer:
-    version: "2.2.0"
+    version: "2.3.0"
     file: "agents/qa-reviewer.md"
     scope: micro
     depends_on: [backend-coding-agent, frontend-coding-agent]
     depended_by: [code-review-agent]
 
   code-review-agent:
-    version: "2.2.0"
+    version: "2.3.0"
     file: "agents/code-review-agent.md"
     scope: micro
     depends_on: [qa-reviewer, backend-coding-agent, frontend-coding-agent]

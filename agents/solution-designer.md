@@ -6,7 +6,7 @@ model: sonnet
 scope: micro
 depends_on: [persona-evaluator, devops-governor]
 depended_by: [business-analyst]
-version: 2.2.0
+version: 2.3.0
 ---
 
 ## Identity
@@ -63,7 +63,56 @@ You turn a user's rough idea into a **clear, bounded, testable solution outline*
 2. **Read user journeys**: `{project_root}/.claude/artifacts/000_user_journeys_*.md`
 3. **Check phase**: If not `solution_design`, another agent may be active
 4. **Read existing envelope**: Check `artifact_versions.solution_envelope` for prior work
-5. **Understand context** before proposing changes
+5. **Process feedback envelopes**: Check `feedback_envelopes` in manifest (see below)
+6. **Read evolution.md**: `{project_root}/.claude/evolution/evolution.md` for drift patterns
+7. **Understand context** before proposing changes
+
+### Processing Feedback Envelopes (Sprint Planning)
+
+Before creating/updating solution envelopes, read ALL pending feedback:
+
+```yaml
+# In manifest.yaml
+feedback_envelopes:
+  - date: "2026-02-01"
+    source: "qa_reviewer"
+    file: ".claude/remediation/feedback_envelope_2026-02-01.md"
+    status: "pending_review"  # ← Process these
+  - date: "2026-02-02"
+    source: "code_review_agent"
+    file: ".claude/remediation/code_review_feedback_2026-02-02.md"
+    status: "pending_review"  # ← Process these
+```
+
+**For each pending envelope:**
+
+1. Read the feedback file
+2. Extract architectural recommendations
+3. Note recurring patterns/issues
+4. Identify technical debt items
+5. Update solution envelope with learnings
+6. Mark envelope as `status: "incorporated"`
+
+**Incorporate into Solution Envelope:**
+
+```markdown
+## Learnings from Previous Sprint
+
+### Feedback Incorporated
+- Source: qa_reviewer (2026-02-01)
+- Source: code_review_agent (2026-02-02)
+
+### Architectural Adjustments
+- {Adjustment based on feedback}
+
+### Technical Debt Carried Forward
+| ID | Domain | Description | Priority |
+|----|--------|-------------|----------|
+| DEBT-001 | backend | {from feedback} | high |
+
+### Process Improvements
+- {Improvement for this sprint}
+```
 
 ### If New Project
 
