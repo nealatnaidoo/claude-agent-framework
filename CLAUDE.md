@@ -6,7 +6,7 @@ Always reference the development prompts folder for established patterns, lesson
 
 **Location**: `~/Developer/claude-agent-framework/` (or `~/.claude/` via symlinks)
 
-**Version**: v2.6 (worktree_parallelization) - Updated 2026-01-31
+**Version**: v2.7 (split_coding_agents) - Updated 2026-02-04
 
 ### Agent Taxonomy: Macro vs Micro
 
@@ -29,23 +29,30 @@ Agents are classified by scope:
 
 | Agent | When to Use | Exclusive Permission | Prompt File |
 |-------|-------------|---------------------|-------------|
-| `coding-agent` | Implement code from BA specs only - **NEVER accepts direct user requests** | **Write source code** | `~/.claude/agents/coding-agent.md` |
-| `solution-designer` | Starting a new project - clarify scope before detailed specs (MUST consult devops-governor) | - | `~/.claude/agents/solution-designer.md` |
+| `persona-evaluator` | First step - define user journeys and personas before solution design | **Define user journeys** | `~/.claude/agents/persona-evaluator.md` |
+| `solution-designer` | Turn ideas into bounded solutions (MUST consult devops-governor) | - | `~/.claude/agents/solution-designer.md` |
 | `business-analyst` | Create/update BA artifacts (MUST verify devops approval) | - | `~/.claude/agents/business-analyst.md` |
-| `qa-reviewer` | After code changes - governance check (TDD, hexagonal, gates) + optional persona-based validation | - | `~/.claude/agents/qa-reviewer.md` |
-| `code-review-agent` | Deep task completion verification - interpret specs/stories/tests, produce bug docs and improvement recommendations | - | `~/.claude/agents/code-review-agent.md` |
+| `backend-coding-agent` | Implement Python backend code (hexagonal architecture) - **NEVER accepts direct user requests** | **Write backend code** | `~/.claude/agents/backend-coding-agent.md` |
+| `frontend-coding-agent` | Implement React/TypeScript frontend (FSD architecture) - **NEVER accepts direct user requests** | **Write frontend code** | `~/.claude/agents/frontend-coding-agent.md` |
+| `qa-reviewer` | After code changes - governance check (TDD, hexagonal, gates) + persona validation | - | `~/.claude/agents/qa-reviewer.md` |
+| `code-review-agent` | Deep task completion verification - interpret specs/stories/tests, produce bug docs | - | `~/.claude/agents/code-review-agent.md` |
 | `lessons-advisor` | Before decisions - consult past lessons and operationalize into gates | - | `~/.claude/agents/lessons-advisor.md` |
 
 **CRITICAL - Exclusive Permissions:**
-- **Source Code**: ONLY `coding-agent` can write/modify source code - all other agents MUST NOT
-- **Deployments**: ONLY `devops-governor` can execute deployments - all other agents MUST NOT
+- **Backend Code**: ONLY `backend-coding-agent` can write/modify Python backend code
+- **Frontend Code**: ONLY `frontend-coding-agent` can write/modify React/TypeScript frontend code
+- **Deployments**: ONLY `devops-governor` can execute deployments
+- **User Journeys**: ONLY `persona-evaluator` can define user journeys and personas
 
 **CRITICAL - BA-Only Input Constraint:**
-- `coding-agent` accepts work ONLY from BA-produced artifacts (spec, tasklist)
+- Coding agents accept work ONLY from BA-produced artifacts (spec, tasklist)
 - Users MUST NOT request coding directly - they must go through BA workflow
 - If a user requests code changes, redirect them to create a spec first
 
-**Note**: Persona evaluation is embedded in `qa-reviewer` with configurable lens packs.
+**Task Assignment:**
+- Backend tasks (Python, API, database): `backend-coding-agent`
+- Frontend tasks (React, TypeScript, UI): `frontend-coding-agent`
+- Full-stack tasks: Split between agents with clear handoff
 
 ### Persona Lens Packs
 
@@ -78,12 +85,14 @@ All agents (internal and visiting) operate under strict governance to prevent co
   - Macro agents: `~/.claude/{domain}/manifest.yaml`
   - Micro agents: `{project}/.claude/manifest.yaml`
 - **Macro vs Micro Scope**: Macro agents govern portfolios; micro agents work within projects
-- **Exclusive Permissions**: Two capabilities are exclusively reserved:
-  - Source code modification → `coding-agent` ONLY (no other agent may write code)
-  - Deployment execution → `devops-governor` ONLY (no other agent may deploy)
+- **Exclusive Permissions**: Four capabilities are exclusively reserved:
+  - Backend code modification → `backend-coding-agent` ONLY
+  - Frontend code modification → `frontend-coding-agent` ONLY
+  - Deployment execution → `devops-governor` ONLY
+  - User journey definition → `persona-evaluator` ONLY
 - **Consultation Required**: Micro agents MUST consult relevant macro agents before certain decisions
 - **Internal vs Visiting**: Internal agents work within the workflow; visiting agents analyze and report only
-- **BA-Only Input for Coding**: `coding-agent` accepts work ONLY from BA specs - users must go through BA workflow
+- **BA-Only Input for Coding**: Coding agents accept work ONLY from BA specs - users must go through BA workflow
 - **ID Sequencing**: BUG/IMPROVE IDs are project-global, never reused, always search before creating
 - **Document Locations**: All outputs use `.claude/` folder structure (artifacts, evidence, remediation, evolution)
 
@@ -138,20 +147,25 @@ python ~/.claude/scripts/validate_agents.py agent-name.md
 | `~/.claude/prompts/system/lessons_system_prompt_v2_0.md` | Lessons operationalization into gates and checklists |
 | `~/.claude/docs/agent_operating_model.md` | **Lifecycle playbook**: Persona -> Solution -> BA -> Coding -> QA -> Lessons |
 
-### Agent Lifecycle (v2.5)
+### Agent Lifecycle (v2.6)
 
 ```
-                              ┌─────────────────┐
-                              │ DevOps Governor │ (MACRO - consult for stack/deployment)
-                              └────────┬────────┘
-                                       │ approves
-                                       ▼
-Solution Designer ──► DevOps ──► BA ──► Coding ──► QA Review ──► Code Review ──► Lessons
-        │             consult      │        │           │              │             │
-   scenarios         stack/deploy  artifacts  code    governance   deep verify   improve
-   + stories         approval      + tasks   + tests   + quick     + completion   gates
-   + handoff                                 pass/fail   + bug docs
+                                    ┌─────────────────┐
+                                    │ DevOps Governor │ (MACRO - consult for stack/deployment)
+                                    └────────┬────────┘
+                                             │ approves
+                                             ▼
+Persona ──► Solution Designer ──► DevOps ──► BA ──► Coding ──► QA ──► Code Review ──► Lessons
+   │               │             consult      │        │         │          │             │
+journeys      architecture     stack/deploy  spec   backend   gates    deep verify    improve
++ personas    + scenarios      approval     tasks   frontend   pass    + completion    gates
+                + handoff                          (parallel)  /fail   + bug docs
 ```
+
+**Coding Phase Detail:**
+- `backend-coding-agent`: Python/FastAPI, hexagonal architecture
+- `frontend-coding-agent`: React/TypeScript, Feature-Sliced Design
+- Both can run in parallel via git worktrees
 
 **DevOps Governor Integration:**
 - Solution Designer MUST consult DevOps Governor before finalizing stack/deployment
@@ -308,7 +322,8 @@ The DevOps Governor is a **macro agent** that ensures CI/CD consistency across a
 |-------|-------------------------|
 | `solution-designer` | Proposing tech stack, deployment architecture, CI/CD platform |
 | `business-analyst` | Must verify DevOps approval stamp before proceeding |
-| `coding-agent` | Requesting deployment after task completion |
+| `backend-coding-agent` | Requesting deployment after task completion |
+| `frontend-coding-agent` | Requesting deployment after task completion |
 
 **Invocation:**
 ```

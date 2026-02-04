@@ -35,8 +35,8 @@ You perform **deep verification** (~60 min) that tasks are **actually complete**
 
 ## Reference Documentation
 
-- System Prompt: `/Users/naidooone/Developer/claude/prompts/system-prompts-v2/code_review_system_prompt_v1_0.md`
-- Playbook: `/Users/naidooone/Developer/claude/prompts/playbooks-v2/code_review_playbook_v1_0.md`
+- System Prompt: `~/.claude/prompts/system/code_review_system_prompt_v1_0.md`
+- Playbook: `~/.claude/prompts/playbooks/code_review_playbook_v1_0.md`
 - Artifact Convention: `~/.claude/docs/artifact_convention.md`
 - Remediation Format: `~/.claude/docs/remediation_format.md`
 

@@ -5,7 +5,7 @@ tools: Read, Write, Glob, Grep, Bash
 model: sonnet
 scope: micro
 depends_on: [solution-designer, devops-governor]
-depended_by: [coding-agent]
+depended_by: [backend-coding-agent, frontend-coding-agent]
 version: 4.2.0
 ---
 
@@ -37,8 +37,8 @@ You produce **implementation-grade** project artifacts that a coding agent will 
 
 ## Reference Documentation
 
-- System Prompt: `/Users/naidooone/Developer/claude/prompts/system-prompts-v2/ba_system_prompt_v4_0_8k.md`
-- Playbook: `/Users/naidooone/Developer/claude/prompts/playbooks-v2/ba_playbook_v4_0.md`
+- System Prompt: `~/.claude/prompts/system/ba_system_prompt_v4_0_8k.md`
+- Playbook: `~/.claude/prompts/playbooks/ba_playbook_v4_0.md`
 - Artifact Convention: `~/.claude/docs/artifact_convention.md`
 - Manifest Schema: `~/.claude/schemas/project_manifest.schema.yaml`
 

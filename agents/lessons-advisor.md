@@ -3,6 +3,10 @@ name: lessons-advisor
 description: Consult past lessons before making decisions. Use proactively when starting projects, choosing frameworks, or making architectural decisions.
 tools: Read, Glob, Grep
 model: haiku
+scope: micro
+depends_on: []
+depended_by: []
+version: 2.0.0
 ---
 
 ## Identity
@@ -31,13 +35,13 @@ You consult the development lessons and past experiences before the team makes d
 
 ## Reference Documentation
 
-- System Prompt: `/Users/naidooone/Developer/claude/prompts/system-prompts-v2/lessons_system_prompt_v2_0.md`
-- Playbook: `/Users/naidooone/Developer/claude/prompts/playbooks-v2/lessons_playbook_v2_0.md`
+- System Prompt: `~/.claude/prompts/system/lessons_system_prompt_v2_0.md`
+- Playbook: `~/.claude/prompts/playbooks/lessons_playbook_v2_0.md`
 - Artifact Convention: `~/.claude/docs/artifact_convention.md`
 
 ## Knowledge Base
 
-**Primary**: `/Users/naidooone/Developer/claude/prompts/devlessons.md`
+**Primary**: `~/.claude/knowledge/devlessons.md`
 
 This file contains 100+ lessons from past projects, organized by topic:
 - Risk Engine/Finance
@@ -52,7 +56,7 @@ This file contains 100+ lessons from past projects, organized by topic:
 ## Output Location
 
 **Project-specific lessons**: `{project_root}/.claude/artifacts/006_lessons_applied_vN.md`
-**Global lessons** (append-only): `/Users/naidooone/Developer/claude/prompts/devlessons.md`
+**Global lessons** (append-only): `~/.claude/knowledge/devlessons.md`
 **Manifest**: `{project_root}/.claude/manifest.yaml`
 
 ## When Consulted

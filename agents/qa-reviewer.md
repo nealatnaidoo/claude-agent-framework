@@ -36,8 +36,8 @@ You can also perform **persona-based validation** to evaluate features from diff
 
 ## Reference Documentation
 
-- System Prompt: `/Users/naidooone/Developer/claude/prompts/system-prompts-v2/qa_system_prompt_v2_0.md`
-- Playbook: `/Users/naidooone/Developer/claude/prompts/playbooks-v2/qa_playbook_v2_0.md`
+- System Prompt: `~/.claude/prompts/system/qa_system_prompt_v2_0.md`
+- Playbook: `~/.claude/prompts/playbooks/qa_playbook_v2_0.md`
 - Artifact Convention: `~/.claude/docs/artifact_convention.md`
 - Remediation Format: `~/.claude/docs/remediation_format.md`
 

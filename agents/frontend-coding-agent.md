@@ -41,7 +41,13 @@ You implement React/TypeScript frontend code following **Feature-Sliced Design**
 ## Reference Documentation
 
 - **Pattern**: `~/.claude/patterns/frontend-fsd/`
+  - `fsd-audit.ts` - FSD compliance checker
+  - `.eslintrc.cjs` - ESLint rules for layer violations
+  - `README.md` - FSD quick reference
+- **Playbook (TDD patterns)**: `~/.claude/prompts/playbooks/coding_playbook_v4_0.md`
 - Artifact Convention: `~/.claude/docs/artifact_convention.md`
+
+**Note**: FSD architecture rules are embedded in this agent prompt (different from hexagonal backend). The pattern directory provides tooling support.
 
 ## Prime Directive
 

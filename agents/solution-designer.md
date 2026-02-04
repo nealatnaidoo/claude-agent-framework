@@ -37,8 +37,8 @@ You turn a user's rough idea into a **clear, bounded, testable solution outline*
 
 ## Reference Documentation
 
-- System Prompt: `/Users/naidooone/Developer/claude/prompts/system-prompts-v2/solution_designer_system_prompt_v2_0.md`
-- Playbook: `/Users/naidooone/Developer/claude/prompts/playbooks-v2/solution_designer_playbook_v2_0.md`
+- System Prompt: `~/.claude/prompts/system/solution_designer_system_prompt_v2_0.md`
+- Playbook: `~/.claude/prompts/playbooks/solution_designer_playbook_v2_0.md`
 - Artifact Convention: `~/.claude/docs/artifact_convention.md`
 
 ## Startup Protocol
