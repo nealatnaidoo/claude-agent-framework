@@ -1,0 +1,38 @@
+hex_rules: Hexagonal Import Rules {
+  direction: right
+
+  domain: Domain {
+    style.fill: "#fff9c4"
+    model: "model.py\n(stdlib ONLY)"
+    service: "service.py"
+
+    model -> service: {style.stroke-dash: 3}
+  }
+
+  ports: Ports {
+    style.fill: "#e8f5e9"
+    inbound: "inbound.py\n(ABC interfaces)"
+    outbound: "outbound.py\n(ABC interfaces)"
+  }
+
+  adapters: Adapters {
+    style.fill: "#e3f2fd"
+    in_api: "api_handler.py"
+    out_repo: "postgres_repo.py"
+  }
+
+  # Allowed imports (green)
+  adapters.in_api -> ports.inbound: {style.stroke: "#4caf50"}
+  adapters.in_api -> domain.service: {style.stroke: "#4caf50"}
+  adapters.out_repo -> ports.outbound: {style.stroke: "#4caf50"}
+  adapters.out_repo -> domain.model: {style.stroke: "#4caf50"}
+  domain.service -> ports.inbound: {style.stroke: "#4caf50"}
+  domain.service -> ports.outbound: {style.stroke: "#4caf50"}
+
+  # FORBIDDEN (red X)
+  forbidden: "FORBIDDEN:\ndomain -> adapters" {
+    shape: text
+    style.font-color: "#c62828"
+    style.font-size: 14
+  }
+}

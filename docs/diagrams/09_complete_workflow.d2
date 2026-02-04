@@ -1,0 +1,104 @@
+complete_flow: Complete Agent Workflow {
+  direction: down
+
+  # Actors
+  user: User {
+    shape: person
+    style.fill: "#e0e0e0"
+  }
+
+  # Phase 1: Solution Design
+  phase1: "1. SOLUTION DESIGN" {
+    style.fill: "#e3f2fd"
+
+    sd: Solution Designer
+    devops: DevOps Governor
+
+    sd -> devops: "consult on stack"
+    devops -> sd: "approve + stamp"
+  }
+
+  # Phase 2: BA
+  phase2: "2. BUSINESS ANALYSIS" {
+    style.fill: "#fff3e0"
+
+    ba: Business Analyst
+    lessons: Lessons Advisor
+
+    ba -> lessons: "consult lessons"
+    lessons -> ba: "applicable lessons"
+  }
+
+  # Phase 3: Coding
+  phase3: "3. CODING" {
+    style.fill: "#e8f5e9"
+
+    backend: Backend Agent
+    frontend: Frontend Agent
+
+    note: "Parallel execution\nvia worktrees" {
+      shape: text
+      style.font-size: 10
+    }
+  }
+
+  # Phase 4: QA
+  phase4: "4. QA REVIEW" {
+    style.fill: "#fff9c4"
+
+    qa: QA Reviewer
+  }
+
+  # Phase 5: Code Review
+  phase5: "5. CODE REVIEW" {
+    style.fill: "#f3e5f5"
+
+    review: Code Review Agent
+  }
+
+  # Phase 6: Deployment
+  phase6: "6. DEPLOYMENT" {
+    style.fill: "#b2dfdb"
+
+    deploy: DevOps Governor
+  }
+
+  # Flow
+  user -> phase1.sd: "request"
+  phase1 -> phase2: "001_solution_envelope"
+  phase2 -> phase3: "spec + tasks"
+  phase3 -> phase4: "evidence"
+  phase4 -> phase5: "pass"
+  phase5 -> phase6: "verified"
+
+  # Feedback loops
+  phase4 -> phase3: "needs work" {
+    style.stroke: "#d32f2f"
+    style.stroke-dash: 3
+  }
+  phase5 -> phase3: "findings" {
+    style.stroke: "#d32f2f"
+    style.stroke-dash: 3
+  }
+  phase3 -> phase2: "drift" {
+    style.stroke: "#ff9800"
+    style.stroke-dash: 3
+  }
+
+  # Visiting agents
+  visiting: Visiting Agents {
+    style.fill: "#f5f5f5"
+    style.stroke-dash: 3
+
+    sec: Security
+    perf: Performance
+    a11y: Accessibility
+  }
+
+  visiting -> phase3: "analyze" {
+    style.stroke-dash: 3
+  }
+  visiting -> phase4: "report" {
+    style.stroke-dash: 3
+  }
+}

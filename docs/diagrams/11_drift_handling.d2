@@ -1,0 +1,62 @@
+drift_flow: Drift Detection & Handling {
+  direction: down
+
+  start: Coding Agent Working {
+    style.fill: "#e8f5e9"
+  }
+
+  detect: Drift Detected {
+    shape: diamond
+    style.fill: "#fff9c4"
+  }
+
+  # Tiers
+  tier1: Tier 1: Minor {
+    style.fill: "#c8e6c9"
+    desc: |md
+      - Small utilities
+      - Missing __init__.py
+      - Typo fixes
+    |
+    action: "Document + Continue"
+  }
+
+  tier2: Tier 2: Moderate {
+    style.fill: "#fff9c4"
+    desc: |md
+      - Files outside scope
+      - Adjacent bugs
+    |
+    action: "Halt + EV Entry\nWait for BA"
+  }
+
+  tier3: Tier 3: Significant {
+    style.fill: "#ffcdd2"
+    desc: |md
+      - New feature
+      - Architecture change
+      - Security risk
+    |
+    action: "HALT IMMEDIATELY\nEscalate to BA/SD"
+  }
+
+  ev_log: evolution.md {
+    shape: document
+    style.fill: "#fff3e0"
+  }
+
+  ba: Business Analyst {
+    style.fill: "#fff3e0"
+  }
+
+  start -> detect
+  detect -> tier1: "small"
+  detect -> tier2: "moderate"
+  detect -> tier3: "significant"
+
+  tier1 -> ev_log: "append"
+  tier2 -> ev_log: "append"
+  tier2 -> ba: "notify"
+  tier3 -> ev_log: "append"
+  tier3 -> ba: "escalate"
+}

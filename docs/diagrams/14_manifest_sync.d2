@@ -1,0 +1,39 @@
+sync: Manifest Synchronization {
+  direction: right
+
+  events: Trigger Events {
+    style.fill: "#e3f2fd"
+
+    list: |md
+      - Phase change
+      - Task completion
+      - Artifact version bump
+      - Review completion
+      - Drift detection
+      - Worktree spawn/merge
+    |
+  }
+
+  update: Update Manifest {
+    style.fill: "#fff3e0"
+
+    action: |md
+      1. Read current state
+      2. Apply changes
+      3. Update last_updated
+      4. Write atomically
+    |
+  }
+
+  verify: Verify Sync {
+    style.fill: "#e8f5e9"
+
+    checks: |md
+      - Artifact files exist
+      - Phase matches reality
+      - No stale tasks
+    |
+  }
+
+  events -> update -> verify
+}

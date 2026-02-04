@@ -1,0 +1,66 @@
+manifest_structure: Manifest Structure {
+  direction: down
+
+  manifest: manifest.yaml {
+    style.fill: "#e8f5e9"
+    style.stroke: "#388e3c"
+    style.stroke-width: 2
+    shape: cylinder
+  }
+
+  sections: {
+    style.fill: "#fafafa"
+
+    meta: Metadata {
+      style.fill: "#e3f2fd"
+      content: |md
+        - schema_version
+        - project_slug
+        - phase
+        - last_updated
+      |
+    }
+
+    artifacts: Artifact Versions {
+      style.fill: "#fff3e0"
+      content: |md
+        - solution_envelope: v1
+        - spec: v1
+        - tasklist: v1
+        - rules: v1
+        - quality_gates: v1
+      |
+    }
+
+    outstanding: Outstanding Work {
+      style.fill: "#ffcdd2"
+      content: |md
+        - tasks: [T001, T002...]
+        - remediation: [BUG-001...]
+      |
+    }
+
+    reviews: Review History {
+      style.fill: "#f3e5f5"
+      content: |md
+        - last_qa_review
+        - last_code_review
+      |
+    }
+
+    worktrees: Worktree State {
+      style.fill: "#b2dfdb"
+      content: |md
+        - feature_backlog
+        - active_worktrees
+        - worktree_governance
+      |
+    }
+  }
+
+  manifest -> sections.meta
+  manifest -> sections.artifacts
+  manifest -> sections.outstanding
+  manifest -> sections.reviews
+  manifest -> sections.worktrees
+}

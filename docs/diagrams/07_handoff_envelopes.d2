@@ -1,0 +1,103 @@
+envelopes: Handoff Envelope Types {
+  direction: down
+
+  # Solution Envelope
+  solution: Solution Envelope {
+    style.fill: "#e3f2fd"
+    from: "Solution Designer"
+    to: "Business Analyst"
+    file: "001_solution_envelope_v1.md"
+
+    contents: |md
+      - Problem statement
+      - Personas and journeys
+      - Key flows
+      - Architecture proposal
+      - **DevOps approval stamp**
+      - Open questions
+    |
+  }
+
+  # BA Handoff
+  ba_handoff: BA Handoff {
+    style.fill: "#fff3e0"
+    from: "Business Analyst"
+    to: "Coding Agents"
+
+    files: |md
+      - 002_spec_vN.md
+      - 003_tasklist_vN.md
+      - 004_rules_vN.yaml
+      - 005_quality_gates_vN.md
+    |
+  }
+
+  # Coding Completion
+  coding_complete: Coding Completion {
+    style.fill: "#e8f5e9"
+    from: "Coding Agent"
+    to: "QA Reviewer"
+
+    evidence: |md
+      - quality_gates_run.json
+      - test_report.json
+      - test_failures.json
+    |
+  }
+
+  # QA Handoff
+  qa_handoff: QA/Review Handoff {
+    style.fill: "#fff9c4"
+    from: "QA/Code Review"
+    to: "Coding Agent"
+
+    file: "qa_YYYY-MM-DD.md"
+    contents: |md
+      - BUG-XXX entries
+      - IMPROVE-XXX entries
+      - Priority classification
+    |
+  }
+
+  # Drift Report
+  drift: Drift Report {
+    style.fill: "#ffcdd2"
+    from: "Coding Agent"
+    to: "Business Analyst"
+
+    file: "evolution.md (append)"
+    contents: |md
+      - EV-XXXX entries
+      - Type: drift/change/risk
+      - Impact assessment
+    |
+  }
+
+  # Deployment Request
+  deploy: Deployment Request {
+    style.fill: "#b2dfdb"
+    from: "Any Agent"
+    to: "DevOps Governor"
+
+    contents: |md
+      - project_slug
+      - environment
+      - commit_sha
+      - quality_gates_evidence
+    |
+  }
+
+  # Feedback Envelope
+  feedback: Feedback Envelope {
+    style.fill: "#f3e5f5"
+    from: "QA/Code Review"
+    to: "Solution Designer"
+
+    file: "feedback_envelope_YYYY-MM-DD.md"
+    contents: |md
+      - Sprint learnings
+      - Architecture recommendations
+      - Technical debt items
+    |
+  }
+}

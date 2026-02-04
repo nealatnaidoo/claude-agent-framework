@@ -1,0 +1,43 @@
+id_protocol: ID Sequencing Protocol {
+  direction: right
+
+  search: "1. Search Existing" {
+    style.fill: "#e3f2fd"
+
+    cmd: |md
+      ```bash
+      grep -r "BUG-[0-9]" .claude/
+      grep -r "IMPROVE-[0-9]" .claude/
+      ```
+    |
+  }
+
+  find_highest: "2. Find Highest" {
+    style.fill: "#fff3e0"
+
+    example: |md
+      Found: BUG-001, BUG-002, BUG-015
+      Highest: BUG-015
+    |
+  }
+
+  increment: "3. Increment" {
+    style.fill: "#e8f5e9"
+
+    result: |md
+      Next ID: BUG-016
+    |
+  }
+
+  search -> find_highest -> increment
+
+  rules: |md
+    **Rules:**
+    - IDs are project-global
+    - IDs are never reused
+    - IDs are sequential
+    - Search BEFORE creating
+  | {
+    style.fill: "#ffecb3"
+  }
+}

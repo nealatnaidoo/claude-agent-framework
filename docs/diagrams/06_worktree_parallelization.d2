@@ -1,0 +1,68 @@
+worktrees: Worktree Parallelization {
+  direction: down
+
+  main: Main Worktree (Planning Hub) {
+    style.fill: "#e3f2fd"
+    style.stroke: "#1565c0"
+    style.stroke-width: 2
+
+    ba: BA + Solution Designer {
+      style.fill: "#bbdefb"
+    }
+
+    backlog: Feature Backlog {
+      style.fill: "#e8f5e9"
+      f1: "Feature A: ready"
+      f2: "Feature B: ready"
+      f3: "Feature C: in_progress"
+    }
+
+    manifest: manifest.yaml {
+      style.fill: "#fff9c4"
+      shape: document
+    }
+  }
+
+  worktrees: Feature Worktrees (Parallel) {
+    style.fill: "#fff3e0"
+
+    wt_a: Worktree A: user-auth {
+      style.fill: "#ffe0b2"
+      backend_a: Backend Tasks
+      frontend_a: Frontend Tasks
+      qa_a: QA Review
+    }
+
+    wt_b: Worktree B: billing {
+      style.fill: "#ffe0b2"
+      backend_b: Backend Tasks
+      frontend_b: Frontend Tasks
+      qa_b: QA Review
+    }
+  }
+
+  main.backlog.f1 -> worktrees.wt_a: "spawn" {
+    style.stroke: "#388e3c"
+  }
+  main.backlog.f3 -> worktrees.wt_b: "spawn" {
+    style.stroke: "#388e3c"
+  }
+
+  worktrees.wt_a -> main: "merge on complete" {
+    style.stroke: "#7b1fa2"
+    style.stroke-dash: 3
+  }
+  worktrees.wt_b -> main: "merge on complete" {
+    style.stroke: "#7b1fa2"
+    style.stroke-dash: 3
+  }
+
+  governance: |md
+    **Governance:**
+    - max_parallel: 3
+    - BUG/IMPROVE IDs are project-global
+    - Each worktree has independent manifest
+  | {
+    style.fill: "#ffecb3"
+  }
+}

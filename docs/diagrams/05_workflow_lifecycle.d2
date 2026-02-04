@@ -1,0 +1,88 @@
+lifecycle: Project Workflow Lifecycle {
+  direction: right
+
+  style.fill: "#fafafa"
+
+  # Phases
+  design: Solution Design {
+    style.fill: "#e3f2fd"
+  }
+
+  ba: Business Analysis {
+    style.fill: "#fff3e0"
+  }
+
+  coding: Coding {
+    style.fill: "#e8f5e9"
+
+    backend: Backend {
+      style.fill: "#c8e6c9"
+    }
+    frontend: Frontend {
+      style.fill: "#c8e6c9"
+    }
+  }
+
+  qa: QA Review {
+    style.fill: "#fff9c4"
+  }
+
+  review: Code Review {
+    style.fill: "#f3e5f5"
+  }
+
+  complete: Complete {
+    style.fill: "#c8e6c9"
+  }
+
+  # Flow
+  design -> ba: "envelope" {
+    style.stroke: "#1976d2"
+    style.stroke-width: 2
+  }
+  ba -> coding: "spec + tasks" {
+    style.stroke: "#f57c00"
+    style.stroke-width: 2
+  }
+  coding -> qa: "evidence" {
+    style.stroke: "#388e3c"
+    style.stroke-width: 2
+  }
+  qa -> review: "pass" {
+    style.stroke: "#fbc02d"
+    style.stroke-width: 2
+  }
+  qa -> coding: "needs work" {
+    style.stroke: "#d32f2f"
+    style.stroke-dash: 3
+  }
+  review -> complete: "verified" {
+    style.stroke: "#7b1fa2"
+    style.stroke-width: 2
+  }
+  review -> coding: "findings" {
+    style.stroke: "#d32f2f"
+    style.stroke-dash: 3
+  }
+
+  # DevOps consultation
+  devops: DevOps Governor {
+    style.fill: "#bbdefb"
+    style.stroke: "#1565c0"
+    style.stroke-width: 2
+  }
+
+  design -> devops: "consult" {
+    style.stroke: "#1565c0"
+    style.stroke-dash: 3
+  }
+  devops -> design: "approve" {
+    style.stroke: "#1565c0"
+    style.stroke-dash: 3
+  }
+
+  coding -> devops: "deploy request" {
+    style.stroke: "#1565c0"
+    style.stroke-dash: 3
+  }
+}

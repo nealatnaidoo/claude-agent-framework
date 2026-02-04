@@ -1,0 +1,87 @@
+direction: down
+
+title: Agent Hierarchy {
+  near: top-center
+  shape: text
+  style.font-size: 24
+}
+
+# Scope containers
+macro: Macro Level (Portfolio) {
+  style.fill: "#e8f4f8"
+  style.stroke: "#2196F3"
+
+  devops: DevOps Governor {
+    style.fill: "#bbdefb"
+    style.stroke: "#1565c0"
+    icon: https://icons.terrastruct.com/essentials%2F112-server.svg
+  }
+
+  devops.permission: "EXCLUSIVE:\nExecute Deployments" {
+    shape: text
+    style.font-size: 10
+    style.font-color: "#c62828"
+  }
+}
+
+micro: Micro Level (Project) {
+  style.fill: "#fff3e0"
+  style.stroke: "#FF9800"
+
+  internal: Internal Agents {
+    style.fill: "#ffe0b2"
+
+    solution: Solution Designer
+    ba: Business Analyst
+    backend: Backend Coding Agent {
+      style.fill: "#c8e6c9"
+    }
+    frontend: Frontend Coding Agent {
+      style.fill: "#c8e6c9"
+    }
+    qa: QA Reviewer
+    review: Code Review Agent
+    lessons: Lessons Advisor
+
+    backend.permission: "EXCLUSIVE:\nBackend Code" {
+      shape: text
+      style.font-size: 10
+      style.font-color: "#c62828"
+    }
+    frontend.permission: "EXCLUSIVE:\nFrontend Code" {
+      shape: text
+      style.font-size: 10
+      style.font-color: "#c62828"
+    }
+  }
+
+  visiting: Visiting Agents {
+    style.fill: "#f3e5f5"
+    style.stroke-dash: 3
+
+    security: Security Auditor
+    perf: Performance Analyst
+    a11y: Accessibility Auditor
+    domain: Domain Expert
+    compliance: Compliance Auditor
+
+    note: "READ-ONLY\nCannot modify code" {
+      shape: text
+      style.font-size: 10
+      style.font-color: "#7b1fa2"
+    }
+  }
+}
+
+# Relationships
+macro.devops -> micro.internal.solution: "approves stack" {
+  style.stroke: "#1565c0"
+}
+macro.devops -> micro.internal.backend: "deployment requests" {
+  style.stroke: "#1565c0"
+  style.stroke-dash: 3
+}
+macro.devops -> micro.internal.frontend: "deployment requests" {
+  style.stroke: "#1565c0"
+  style.stroke-dash: 3
+}

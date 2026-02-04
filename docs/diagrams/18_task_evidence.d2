@@ -1,0 +1,28 @@
+evidence: Task Completion Evidence {
+  direction: right
+
+  required: Required Artifacts {
+    style.fill: "#e8f5e9"
+
+    files: |md
+      ✓ .claude/evidence/quality_gates_run.json
+      ✓ .claude/evidence/test_report.json
+      ✓ .claude/evidence/test_failures.json
+    |
+  }
+
+  validation: Validation Checks {
+    style.fill: "#fff9c4"
+
+    checks: |md
+      ✓ All task-relevant tests pass
+      ✓ New code has corresponding tests
+      ✓ manifest.yaml updated
+      ✓ No lint/type errors
+    |
+  }
+
+  required -> validation -> complete: Complete {
+    style.fill: "#c8e6c9"
+  }
+}

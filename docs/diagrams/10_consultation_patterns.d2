@@ -1,0 +1,72 @@
+consultations: Agent Consultation Patterns {
+  direction: right
+
+  # DevOps consultations
+  devops_consult: DevOps Consultation {
+    style.fill: "#e3f2fd"
+
+    trigger: |md
+      **When to consult:**
+      - Proposing tech stack
+      - Defining deployment architecture
+      - Selecting CI/CD platform
+      - Defining environment strategy
+    |
+
+    flow: {
+      sd: Solution Designer
+      devops: DevOps Governor
+      ba: Business Analyst
+
+      sd -> devops: "1. propose"
+      devops -> sd: "2. approve/reject"
+      sd -> ba: "3. envelope\n(with stamp)"
+    }
+  }
+
+  # Lessons consultation
+  lessons_consult: Lessons Consultation {
+    style.fill: "#fff3e0"
+
+    trigger: |md
+      **When to consult:**
+      - Starting new project
+      - Choosing framework
+      - Making architecture decisions
+      - After 3+ recurring issues
+    |
+
+    flow: {
+      ba: Business Analyst
+      lessons: Lessons Advisor
+
+      ba -> lessons: "1. context + stack"
+      lessons -> ba: "2. applicable lessons"
+    }
+  }
+
+  # Deployment request
+  deploy_request: Deployment Request {
+    style.fill: "#b2dfdb"
+
+    trigger: |md
+      **When to request:**
+      - Quality gates pass
+      - All tests green
+      - Evidence artifacts exist
+    |
+
+    flow: {
+      coding: Coding Agent
+      devops: DevOps Governor
+
+      coding -> devops: |md
+        project_slug
+        environment
+        commit_sha
+        evidence_path
+      |
+      devops -> coding: "deployed / rejected"
+    }
+  }
+}

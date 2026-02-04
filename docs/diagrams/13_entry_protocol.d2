@@ -1,0 +1,53 @@
+entry_protocol: Agent Entry Protocol {
+  direction: down
+
+  start: Agent Starts/Restarts {
+    shape: oval
+    style.fill: "#e0e0e0"
+  }
+
+  read_manifest: "1. Read manifest.yaml FIRST" {
+    style.fill: "#e3f2fd"
+    style.stroke: "#1565c0"
+    style.stroke-width: 2
+  }
+
+  extract: "2. Extract Context" {
+    style.fill: "#fff3e0"
+
+    items: |md
+      - agent_routing: Am I internal/visiting?
+      - artifact_versions: Current file paths
+      - outstanding.remediation: Critical bugs
+      - outstanding.tasks: Pending work
+      - compliance_requirements: Rules
+    |
+  }
+
+  prioritize: "3. Prioritize Work" {
+    style.fill: "#fff9c4"
+
+    order: |md
+      1. Critical remediation
+      2. High remediation
+      3. In-progress tasks
+      4. Medium remediation
+      5. Pending tasks
+      6. Low remediation
+    |
+  }
+
+  proceed: "4. Proceed with Work" {
+    style.fill: "#e8f5e9"
+  }
+
+  start -> read_manifest -> extract -> prioritize -> proceed
+
+  warning: |md
+    **NEVER hardcode artifact paths**
+    **ALWAYS read from manifest**
+  | {
+    style.fill: "#ffcdd2"
+    style.font-color: "#c62828"
+  }
+}

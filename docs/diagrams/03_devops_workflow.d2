@@ -1,0 +1,33 @@
+devops_flow: DevOps Governor Workflow {
+  direction: down
+
+  request: Consultation Request {
+    style.fill: "#e3f2fd"
+  }
+
+  check: Non-Negotiables Check {
+    style.fill: "#fff9c4"
+  }
+
+  decision: {
+    shape: diamond
+    style.fill: "#ffecb3"
+  }
+
+  approve: Approve + Stamp {
+    style.fill: "#c8e6c9"
+  }
+
+  reject: Reject + Required Changes {
+    style.fill: "#ffcdd2"
+  }
+
+  deploy: Execute Deployment {
+    style.fill: "#b2dfdb"
+  }
+
+  request -> check -> decision
+  decision -> approve: "compliant"
+  decision -> reject: "non-compliant"
+  approve -> deploy: "deployment request"
+}

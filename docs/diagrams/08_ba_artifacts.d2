@@ -1,0 +1,67 @@
+ba_artifacts: BA Handoff Artifacts {
+  direction: right
+
+  spec: 002_spec_vN.md {
+    style.fill: "#fff3e0"
+    shape: document
+
+    contents: |md
+      - Requirements
+      - User stories
+      - Acceptance criteria
+      - API contracts
+    |
+  }
+
+  tasklist: 003_tasklist_vN.md {
+    style.fill: "#fff3e0"
+    shape: document
+
+    contents: |md
+      - T001: {title}
+        - domain: backend/frontend
+        - blocked_by: []
+        - AC: [list]
+    |
+  }
+
+  rules: 004_rules_vN.yaml {
+    style.fill: "#fff3e0"
+    shape: document
+
+    contents: |md
+      - Domain rules
+      - Validation policies
+      - Business constraints
+    |
+  }
+
+  gates: 005_quality_gates_vN.md {
+    style.fill: "#fff3e0"
+    shape: document
+
+    contents: |md
+      - Lint requirements
+      - Type check rules
+      - Test coverage
+      - Evidence artifacts
+    |
+  }
+
+  manifest: manifest.yaml {
+    style.fill: "#e8f5e9"
+    shape: cylinder
+
+    contents: |md
+      outstanding.tasks:
+        - id: T001
+          status: pending
+          blocked_by: []
+    |
+  }
+
+  spec -> manifest: "loaded"
+  tasklist -> manifest: "tasks"
+  rules -> manifest: "ref"
+  gates -> manifest: "ref"
+}

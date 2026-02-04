@@ -1,0 +1,96 @@
+hexagonal: Hexagonal Architecture {
+  direction: right
+
+  # External World
+  external: External World {
+    style.fill: "#e0e0e0"
+    style.stroke-dash: 3
+
+    http: HTTP Clients
+    db: Database
+    queue: Message Queue
+    third: Third-party APIs
+  }
+
+  # Adapters Layer
+  adapters: Adapters Layer {
+    style.fill: "#e3f2fd"
+
+    inbound: Inbound (Driving) {
+      style.fill: "#bbdefb"
+      api: "FastAPI handlers"
+      cli: "CLI commands"
+      events: "Event handlers"
+    }
+
+    outbound: Outbound (Driven) {
+      style.fill: "#bbdefb"
+      postgres: "PostgreSQL repo"
+      redis: "Redis cache"
+      http_client: "HTTP client"
+    }
+  }
+
+  # Ports Layer
+  ports: Ports Layer {
+    style.fill: "#fff9c4"
+    style.stroke: "#fbc02d"
+    style.stroke-width: 2
+
+    inbound_ports: Inbound Ports {
+      style.fill: "#fff59d"
+      service_if: "Service interfaces\n(ABC)"
+    }
+
+    outbound_ports: Outbound Ports {
+      style.fill: "#fff59d"
+      repo_if: "Repository interfaces\n(ABC)"
+      cache_if: "Cache interfaces\n(ABC)"
+    }
+  }
+
+  # Domain Layer
+  domain: Domain Layer {
+    style.fill: "#e8f5e9"
+    style.stroke: "#388e3c"
+    style.stroke-width: 2
+
+    model: Model {
+      style.fill: "#c8e6c9"
+      entities: "Entities\n(frozen dataclass)"
+      values: "Value Objects\n(immutable)"
+    }
+
+    service: Service {
+      style.fill: "#c8e6c9"
+      logic: "Business logic\n(pure functions)"
+    }
+
+    rules: Rules {
+      style.fill: "#c8e6c9"
+      policy: "Domain policies\n(YAML-driven)"
+    }
+  }
+
+  # Connections
+  external.http -> adapters.inbound.api
+  external.db -> adapters.outbound.postgres
+
+  adapters.inbound -> ports.inbound_ports
+  adapters.outbound -> ports.outbound_ports
+
+  ports.inbound_ports -> domain.service
+  domain.service -> ports.outbound_ports
+
+  # Sacred rule
+  forbidden: |md
+    **SACRED RULE:**
+    Domain NEVER imports Adapters
+
+    Core depends on ports only.
+    Adapters depend on core.
+  | {
+    style.fill: "#ffcdd2"
+    style.font-color: "#c62828"
+  }
+}

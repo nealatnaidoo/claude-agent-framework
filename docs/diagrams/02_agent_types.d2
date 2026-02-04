@@ -1,0 +1,61 @@
+direction: right
+
+types: Agent Types {
+  style.fill: "#fafafa"
+
+  macro: MACRO AGENTS {
+    style.fill: "#e3f2fd"
+    desc: |md
+      - Portfolio-wide scope
+      - Enforce cross-project consistency
+      - Exclusive deployment permissions
+      - Entry: ~/.claude/{domain}/manifest.yaml
+    |
+
+    devops: devops-governor
+  }
+
+  micro: MICRO AGENTS {
+    style.fill: "#fff8e1"
+
+    internal: INTERNAL {
+      style.fill: "#fff3e0"
+      desc: |md
+        - Participate in workflow
+        - Can modify artifacts
+        - Phase-specific tasks
+        - Entry: {project}/.claude/manifest.yaml
+      |
+
+      agents: |md
+        - solution-designer
+        - business-analyst
+        - backend-coding-agent
+        - frontend-coding-agent
+        - qa-reviewer
+        - code-review-agent
+        - lessons-advisor
+      |
+    }
+
+    visiting: VISITING {
+      style.fill: "#f3e5f5"
+      style.stroke-dash: 3
+      desc: |md
+        - Read-only access
+        - Cannot modify source code
+        - Cannot change workflow phase
+        - Entry: {project}/.claude/manifest.yaml
+      |
+
+      agents: |md
+        - security-auditor
+        - performance-analyst
+        - accessibility-auditor
+        - domain-expert
+        - compliance-auditor
+        - test-specialist
+      |
+    }
+  }
+}

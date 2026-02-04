@@ -1,0 +1,75 @@
+fsd: Feature-Sliced Design {
+  direction: down
+
+  # Layers (top to bottom)
+  app: "Layer 7: app" {
+    style.fill: "#e3f2fd"
+    desc: "Application shell, providers, routing"
+  }
+
+  pages: "Layer 6: pages" {
+    style.fill: "#bbdefb"
+    desc: "Route pages (composition only)"
+  }
+
+  widgets: "Layer 5: widgets" {
+    style.fill: "#90caf9"
+    desc: "Composite UI blocks"
+  }
+
+  features: "Layer 4: features" {
+    style.fill: "#64b5f6"
+    desc: "User interactions"
+  }
+
+  entities: "Layer 3: entities" {
+    style.fill: "#42a5f5"
+    desc: "Business objects"
+  }
+
+  shared: "Layer 2: shared" {
+    style.fill: "#2196f3"
+    style.font-color: "white"
+    desc: "UI kit, utilities"
+  }
+
+  # Import direction
+  app -> pages: "imports" {style.stroke: "#4caf50"}
+  pages -> widgets: "imports" {style.stroke: "#4caf50"}
+  widgets -> features: "imports" {style.stroke: "#4caf50"}
+  features -> entities: "imports" {style.stroke: "#4caf50"}
+  entities -> shared: "imports" {style.stroke: "#4caf50"}
+
+  # Forbidden
+  forbidden: |md
+    **FORBIDDEN:**
+    - Upward imports
+    - Same-layer cross-slice
+    - Internal module imports
+
+    **USE index.ts for public API**
+  | {
+    style.fill: "#ffcdd2"
+    style.font-color: "#c62828"
+  }
+
+  # Slice structure
+  slice: Slice Structure {
+    style.fill: "#fff3e0"
+
+    structure: |md
+      features/auth/
+      ├── ui/
+      │   ├── LoginForm.tsx
+      │   └── LoginForm.test.tsx
+      ├── model/
+      │   ├── types.ts  ← CONTRACT
+      │   ├── store.ts
+      │   └── hooks.ts
+      ├── api/
+      │   ├── queries.ts
+      │   └── mutations.ts
+      └── index.ts  ← PUBLIC API
+    |
+  }
+}
