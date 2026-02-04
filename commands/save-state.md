@@ -1,5 +1,5 @@
 ---
-allowed-tools: Read, Write, Bash(date:*), Bash(git:*)
+allowed-tools: Read, Write, Bash(pwd), Bash(date:*), Bash(git:*), Bash(mkdir:*)
 description: Save conversation progress, intent, and next actions for session resumption
 ---
 
@@ -8,7 +8,7 @@ description: Save conversation progress, intent, and next actions for session re
 - Current directory: !`pwd`
 - Timestamp: !`date +"%Y-%m-%d %H:%M:%S"`
 - Git branch: !`git branch --show-current 2>/dev/null || echo "not a git repo"`
-- Git status: !`git status --porcelain 2>/dev/null | head -10`
+- Git status: !`git status --short 2>/dev/null`
 
 ## Your Task
 

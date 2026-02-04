@@ -32,8 +32,8 @@ git clone https://github.com/YOUR_USERNAME/claude-agent-framework.git ~/Develope
 
 # Run the installer
 cd ~/Developer/claude-agent-framework
-chmod +x scripts/install.sh
-./scripts/install.sh
+chmod +x bin/install.sh
+./bin/install.sh
 ```
 
 The installer will:
@@ -62,47 +62,89 @@ ln -s ~/Developer/claude-agent-framework/CLAUDE.md ~/.claude/CLAUDE.md
 ```
 claude-agent-framework/
 ├── agents/           # Agent prompt definitions
+├── bin/              # Shell scripts (install, snapshot, rollback)
+├── commands/         # User-invocable slash commands
+├── config/           # Configuration templates
+├── data/             # CLI databases (DuckDB)
+├── docs/             # Governance documentation
+├── hooks/            # Claude Code hooks
+├── knowledge/        # devlessons.md
+├── lenses/           # Persona lens packs
+├── patterns/         # CI/CD and architecture patterns
 ├── prompts/
-│   ├── system/      # System prompts (methodology)
-│   └── playbooks/   # Practical guides
-├── schemas/         # Validation schemas
-├── docs/            # Governance documentation
-├── lenses/          # Persona lens packs
-├── patterns/        # CI/CD and architecture patterns
-├── templates/       # Templates for new agents/artifacts
-├── commands/        # User-invocable commands
-├── hooks/           # Claude Code hooks
-├── scripts/         # Tooling (install, validate, snapshot)
-├── knowledge/       # devlessons.md
-├── config/          # Configuration templates
-├── versions/        # Version tracking and snapshots
-├── CLAUDE.md        # Global instructions
-├── manifest.yaml    # Package manifest
-└── VERSION          # Current version
+│   ├── system/       # System prompts (methodology)
+│   └── playbooks/    # Practical guides
+├── schemas/          # Validation schemas
+├── src/claude_cli/   # Python CLI tools
+├── templates/        # Templates for new agents/artifacts
+├── tests/            # CLI test suite
+├── versions/         # Version tracking and snapshots
+├── CLAUDE.md         # Global instructions
+├── manifest.yaml     # Package manifest
+├── pyproject.toml    # Python package definition
+└── VERSION           # Current version
 ```
 
 ## Usage
 
-### Validate Agents
+### Install CLI Tools
 
 ```bash
-python3 ~/.claude/scripts/validate_agents.py
+cd ~/Developer/claude-agent-framework
+pip install -e .
 ```
 
-### Create a Snapshot
+This installs the `caf` (Claude Agent Framework) CLI.
+
+### CLI Commands
 
 ```bash
-./scripts/snapshot.sh "pre-major-change"
+# Show help
+caf --help
+
+# Show framework status
+caf status
+
+# List agents
+caf agents list
+
+# Validate agents
+caf agents validate
+caf agents validate my-agent
+
+# Create new agent
+caf agents new my-agent --type micro
+
+# Dependency analysis
+caf analysis graph
+caf analysis graph --mermaid
+caf analysis impact my-agent
+caf analysis impact my-agent --delete
+
+# Version tracking
+caf versions init
+caf versions scan
+caf versions query 2026-01-15
+caf versions diff 2026-01-01 now
+
+# Lessons management
+caf lessons list
+caf lessons search "testing"
+
+# Worktree management
+caf worktree list
+caf worktree create feature-x
 ```
 
-### Rollback to Previous Version
+### Shell Scripts
 
 ```bash
-# List available snapshots
-./scripts/rollback.sh --list
+# Create a snapshot
+./bin/snapshot.sh "pre-major-change"
 
-# Rollback
-./scripts/rollback.sh 2026-02-03_v2.6.0_initial
+# Rollback to previous version
+./bin/rollback.sh --list
+./bin/rollback.sh 2026-02-03_v2.6.0_initial
 ```
 
 ### Update
@@ -114,61 +156,20 @@ git pull
 
 Since the framework uses symlinks, updates are immediate.
 
-## Bi-Temporal Version Tracking
-
-The framework tracks all component changes with two time dimensions:
-- **Valid time**: When a version was active
-- **Transaction time**: When the change was recorded
-
-### Initialize Tracking
-
-```bash
-python3 scripts/version_tracker.py init
-```
-
-### Scan for Changes
-
-```bash
-# Show what would be recorded
-python3 scripts/version_tracker.py scan --dry-run
-
-# Record changes
-python3 scripts/version_tracker.py scan
-```
-
-### Query Historical State
-
-```bash
-# What was the system like on a specific date?
-python3 scripts/version_tracker.py query 2026-01-15
-
-# Current state
-python3 scripts/version_tracker.py query now
-```
-
 ### View Change History
 
 ```bash
 # Full history
-python3 scripts/version_tracker.py history
+caf versions history
 
 # Just agents
-python3 scripts/version_tracker.py history --type agents
+caf versions history --type agents
 ```
 
 ### Compare Two Points in Time
 
 ```bash
-python3 scripts/version_tracker.py diff 2026-01-01 now
-```
-
-### Automatic Tracking (Optional)
-
-Install the pre-commit hook to auto-record changes:
-
-```bash
-cp hooks/pre-commit-version-track .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
+caf versions diff 2026-01-01 now
 ```
 
 ## Customization
@@ -185,10 +186,17 @@ These files live in `~/.claude/` and are NOT symlinked:
 
 ### Adding New Agents
 
-1. Copy the template: `cp templates/new_agent_template.md agents/my-agent.md`
-2. Edit the agent following the schema in `schemas/agent_prompt.schema.yaml`
-3. Run validation: `python3 scripts/validate_agents.py agents/my-agent.md`
-4. Update `manifest.yaml` with the new agent
+```bash
+# Create agent interactively
+caf agents new my-agent --type micro
+
+# Or copy template manually
+cp templates/new_agent_template.md agents/my-agent.md
+```
+
+1. Edit the agent following the schema in `schemas/agent_prompt.schema.yaml`
+2. Run validation: `caf agents validate my-agent`
+3. Update `manifest.yaml` with the new agent
 
 ## Versioning
 
@@ -201,13 +209,13 @@ The framework uses semantic versioning:
 Create snapshots before major changes:
 
 ```bash
-./scripts/snapshot.sh "before-new-agent"
+./bin/snapshot.sh "before-new-agent"
 ```
 
 ## Uninstall
 
 ```bash
-./scripts/uninstall.sh
+./bin/uninstall.sh
 ```
 
 This removes symlinks but preserves your local state (devops/, configs, history).
@@ -216,7 +224,7 @@ This removes symlinks but preserves your local state (devops/, configs, history)
 
 1. Create a feature branch
 2. Make changes
-3. Run `python3 scripts/validate_agents.py` to verify
+3. Run `caf agents validate` to verify
 4. Update `manifest.yaml` versions as needed
 5. Create a pull request
 

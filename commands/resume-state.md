@@ -1,5 +1,5 @@
 ---
-allowed-tools: Read, Glob, Bash(date:*), Bash(git:*)
+allowed-tools: Read, Glob, Bash(pwd), Bash(date:*), Bash(git:*)
 description: Resume work from a saved session state
 ---
 
@@ -8,7 +8,6 @@ description: Resume work from a saved session state
 - Current directory: !`pwd`
 - Timestamp: !`date +"%Y-%m-%d %H:%M:%S"`
 - Git branch: !`git branch --show-current 2>/dev/null || echo "not a git repo"`
-- State file exists: !`test -f .claude/session_state.md && echo "yes" || echo "no"`
 
 ## Your Task
 

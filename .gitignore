@@ -30,3 +30,17 @@ Thumbs.db
 *.tmp
 *.temp
 *.log
+
+# CLI data (DuckDB databases)
+data/*.duckdb
+data/*.duckdb.wal
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Coverage
+.coverage
+htmlcov/
+.pytest_cache/

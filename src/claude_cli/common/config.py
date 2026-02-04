@@ -24,15 +24,17 @@ def get_framework_paths() -> dict[str, str]:
         "knowledge": str(root / "knowledge"),
         "prompts": str(root / "prompts"),
         "schemas": str(root / "schemas"),
-        "cli_data": str(root / "cli" / "data"),
+        "data": str(root / "data"),
         "patterns": str(root / "patterns"),
+        "versions": str(root / "versions"),
+        "manifest": str(root / "manifest.yaml"),
     }
 
 
 def get_db_path(db_name: str = "lessons.duckdb") -> Path:
     """Get path to a CLI database file."""
     root = get_framework_root()
-    data_dir = root / "cli" / "data"
+    data_dir = root / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir / db_name
 

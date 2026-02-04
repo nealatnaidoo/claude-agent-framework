@@ -7,6 +7,8 @@ from claude_cli.lessons.cli import app as lessons_app
 from claude_cli.agents.cli import app as agents_app
 from claude_cli.worktree.cli import app as worktree_app
 from claude_cli.db.cli import app as db_app
+from claude_cli.analysis.cli import app as analysis_app
+from claude_cli.versioning.cli import app as versioning_app
 
 app = typer.Typer(
     name="claude",
@@ -22,6 +24,8 @@ app.add_typer(lessons_app, name="lessons", help="Manage development lessons")
 app.add_typer(agents_app, name="agents", help="Agent validation and management")
 app.add_typer(worktree_app, name="worktree", help="Git worktree management")
 app.add_typer(db_app, name="db", help="Database harness operations (DevOps)")
+app.add_typer(analysis_app, name="analysis", help="Agent dependency analysis")
+app.add_typer(versioning_app, name="versions", help="Bi-temporal version tracking")
 
 
 @app.command()
