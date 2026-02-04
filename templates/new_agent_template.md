@@ -65,8 +65,8 @@ You are a **VISITING agent**, not an internal agent.
 
 ## Reference Documentation
 
-- System Prompt: `/Users/naidooone/Developer/claude/prompts/system-prompts-v2/{related_prompt}.md`
-- Playbook: `/Users/naidooone/Developer/claude/prompts/playbooks-v2/{related_playbook}.md`
+- System Prompt: `~/.claude/prompts/system/{related_prompt}.md`
+- Playbook: `~/.claude/prompts/playbooks/{related_playbook}.md`
 - Agent Creation Guide: `~/.claude/docs/agent_creation_guide.md`
 - Agent Operating Model: `~/.claude/docs/agent_operating_model.md`
 

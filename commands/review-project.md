@@ -134,10 +134,10 @@ After review completes, display a concise summary:
 ## Reference
 
 Full prompt template with customization options:
-`/Users/naidooone/Developer/claude/prompts/project_review_prompt.md`
+`~/.claude/commands/review-project.md`
 
 Agent prompts:
-- QA Reviewer: `/Users/naidooone/Developer/claude/prompts/agents/qa-reviewer.md`
-- Code Review: `/Users/naidooone/Developer/claude/prompts/agents/code-review-agent.md`
+- QA Reviewer: `~/.claude/agents/qa-reviewer.md`
+- Code Review: `~/.claude/agents/code-review-agent.md`
 
 </review-project>

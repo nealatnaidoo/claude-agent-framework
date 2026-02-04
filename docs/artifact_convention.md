@@ -317,4 +317,4 @@ For existing projects with `{project}_spec.md` at root:
 3. Create `manifest.yaml` from current state
 4. Update any hardcoded paths in project
 
-See: `/Users/naidooone/Developer/claude/prompts/migrations/MIGRATE_PROJECT_ARTIFACTS.md`
+See: `~/.claude/migrations/MIGRATE_PROJECT_ARTIFACTS.md`
