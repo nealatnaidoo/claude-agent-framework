@@ -7,13 +7,12 @@ description: Capture a learning from the current session and append to devlesson
 
 - Current directory: !`pwd`
 - Today's date: !`date +%Y-%m-%d`
-- Current lesson count: !`grep -c "^### Lesson" ~/.claude/knowledge/devlessons.md 2>/dev/null || echo "0"`
+- Current lesson count: !`grep -cE "^##+ Lesson" ~/.claude/knowledge/devlessons.md 2>/dev/null || echo "0"`
+- Highest lesson number: !`grep -oE "Lesson [0-9]+" ~/.claude/knowledge/devlessons.md | sed 's/Lesson //' | sort -n | tail -1`
 
 ## Your Task
 
 Capture a lesson from the current conversation and append it to `~/.claude/knowledge/devlessons.md`.
-
-**Note**: This file is symlinked to `/Users/naidooone/Developer/claude/prompts/devlessons.md`.
 
 **User's input:** `$ARGUMENTS`
 
@@ -25,22 +24,25 @@ Capture a lesson from the current conversation and append it to `~/.claude/knowl
 
 ### Lesson Format
 
-Use this exact format (replace NNN with the next lesson number after the current count):
+Use this exact format (replace NNN with the next lesson number after the highest):
 
 ```markdown
 ---
 
-### Lesson NNN: <concise title>
+## Lesson NNN: <concise title>
 
-**What happened (<project name>, <date>):**
+**Date**: <YYYY-MM-DD>
+**Context**: <brief project/situation context>
+
+### Problem
 
 <1-2 paragraphs describing the problem or discovery>
 
-**The fix:**
+### Solution
 
 <code blocks or steps showing the solution>
 
-### Future Checklist:
+### Future Checklist
 - [ ] <actionable item 1>
 - [ ] <actionable item 2>
 - [ ] <actionable item 3>
