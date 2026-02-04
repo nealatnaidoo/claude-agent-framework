@@ -199,6 +199,25 @@ patterns:
     description: "React/TypeScript Feature-Sliced Design"
     audit_script: "fsd-audit.ts"
 
+  gitlab-ci-patterns:
+    version: "1.1.0"
+    path: "patterns/gitlab-ci/"
+    description: "GitLab CI/CD templates for all deployment targets"
+    templates:
+      - python-fastapi.yml    # Fly.io backend
+      - nextjs-frontend.yml   # Fly.io frontend
+      - full-stack.yml        # Fly.io full-stack
+      - azure-aks-python.yml  # Azure AKS
+      - azure-functions-python.yml  # Azure Functions
+      - databricks-jobs.yml   # Databricks
+
+  devops-architecture:
+    version: "1.0.0"
+    path: "patterns/architecture/"
+    description: "Portfolio-wide DevOps architecture documentation"
+    files:
+      - devops-portfolio-structure.md
+
 # Exclusive permissions map (for governance validation)
 exclusive_permissions:
   write_backend_code: backend-coding-agent

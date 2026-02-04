@@ -1,0 +1,320 @@
+# Canonical GitLab CI/CD Template: Python → Azure Functions
+# Version: 1.0
+# Last Updated: 2026-02-04
+# Decision Reference: DEC-DEVOPS-018
+#
+# This template deploys serverless Python functions to Azure Functions.
+# Supports both Consumption and Premium plans.
+#
+# Project Structure Expected:
+# ├── functions/
+# │   ├── HttpTrigger/
+# │   │   ├── __init__.py
+# │   │   └── function.json
+# │   ├── QueueTrigger/
+# │   │   ├── __init__.py
+# │   │   └── function.json
+# │   └── host.json
+# ├── shared/                  # Shared code
+# ├── tests/
+# └── requirements.txt
+
+stages:
+  - quality
+  - test
+  - security
+  - package
+  - deploy-dev
+  - deploy-staging
+  - deploy-prod
+
+variables:
+  PYTHON_VERSION: "3.11"  # Azure Functions currently supports up to 3.11
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+  # Azure Function App names
+  FUNC_APP_DEV: "${CI_PROJECT_NAME}-dev"
+  FUNC_APP_STAGING: "${CI_PROJECT_NAME}-staging"
+  FUNC_APP_PROD: "${CI_PROJECT_NAME}"
+
+  # Resource Group
+  AZURE_RESOURCE_GROUP: "${AZURE_RESOURCE_GROUP}"
+
+  # Slot deployment for zero-downtime
+  DEPLOYMENT_SLOT: "staging"
+
+# ============================================================================
+# REUSABLE TEMPLATES
+# ============================================================================
+
+.python-base:
+  image: python:${PYTHON_VERSION}-slim
+  cache:
+    key: python-${CI_COMMIT_REF_SLUG}
+    paths:
+      - .cache/pip
+      - .venv
+  before_script:
+    - python -m venv .venv
+    - source .venv/bin/activate
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install -r requirements-dev.txt || true
+
+.azure-cli:
+  image: mcr.microsoft.com/azure-cli:latest
+  before_script:
+    - az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
+    - az account set --subscription $AZURE_SUBSCRIPTION_ID
+
+.func-core-tools:
+  image: mcr.microsoft.com/azure-functions/python:4-python${PYTHON_VERSION}
+  before_script:
+    - npm install -g azure-functions-core-tools@4 --unsafe-perm true
+    - az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
+
+# ============================================================================
+# STAGE 1: QUALITY GATES (NON-NEGOTIABLE)
+# ============================================================================
+
+lint:
+  extends: .python-base
+  stage: quality
+  script:
+    - pip install ruff
+    - ruff check functions/ shared/ tests/ --output-format=gitlab > gl-code-quality-report.json || true
+    - ruff check functions/ shared/ tests/
+  artifacts:
+    reports:
+      codequality: gl-code-quality-report.json
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^(main|develop)$/
+
+type-check:
+  extends: .python-base
+  stage: quality
+  script:
+    - pip install mypy
+    - mypy functions/ shared/ --ignore-missing-imports
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^(main|develop)$/
+
+validate-function-json:
+  extends: .python-base
+  stage: quality
+  script:
+    - pip install jsonschema
+    - |
+      # Validate all function.json files
+      for dir in functions/*/; do
+        if [ -f "${dir}function.json" ]; then
+          echo "Validating ${dir}function.json"
+          python -c "import json; json.load(open('${dir}function.json'))" || exit 1
+        fi
+      done
+      # Validate host.json
+      python -c "import json; json.load(open('functions/host.json'))"
+
+# ============================================================================
+# STAGE 2: TESTING (NON-NEGOTIABLE)
+# ============================================================================
+
+unit-tests:
+  extends: .python-base
+  stage: test
+  script:
+    - pip install pytest pytest-cov pytest-asyncio
+    - pytest tests/unit/ -v --junitxml=junit.xml --cov=functions --cov=shared --cov-report=xml
+  artifacts:
+    when: always
+    reports:
+      junit: junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+  coverage: '/TOTAL.*\s+(\d+%)/'
+
+integration-tests:
+  extends: .python-base
+  stage: test
+  variables:
+    # Use Azurite for local Azure Storage emulation
+    AZURITE_CONNECTION_STRING: "UseDevelopmentStorage=true"
+  services:
+    - name: mcr.microsoft.com/azure-storage/azurite:latest
+      alias: azurite
+  script:
+    - pip install pytest pytest-asyncio azure-storage-blob azure-storage-queue
+    - pytest tests/integration/ -v --junitxml=integration-junit.xml
+  artifacts:
+    reports:
+      junit: integration-junit.xml
+
+# ============================================================================
+# STAGE 3: SECURITY SCANNING (NON-NEGOTIABLE)
+# ============================================================================
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+
+sast:
+  stage: security
+  variables:
+    SAST_EXCLUDED_PATHS: "tests/, .venv/"
+
+# ============================================================================
+# STAGE 4: PACKAGE
+# ============================================================================
+
+package-functions:
+  extends: .python-base
+  stage: package
+  script:
+    - |
+      # Create deployment package
+      mkdir -p .python_packages/lib/site-packages
+      pip install --target=".python_packages/lib/site-packages" -r requirements.txt
+
+      # Create zip for deployment
+      zip -r function-app.zip functions/ shared/ .python_packages/ host.json requirements.txt
+  artifacts:
+    paths:
+      - function-app.zip
+    expire_in: 1 hour
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(main|develop)$/
+
+# ============================================================================
+# STAGE 5: DEPLOY DEV (AUTOMATIC)
+# ============================================================================
+
+deploy-dev:
+  extends: .azure-cli
+  stage: deploy-dev
+  environment:
+    name: development
+    url: https://${FUNC_APP_DEV}.azurewebsites.net
+  script:
+    - |
+      # Deploy to dev function app
+      az functionapp deployment source config-zip \
+        --resource-group ${AZURE_RESOURCE_GROUP} \
+        --name ${FUNC_APP_DEV} \
+        --src function-app.zip
+
+      # Verify deployment
+      sleep 30
+      az functionapp function list --resource-group ${AZURE_RESOURCE_GROUP} --name ${FUNC_APP_DEV}
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+  needs:
+    - package-functions
+    - unit-tests
+
+# ============================================================================
+# STAGE 6: DEPLOY STAGING (AUTOMATIC)
+# ============================================================================
+
+deploy-staging:
+  extends: .azure-cli
+  stage: deploy-staging
+  environment:
+    name: staging
+    url: https://${FUNC_APP_STAGING}.azurewebsites.net
+  script:
+    - |
+      az functionapp deployment source config-zip \
+        --resource-group ${AZURE_RESOURCE_GROUP} \
+        --name ${FUNC_APP_STAGING} \
+        --src function-app.zip
+
+      sleep 30
+      az functionapp function list --resource-group ${AZURE_RESOURCE_GROUP} --name ${FUNC_APP_STAGING}
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  needs:
+    - package-functions
+    - unit-tests
+    - integration-tests
+
+# ============================================================================
+# STAGE 7: DEPLOY PROD (MANUAL with slot swap)
+# ============================================================================
+
+deploy-prod-slot:
+  extends: .azure-cli
+  stage: deploy-prod
+  environment:
+    name: production-slot
+  script:
+    - |
+      # Deploy to staging slot first (zero-downtime)
+      az functionapp deployment source config-zip \
+        --resource-group ${AZURE_RESOURCE_GROUP} \
+        --name ${FUNC_APP_PROD} \
+        --slot ${DEPLOYMENT_SLOT} \
+        --src function-app.zip
+
+      # Wait for slot to be ready
+      sleep 60
+
+      # Validate staging slot
+      SLOT_URL="https://${FUNC_APP_PROD}-${DEPLOYMENT_SLOT}.azurewebsites.net/api/health"
+      curl -sf $SLOT_URL || exit 1
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+  needs:
+    - deploy-staging
+
+swap-to-prod:
+  extends: .azure-cli
+  stage: deploy-prod
+  environment:
+    name: production
+    url: https://${FUNC_APP_PROD}.azurewebsites.net
+  script:
+    - |
+      # Swap staging slot to production
+      az functionapp deployment slot swap \
+        --resource-group ${AZURE_RESOURCE_GROUP} \
+        --name ${FUNC_APP_PROD} \
+        --slot ${DEPLOYMENT_SLOT} \
+        --target-slot production
+
+      echo "Swapped ${DEPLOYMENT_SLOT} to production"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+  needs:
+    - deploy-prod-slot
+
+# ============================================================================
+# ROLLBACK (MANUAL - swap back)
+# ============================================================================
+
+rollback-prod:
+  extends: .azure-cli
+  stage: deploy-prod
+  environment:
+    name: production
+    action: rollback
+  script:
+    - |
+      # Swap back (staging now has old prod, production has new)
+      az functionapp deployment slot swap \
+        --resource-group ${AZURE_RESOURCE_GROUP} \
+        --name ${FUNC_APP_PROD} \
+        --slot ${DEPLOYMENT_SLOT} \
+        --target-slot production
+
+      echo "Rolled back to previous version"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+  needs:
+    - swap-to-prod

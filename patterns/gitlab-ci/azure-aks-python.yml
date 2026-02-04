@@ -1,0 +1,303 @@
+# Canonical GitLab CI/CD Template: Python Backend → Azure AKS
+# Version: 1.0
+# Last Updated: 2026-02-04
+# Decision Reference: DEC-DEVOPS-017
+#
+# This template deploys Python backends to Azure Kubernetes Service (AKS).
+# Requires: Azure Service Principal, ACR credentials, kubeconfig
+#
+# Automation Levels:
+# - dev/staging: Automatic on merge to develop/main
+# - production: Manual approval required
+
+stages:
+  - quality
+  - test
+  - security
+  - build
+  - deploy-dev
+  - deploy-staging
+  - deploy-prod
+
+variables:
+  PYTHON_VERSION: "3.12"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+  # Azure Container Registry
+  ACR_NAME: "${ACR_REGISTRY_NAME}"
+  ACR_LOGIN_SERVER: "${ACR_REGISTRY_NAME}.azurecr.io"
+  IMAGE_NAME: "${ACR_LOGIN_SERVER}/${CI_PROJECT_NAME}"
+
+  # AKS Clusters (one per environment)
+  AKS_RESOURCE_GROUP: "${AKS_RESOURCE_GROUP}"
+  AKS_CLUSTER_DEV: "${PROJECT_NAME}-dev"
+  AKS_CLUSTER_STAGING: "${PROJECT_NAME}-staging"
+  AKS_CLUSTER_PROD: "${PROJECT_NAME}-prod"
+
+  # Kubernetes namespace
+  K8S_NAMESPACE: "${CI_PROJECT_NAME}"
+
+# ============================================================================
+# REUSABLE TEMPLATES
+# ============================================================================
+
+.python-base:
+  image: python:${PYTHON_VERSION}-slim
+  cache:
+    key: python-${CI_COMMIT_REF_SLUG}
+    paths:
+      - .cache/pip
+      - .venv
+  before_script:
+    - python -m venv .venv
+    - source .venv/bin/activate
+    - pip install --upgrade pip
+    - pip install -e ".[dev]"
+
+.azure-cli:
+  image: mcr.microsoft.com/azure-cli:latest
+  before_script:
+    - az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
+    - az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_CLUSTER --overwrite-existing
+    - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    - chmod +x kubectl && mv kubectl /usr/local/bin/
+
+# ============================================================================
+# STAGE 1: QUALITY GATES (NON-NEGOTIABLE)
+# ============================================================================
+
+lint:
+  extends: .python-base
+  stage: quality
+  script:
+    - ruff check src/ tests/ --output-format=gitlab > gl-code-quality-report.json || true
+    - ruff check src/ tests/
+  artifacts:
+    reports:
+      codequality: gl-code-quality-report.json
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^(main|develop)$/
+
+type-check:
+  extends: .python-base
+  stage: quality
+  script:
+    - mypy src/ --strict
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^(main|develop)$/
+
+determinism-check:
+  extends: .python-base
+  stage: quality
+  script:
+    - |
+      VIOLATIONS=$(grep -r "datetime\.now\|datetime\.utcnow\|uuid4" src/*/core/ --include="*.py" 2>/dev/null | grep -v import | wc -l || echo "0")
+      if [ "$VIOLATIONS" -gt 0 ]; then
+        echo "ERROR: Found $VIOLATIONS determinism violations in core"
+        grep -r "datetime\.now\|datetime\.utcnow\|uuid4" src/*/core/ --include="*.py" | grep -v import
+        exit 1
+      fi
+      echo "No determinism violations found"
+
+# ============================================================================
+# STAGE 2: TESTING (NON-NEGOTIABLE)
+# ============================================================================
+
+unit-tests:
+  extends: .python-base
+  stage: test
+  script:
+    - pytest tests/unit/ -v --junitxml=junit.xml --cov=src --cov-report=xml
+  artifacts:
+    when: always
+    reports:
+      junit: junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+  coverage: '/TOTAL.*\s+(\d+%)/'
+
+integration-tests:
+  extends: .python-base
+  stage: test
+  services:
+    - name: postgres:15
+      alias: postgres
+  variables:
+    POSTGRES_DB: test_db
+    POSTGRES_USER: test_user
+    POSTGRES_PASSWORD: test_password
+    DATABASE_URL: "postgresql://test_user:test_password@postgres:5432/test_db"
+  script:
+    - pytest tests/integration/ -v --junitxml=integration-junit.xml
+  artifacts:
+    reports:
+      junit: integration-junit.xml
+
+security-tests:
+  extends: .python-base
+  stage: test
+  script:
+    - pytest tests/security/ -v || true
+    - pip install bandit
+    - bandit -r src/ -f json -o bandit-report.json || true
+  artifacts:
+    paths:
+      - bandit-report.json
+
+# ============================================================================
+# STAGE 3: SECURITY SCANNING (NON-NEGOTIABLE)
+# ============================================================================
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+  - template: Security/Container-Scanning.gitlab-ci.yml
+
+sast:
+  stage: security
+  variables:
+    SAST_EXCLUDED_PATHS: "tests/, .venv/"
+
+container_scanning:
+  stage: security
+  needs: ["build-image"]
+
+# ============================================================================
+# STAGE 4: BUILD
+# ============================================================================
+
+build-image:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - docker login $ACR_LOGIN_SERVER -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET
+  script:
+    - docker build -t ${IMAGE_NAME}:${CI_COMMIT_SHA} -t ${IMAGE_NAME}:latest .
+    - docker push ${IMAGE_NAME}:${CI_COMMIT_SHA}
+    - docker push ${IMAGE_NAME}:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(main|develop)$/
+
+# ============================================================================
+# STAGE 5: DEPLOY DEV (AUTOMATIC)
+# ============================================================================
+
+deploy-dev:
+  extends: .azure-cli
+  stage: deploy-dev
+  variables:
+    AKS_CLUSTER: $AKS_CLUSTER_DEV
+  environment:
+    name: development
+    url: https://dev.${CI_PROJECT_NAME}.yourdomain.com
+  script:
+    - |
+      # Update image in deployment
+      kubectl set image deployment/${CI_PROJECT_NAME} \
+        ${CI_PROJECT_NAME}=${IMAGE_NAME}:${CI_COMMIT_SHA} \
+        -n ${K8S_NAMESPACE} || \
+      kubectl apply -f k8s/dev/ -n ${K8S_NAMESPACE}
+    - kubectl rollout status deployment/${CI_PROJECT_NAME} -n ${K8S_NAMESPACE} --timeout=300s
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+
+# ============================================================================
+# STAGE 6: DEPLOY STAGING (AUTOMATIC with approval gate)
+# ============================================================================
+
+deploy-staging:
+  extends: .azure-cli
+  stage: deploy-staging
+  variables:
+    AKS_CLUSTER: $AKS_CLUSTER_STAGING
+  environment:
+    name: staging
+    url: https://staging.${CI_PROJECT_NAME}.yourdomain.com
+  script:
+    - kubectl set image deployment/${CI_PROJECT_NAME} \
+        ${CI_PROJECT_NAME}=${IMAGE_NAME}:${CI_COMMIT_SHA} \
+        -n ${K8S_NAMESPACE}
+    - kubectl rollout status deployment/${CI_PROJECT_NAME} -n ${K8S_NAMESPACE} --timeout=300s
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  needs:
+    - deploy-dev
+    - unit-tests
+    - integration-tests
+    - security-tests
+
+# ============================================================================
+# STAGE 7: DEPLOY PROD (MANUAL)
+# ============================================================================
+
+deploy-prod:
+  extends: .azure-cli
+  stage: deploy-prod
+  variables:
+    AKS_CLUSTER: $AKS_CLUSTER_PROD
+  environment:
+    name: production
+    url: https://${CI_PROJECT_NAME}.yourdomain.com
+  script:
+    # Blue-green deployment
+    - |
+      CURRENT_COLOR=$(kubectl get svc ${CI_PROJECT_NAME} -n ${K8S_NAMESPACE} -o jsonpath='{.spec.selector.color}' || echo "blue")
+      NEW_COLOR=$([ "$CURRENT_COLOR" == "blue" ] && echo "green" || echo "blue")
+
+      echo "Deploying to $NEW_COLOR (current: $CURRENT_COLOR)"
+
+      # Deploy to new color
+      kubectl set image deployment/${CI_PROJECT_NAME}-${NEW_COLOR} \
+        ${CI_PROJECT_NAME}=${IMAGE_NAME}:${CI_COMMIT_SHA} \
+        -n ${K8S_NAMESPACE}
+      kubectl rollout status deployment/${CI_PROJECT_NAME}-${NEW_COLOR} -n ${K8S_NAMESPACE} --timeout=300s
+
+      # Health check
+      kubectl run health-check --image=curlimages/curl --restart=Never --rm -it -- \
+        curl -f http://${CI_PROJECT_NAME}-${NEW_COLOR}.${K8S_NAMESPACE}.svc.cluster.local/health
+
+      # Switch traffic
+      kubectl patch svc ${CI_PROJECT_NAME} -n ${K8S_NAMESPACE} \
+        -p '{"spec":{"selector":{"color":"'${NEW_COLOR}'"}}}'
+
+      echo "Traffic switched to $NEW_COLOR"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+  needs:
+    - deploy-staging
+
+# ============================================================================
+# ROLLBACK (MANUAL)
+# ============================================================================
+
+rollback-prod:
+  extends: .azure-cli
+  stage: deploy-prod
+  variables:
+    AKS_CLUSTER: $AKS_CLUSTER_PROD
+  environment:
+    name: production
+    action: rollback
+  script:
+    - |
+      CURRENT_COLOR=$(kubectl get svc ${CI_PROJECT_NAME} -n ${K8S_NAMESPACE} -o jsonpath='{.spec.selector.color}')
+      PREVIOUS_COLOR=$([ "$CURRENT_COLOR" == "blue" ] && echo "green" || echo "blue")
+
+      echo "Rolling back to $PREVIOUS_COLOR (current: $CURRENT_COLOR)"
+
+      kubectl patch svc ${CI_PROJECT_NAME} -n ${K8S_NAMESPACE} \
+        -p '{"spec":{"selector":{"color":"'${PREVIOUS_COLOR}'"}}}'
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+  needs:
+    - deploy-prod
