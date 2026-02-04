@@ -9571,3 +9571,47 @@ for slide, crops in CROPS.items():
 - [ ] Verify each crop visually - icons are often positioned differently than expected
 - [ ] For HTML templates, embed images as base64 data URIs to avoid path issues with file:// protocol
 - [ ] Keep both hires renders and cropped icons - may need to re-crop with different coordinates
+
+---
+
+## Lesson 124: Grep Patterns Must Match All Heading Variations
+
+**Date**: 2026-02-04
+**Context**: Claude Agent Framework - /learn command reporting wrong lesson count
+
+### Problem
+
+The `/learn` command reported only 60 lessons when there were actually 151. The grep pattern `^### Lesson` only matched lessons with exactly 3 hashes, but lessons used varying heading levels:
+
+```markdown
+## Lesson 113: ...   (2 hashes - newer format)
+### Lesson: ...      (3 hashes - older format)
+#### Lesson 35a: ... (4 hashes - sub-lessons)
+```
+
+This caused the lesson count to be wildly inaccurate, and new lessons would get incorrect numbers.
+
+### Solution
+
+Use extended regex with `+` quantifier to match one or more `#` characters:
+
+```bash
+# OLD - only matches ### (3 hashes)
+grep -c "^### Lesson" devlessons.md  # Returns 60
+
+# NEW - matches ##, ###, #### etc.
+grep -cE "^##+ Lesson" devlessons.md  # Returns 151
+```
+
+For finding the highest numbered lesson (to determine next number):
+
+```bash
+grep -oE "Lesson [0-9]+" devlessons.md | sed 's/Lesson //' | sort -n | tail -1
+# Returns: 123 (so next lesson is 124)
+```
+
+### Future Checklist
+- [ ] When counting markdown sections, use `^##+` pattern to match all heading levels
+- [ ] Test grep patterns against actual file content before deploying
+- [ ] For numbered sequences, extract and sort numerically rather than counting occurrences
+- [ ] Document format variations in files that evolved over time
