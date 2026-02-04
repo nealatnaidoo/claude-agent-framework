@@ -16,12 +16,14 @@ agents:
     depended_by: [solution-designer]
 
   devops-governor:
-    version: "1.0.0"
+    version: "1.1.0"
     file: "agents/devops-governor.md"
     scope: macro
     exclusive_permission: execute_deployments
     depends_on: []
     depended_by: [solution-designer, business-analyst, backend-coding-agent, frontend-coding-agent]
+    tools_managed:
+      - db-harness  # Database gates (NN-DB-1 through NN-DB-4)
 
   solution-designer:
     version: "2.3.0"
