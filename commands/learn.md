@@ -1,5 +1,5 @@
 ---
-allowed-tools: Read, Edit, Bash(grep:*)
+allowed-tools: Read, Write, Edit, Bash(grep:*), Bash(wc:*)
 description: Capture a learning from the current session and append to devlessons.md
 ---
 
@@ -7,11 +7,13 @@ description: Capture a learning from the current session and append to devlesson
 
 - Current directory: !`pwd`
 - Today's date: !`date +%Y-%m-%d`
-- Current lesson count: !`grep -c "^### Lesson:" /Users/naidooone/Developer/claude/prompts/devlessons.md 2>/dev/null || echo "0"`
+- Current lesson count: !`grep -c "^### Lesson" ~/.claude/knowledge/devlessons.md 2>/dev/null || echo "0"`
 
 ## Your Task
 
-Capture a lesson from the current conversation and append it to `/Users/naidooone/Developer/claude/prompts/devlessons.md`.
+Capture a lesson from the current conversation and append it to `~/.claude/knowledge/devlessons.md`.
+
+**Note**: This file is symlinked to `/Users/naidooone/Developer/claude/prompts/devlessons.md`.
 
 **User's input:** `$ARGUMENTS`
 
@@ -23,12 +25,12 @@ Capture a lesson from the current conversation and append it to `/Users/naidooon
 
 ### Lesson Format
 
-Use this exact format:
+Use this exact format (replace NNN with the next lesson number after the current count):
 
 ```markdown
 ---
 
-### Lesson: <concise title>
+### Lesson NNN: <concise title>
 
 **What happened (<project name>, <date>):**
 
