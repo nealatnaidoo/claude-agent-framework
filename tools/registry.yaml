@@ -1,0 +1,172 @@
+# Agent CLI Tools Registry
+# Central manifest of all tools available to agents
+# Last Updated: 2026-02-04
+
+schema_version: "1.0"
+last_updated: "2026-02-04"
+
+# ============================================================================
+# FRAMEWORK SCRIPTS (included in repo)
+# ============================================================================
+# Location: scripts/
+# These are simple utilities included with the framework
+
+scripts:
+  # --- Validation & Quality ---
+  validate_agents:
+    path: "scripts/validate_agents.py"
+    description: "Validate agent prompts against schema and governance rules"
+    usage: "python scripts/validate_agents.py [agent.md]"
+    used_by: [devops-governor, qa-reviewer]
+
+  version_tracker:
+    path: "scripts/version_tracker.py"
+    description: "Track agent and artifact version changes with bi-temporal history"
+    usage: "python scripts/version_tracker.py scan|diff|history"
+    used_by: [devops-governor]
+
+  # --- Dependency & Impact ---
+  dependency_graph:
+    path: "scripts/dependency_graph.py"
+    description: "Visualize agent dependency graph"
+    usage: "python scripts/dependency_graph.py [--format dot|json|text]"
+    used_by: [devops-governor, solution-designer]
+
+  impact_analysis:
+    path: "scripts/impact_analysis.py"
+    description: "Analyze impact of changes to agents or patterns"
+    usage: "python scripts/impact_analysis.py --agent agent-name"
+    used_by: [devops-governor]
+
+  # --- Agent Management ---
+  new_agent:
+    path: "scripts/new_agent.py"
+    description: "Create new agent from template with validation"
+    usage: "python scripts/new_agent.py --name my-agent --scope micro"
+    used_by: [devops-governor]
+
+  # --- Deployment & Docker ---
+  local_docker_validate:
+    path: "scripts/local_docker_validate.sh"
+    description: "Validate Docker build and health check locally before deployment"
+    usage: "./scripts/local_docker_validate.sh --port 8080 --health /health --timeout 30"
+    used_by: [devops-governor]
+    decision_ref: "DEC-DEVOPS-006"
+    evidence_output: ".claude/evidence/local_docker_validation.json"
+
+  # --- Worktree Management ---
+  worktree_manager:
+    path: "scripts/worktree_manager.sh"
+    description: "Manage git worktrees for parallel development"
+    usage: "./scripts/worktree_manager.sh create|list|sync|remove"
+    used_by: [business-analyst, backend-coding-agent, frontend-coding-agent]
+    commands:
+      - create: "Create new worktree for feature"
+      - list: "List active worktrees"
+      - sync: "Sync shared artifacts between worktrees"
+      - remove: "Remove completed worktree"
+
+  # --- Framework Installation ---
+  install:
+    path: "scripts/install.sh"
+    description: "Install framework and create symlinks"
+    usage: "./scripts/install.sh"
+
+  uninstall:
+    path: "scripts/uninstall.sh"
+    description: "Uninstall framework"
+    usage: "./scripts/uninstall.sh"
+
+  rollback:
+    path: "scripts/rollback.sh"
+    description: "Rollback framework to previous version"
+    usage: "./scripts/rollback.sh [version]"
+
+  snapshot:
+    path: "scripts/snapshot.sh"
+    description: "Create snapshot of current framework state"
+    usage: "./scripts/snapshot.sh"
+
+  # --- Migration ---
+  migrate_to_claude_folder:
+    path: "scripts/migrate_to_claude_folder.sh"
+    description: "Migrate project artifacts to .claude/ folder structure"
+    usage: "./scripts/migrate_to_claude_folder.sh [project_slug]"
+    used_by: [business-analyst]
+
+# ============================================================================
+# EXTERNAL PACKAGED TOOLS (installed separately)
+# ============================================================================
+# These are standalone tools with their own repositories
+# Install via pip or package manager
+
+packages:
+  db-harness:
+    name: "Database Propagation Harness"
+    repository: "https://github.com/nealatnaidoo/db-harness"
+    version: "1.0.0"
+    install: "pip install git+https://github.com/nealatnaidoo/db-harness.git@v1.0.0"
+    pypi: null  # Not yet published to PyPI
+    description: "Database propagation with PII masking, schema drift detection, and audit logging"
+    commands:
+      propagate: "Propagate data between environments with PII masking"
+      drift: "Detect schema drift between environments"
+      consistency: "Verify FK integrity and referential consistency"
+      detect-pii: "Scan for PII in database tables"
+      audit: "Manage and verify audit logs"
+    used_by: [devops-governor]
+    gates_implemented:
+      - NN-DB-1  # Pre-migration schema drift
+      - NN-DB-2  # Post-migration FK integrity
+      - NN-DB-3  # PII masking propagation
+      - NN-DB-4  # Audit hash chain verification
+    decision_refs:
+      - DEC-DEVOPS-009  # Fly.io database access
+      - DEC-DEVOPS-010  # Masking rule governance
+      - DEC-DEVOPS-011  # Audit log retention
+      - DEC-DEVOPS-012  # Credential scope
+      - DEC-DEVOPS-014  # Portfolio integration
+    ci_templates: "patterns/db-harness/gitlab-ci-templates.yml"
+    baseline_rules: "~/.claude/devops/patterns/db-harness/baseline_masking_rules.yaml"
+
+# ============================================================================
+# PLANNED TOOLS
+# ============================================================================
+
+planned:
+  agent-metrics:
+    category: package
+    purpose: "Collect and report agent performance metrics"
+    status: planned
+
+  pattern-lint:
+    category: script
+    purpose: "Lint CI patterns for compliance with non-negotiables"
+    status: planned
+
+  project-audit:
+    category: script
+    purpose: "Full project audit for Prime Directive compliance"
+    status: planned
+
+  secret-rotate:
+    category: package
+    purpose: "Credential rotation automation for Fly.io/Azure secrets"
+    status: planned
+
+# ============================================================================
+# INSTALLATION
+# ============================================================================
+
+installation:
+  framework_scripts:
+    method: "Included with framework clone"
+    command: "git clone https://github.com/nealatnaidoo/claude-agent-framework.git ~/.claude"
+
+  external_packages:
+    method: "Install separately via pip"
+    all_in_one: "scripts/install_packages.sh"
+
+  verification:
+    - "python ~/.claude/scripts/validate_agents.py --help"
+    - "db-harness --version"
