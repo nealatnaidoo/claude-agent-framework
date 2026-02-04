@@ -11,8 +11,10 @@ from claude_cli.lessons.models import Lesson, LessonCreate
 
 
 SCHEMA_SQL = """
+CREATE SEQUENCE IF NOT EXISTS seq_lessons_id START 1;
+
 CREATE TABLE IF NOT EXISTS lessons (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY DEFAULT nextval('seq_lessons_id'),
     number INTEGER UNIQUE,
     title VARCHAR NOT NULL,
     date_learned DATE NOT NULL,
