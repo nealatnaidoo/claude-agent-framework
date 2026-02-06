@@ -224,12 +224,12 @@ Every task MUST specify its domain:
 
 ```
 PARALLEL EXECUTION POSSIBLE:
-├── Backend Worktree
+├── Backend Agent
 │   ├── T001 (backend) - API endpoint
 │   ├── T002 (backend) - Repository
 │   └── T003 (backend) - Service logic
 │
-└── Frontend Worktree
+└── Frontend Agent
     ├── T004 (frontend) - Component UI
     ├── T005 (frontend) - State hooks
     └── T006 (frontend) - Stories/tests
@@ -246,26 +246,23 @@ T007 (fullstack) - Integration testing
 3. **Fullstack tasks**: Must wait for both domain dependencies
 4. **Integration tasks**: Always assigned to backend-coding-agent
 
-### Worktree Optimization
+### Domain Separation for Parallel Execution
 
-When creating feature specs, consider domain separation:
+When creating feature specs, structure tasks for parallel agent assignment:
 
 ```yaml
-# Optimal worktree structure for parallel execution
-feature_backlog:
-  - slug: "user-auth-backend"
-    domain: "backend"
+# Domain-separated task groups for Agent Teams
+domain_summary:
+  backend:
     tasks: ["T001", "T002", "T003"]
-
-  - slug: "user-auth-frontend"
-    domain: "frontend"
+    agent: "backend-coding-agent"
+  frontend:
     tasks: ["T004", "T005", "T006"]
-    depends_on: ["user-auth-backend"]  # API must exist first
-
-  - slug: "user-auth-integration"
-    domain: "fullstack"
+    agent: "frontend-coding-agent"
+  fullstack:
     tasks: ["T007"]
-    depends_on: ["user-auth-backend", "user-auth-frontend"]
+    agent: "backend-coding-agent"
+    depends_on: ["T002", "T004"]  # Waits for both domains
 ```
 
 ### Conflict Prevention
@@ -506,206 +503,17 @@ When coding detects drift from spec/tasklist:
 
 ---
 
-## Worktree Management (v1.2)
+## Parallel Development
 
-### Feature Backlog Workflow (Work Ahead Model)
+### Recommended: Agent Teams (v3.0)
 
-The backlog enables Solution Designer + BA to work continuously while Coding agents implement in parallel worktrees.
+For parallel frontend/backend development within a session, use **Agent Teams**.
+See: `~/.claude/docs/agent_teams.md`
 
-#### Adding Features to Backlog
+### Legacy: Git Worktrees (deprecated)
 
-When BA completes a feature spec:
+Git worktree-based parallelism is still supported but deprecated in favor of Agent Teams.
+Full worktree protocol: `~/.claude/docs/agent_operating_model.md` (Section 5.1)
+Helper script: `~/.claude/scripts/worktree_manager.sh`
 
-1. **Create feature-specific artifacts** (stored in MAIN `.claude/artifacts/`):
-   ```
-   .claude/artifacts/
-   ├── 002_spec_v1.md                    # Main project spec
-   ├── 002_spec_user_auth_v1.md          # Feature: user-auth
-   ├── 002_spec_billing_v1.md            # Feature: billing
-   ├── 003_tasklist_v1.md                # Main orchestration tasklist
-   ├── 003_tasklist_user_auth_v1.md      # Feature: user-auth tasks
-   └── 003_tasklist_billing_v1.md        # Feature: billing tasks
-   ```
-
-2. **Add to feature_backlog** in main manifest:
-   ```yaml
-   feature_backlog:
-     - slug: "user-auth"
-       name: "User Authentication"
-       status: "ready"
-       priority: 1
-       spec_file: ".claude/artifacts/002_spec_user_auth_v1.md"
-       tasklist_file: ".claude/artifacts/003_tasklist_user_auth_v1.md"
-       tasks: ["T001", "T002", "T003"]
-       dependencies: []
-       created: "2026-01-31T10:00:00Z"
-       devops_approved: true
-       worktree: null  # Not yet spawned
-   ```
-
-3. **Continue working** - BA/Solution Designer can keep speccing features while backlog is processed
-
-#### Backlog Processing (Pull Model)
-
-When ready to start coding:
-
-1. **Check capacity**: `len(active_worktrees) < max_parallel`
-2. **Find next feature**:
-   - Status = "ready"
-   - All dependencies have status = "complete"
-   - Order by priority ASC
-3. **Spawn worktree** using helper script:
-   ```bash
-   ~/.claude/scripts/worktree_manager.sh spawn-from-backlog {feature_slug}
-   ```
-4. **Update backlog entry**: `status: "in_progress"`, `worktree: "feature-slug"`
-
-### When to Create Worktrees
-
-Spawn a worktree when ALL conditions are met:
-
-| Condition | Rationale |
-|-----------|-----------|
-| Feature is independent | No blocking dependencies on other in-progress features |
-| Feature scope >= 3 tasks | Worth the overhead of separate worktree |
-| Main worktree not in coding phase | Avoid conflicts with active implementation |
-| `active_worktrees.length < worktree_governance.max_parallel` | Respect parallelism limits |
-
-### Worktree Creation Protocol
-
-#### Step 1: Check Governance
-
-```yaml
-# Verify in main manifest
-worktree_governance:
-  max_parallel: 3  # Don't exceed this
-
-active_worktrees:
-  - name: "feature-a"  # Count existing
-```
-
-If at capacity, wait for existing worktree to complete.
-
-#### Step 2: Run Helper Script
-
-```bash
-# From main project directory
-~/.claude/scripts/worktree_manager.sh create {project_slug} {feature_slug}
-```
-
-This creates:
-- Feature branch: `feature/{feature_slug}`
-- Worktree: `../{project_slug}-{feature_slug}`
-- Copies shared artifacts (rules, quality gates, lessons)
-- Initializes `.claude/` structure
-
-#### Step 3: Create Worktree Manifest
-
-Create `../{project_slug}-{feature_slug}/.claude/manifest.yaml`:
-
-```yaml
-schema_version: "1.2"
-project_slug: "{project_slug}"
-project_name: "{Project Name} - {Feature Name}"
-phase: "coding"
-
-worktree:
-  is_worktree: true
-  name: "{feature_slug}"
-  branch: "feature/{feature_slug}"
-  main_worktree_path: "../{project_slug}"
-  feature_scope:
-    - "T001"
-    - "T002"
-    - "T003"
-
-artifact_versions:
-  spec:
-    version: 1
-    file: ".claude/artifacts/002_spec_{feature_slug}_v1.md"
-  tasklist:
-    version: 1
-    file: ".claude/artifacts/003_tasklist_{feature_slug}_v1.md"
-  # ... other artifacts
-
-outstanding:
-  tasks:
-    - id: "T001"
-      status: "pending"
-  remediation: []
-```
-
-#### Step 4: Update Main Manifest
-
-Add to main worktree's `.claude/manifest.yaml`:
-
-```yaml
-active_worktrees:
-  - name: "{feature_slug}"
-    path: "../{project_slug}-{feature_slug}"
-    branch: "feature/{feature_slug}"
-    phase: "coding"
-    created: "{ISO timestamp}"
-    tasks: ["T001", "T002", "T003"]
-    last_sync: "{ISO timestamp}"
-
-feature_backlog:
-  - slug: "{feature_slug}"
-    status: "in_progress"  # Changed from "ready"
-    worktree: "{feature_slug}"  # Added link
-```
-
-### Worktree Completion Flow
-
-When a worktree signals completion (all tasks done, QA passed):
-
-1. **Verify in worktree manifest**: `phase: complete`
-2. **Update main manifest**:
-   ```yaml
-   active_worktrees:
-     - name: "{feature_slug}"
-       phase: "complete"  # Changed from "qa"
-
-   feature_backlog:
-     - slug: "{feature_slug}"
-       status: "complete"
-   ```
-3. **Merge feature branch to main**
-4. **Remove worktree** (if `auto_cleanup: true`):
-   ```bash
-   ~/.claude/scripts/worktree_manager.sh remove ../{project_slug}-{feature_slug}
-   ```
-
-### Drift Handling Across Worktrees
-
-If coding agent reports drift in a worktree:
-
-1. **Read drift report** from worktree's `.claude/evolution/evolution.md`
-2. **Assess impact**:
-   - **Local only** (affects only this feature) → Update worktree artifacts
-   - **Cross-feature** (affects main spec) → Update main spec, sync to worktrees
-3. **Sync if needed**:
-   ```bash
-   ~/.claude/scripts/worktree_manager.sh sync ../{project_slug}-{feature_slug}
-   ```
-4. **Update main manifest** with sync timestamp
-
-### Backlog Commands
-
-```bash
-# List backlog and capacity
-~/.claude/scripts/worktree_manager.sh backlog list
-
-# Find next feature to spawn
-~/.claude/scripts/worktree_manager.sh backlog next
-
-# Spawn from backlog
-~/.claude/scripts/worktree_manager.sh spawn-from-backlog {feature_slug}
-```
-
-### Hard Rules for Worktree Mode
-
-1. **Never exceed max_parallel** - wait for completion if at capacity
-2. **Always update both manifests** - worktree and main must stay in sync
-3. **Feature artifacts in main** - specs/tasklists live in main, copied to worktrees
-4. **IDs are project-global** - BUG/IMPROVE IDs sequence from main manifest
+**Feature Backlog** is still supported in manifest schema v1.3 (`feature_backlog`, `active_worktrees` fields).

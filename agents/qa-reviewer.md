@@ -455,138 +455,20 @@ Extract the highest BUG-XXX and IMPROVE-XXX numbers found.
 
 ---
 
-## Worktree Review Protocol (v1.2)
+## Parallel Development Review
 
-### Identifying Review Targets
+### Agent Teams (v3.0 - Recommended)
 
-QA Reviewer can review:
+When reviewing work from Agent Teams teammates, follow the standard review protocol above. Each teammate works in the same branch, so no merge checks needed.
 
-1. **Main worktree** - Standard review of `phase: qa` work
-2. **Feature worktrees** - Review worktrees where `phase: qa`
+### Legacy: Worktree Review (deprecated)
 
-### Discovering Reviewable Worktrees
+If reviewing work in a git worktree, the full worktree review protocol is at:
+`~/.claude/docs/agent_operating_model.md` (Section 5.1)
 
-From main worktree, check manifest:
-
-```yaml
-active_worktrees:
-  - name: "user-auth"
-    path: "../myapp-user-auth"
-    phase: "qa"  # ← Reviewable
-  - name: "billing"
-    path: "../myapp-billing"
-    phase: "coding"  # ← Not ready for review
-```
-
-### Worktree Review Startup
-
-#### Step 1: Navigate to Worktree
-
-```bash
-cd {worktree_path}  # e.g., ../myapp-user-auth
-```
-
-#### Step 2: Read Worktree Manifest
-
-```yaml
-# Verify it's ready for review
-phase: "qa"
-worktree:
-  is_worktree: true
-  feature_scope: ["T001", "T002", "T003"]
-```
-
-#### Step 3: Scope Review to Feature
-
-Only review:
-- Tasks in `feature_scope`
-- Files changed in the feature branch
-- Evidence in this worktree's `.claude/evidence/`
-
-### Review Checklist for Worktrees
-
-Standard checklist applies, plus:
-
-- [ ] Feature branch is up-to-date with main
-- [ ] No merge conflicts with main
-- [ ] All tasks in `feature_scope` completed
-- [ ] Evidence artifacts exist in worktree
-- [ ] Worktree manifest correctly reflects completion
-
-### Branch Freshness Check
-
-```bash
-# Check if feature branch has diverged
-git fetch origin main
-git log feature/user-auth..origin/main --oneline
-
-# If commits exist, feature branch needs rebase
-# Report this as a blocking issue
-```
-
-### Worktree QA Report
-
-Create: `{worktree}/.claude/remediation/qa_YYYY-MM-DD.md`
-
-Include additional section:
-
-```markdown
-## Worktree Status
-
-| Check | Status |
-|-------|--------|
-| Feature Scope | T001, T002, T003 |
-| Branch | feature/user-auth |
-| Up-to-date with main | YES/NO |
-| Merge conflicts | NONE/YES |
-| Ready to merge | YES/NO |
-```
-
-### Phase Transitions in Worktree
-
-| Review Result | Worktree Phase | Main Manifest Update |
-|---------------|----------------|---------------------|
-| `pass` | `complete` | `active_worktrees[].phase: complete` |
-| `pass_with_notes` | `remediation` | `active_worktrees[].phase: remediation` |
-| `needs_work` | `coding` | `active_worktrees[].phase: coding` |
-| `blocked` | `coding` (with flag) | Escalate to BA |
-
-### Updating Both Manifests
-
-After review, update:
-
-1. **Worktree manifest** (`{worktree}/.claude/manifest.yaml`):
-   ```yaml
-   phase: "complete"  # or appropriate phase
-   reviews:
-     last_qa_review:
-       date: "{timestamp}"
-       result: "pass"
-       report_file: ".claude/remediation/qa_YYYY-MM-DD.md"
-   ```
-
-2. **Main manifest** (`{main}/.claude/manifest.yaml`):
-   ```yaml
-   active_worktrees:
-     - name: "user-auth"
-       phase: "complete"
-       last_sync: "{timestamp}"
-   ```
-
-### Merge Approval
-
-If review passes:
-
-1. Set worktree `phase: complete`
-2. Update main manifest
-3. Report: "Worktree 'user-auth' approved for merge"
-
-BA or designated agent handles actual merge.
-
-### Hard Rules for Worktree Review
-
-1. **Only review worktrees in phase: qa** - not coding or complete
-2. **Always check branch freshness** - stale branches are blocking
-3. **Update both manifests** - worktree and main must stay in sync
-4. **BUG/IMPROVE IDs from main sequence** - search main's remediation first
-5. **Report goes in worktree** - `.claude/remediation/` of the worktree being reviewed
+Key differences from standard review:
+- Navigate to the worktree directory first
+- Scope review to `feature_scope` tasks only
+- Check branch freshness (`git log feature/...--oneline`)
+- Update **both** manifests (worktree and main)
+- QA report goes in the worktree's `.claude/remediation/`
