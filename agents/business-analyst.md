@@ -239,12 +239,71 @@ T007 (fullstack) - Integration testing
   └── blocked_by: [T001, T004]
 ```
 
-### Task Sequencing Rules
+### Parallelism-First Design (MANDATORY)
 
-1. **Backend-only tasks**: Can run in parallel with frontend-only tasks
-2. **Frontend-only tasks**: Can run in parallel with backend-only tasks
-3. **Fullstack tasks**: Must wait for both domain dependencies
-4. **Integration tasks**: Always assigned to backend-coding-agent
+**Default to independent tasks.** Only add `blocked_by` when there is a genuine data dependency (one task literally produces output consumed by another). Do NOT add dependencies "to be safe" — unnecessary dependencies kill parallelism.
+
+#### Design Rules
+
+1. **Backend-only tasks**: Can run in parallel with frontend-only tasks (ALWAYS)
+2. **Frontend-only tasks**: Can run in parallel with backend-only tasks (ALWAYS)
+3. **Within-domain tasks**: Default to independent unless they share state
+4. **Fullstack tasks**: Must wait for both domain dependencies (minimize these)
+5. **Integration tasks**: Always assigned to backend-coding-agent, always last
+
+#### Dependency Budget
+
+After creating the tasklist, calculate the **parallelism score**:
+
+```
+Parallelism Score = (tasks with NO blocked_by) / (total tasks) x 100%
+```
+
+| Score | Status | Action |
+|-------|--------|--------|
+| >70% | GOOD | Proceed |
+| 50-70% | REVIEW | Re-examine dependencies, can any be removed? |
+| <50% | REDESIGN | Too serial. Restructure tasks to decouple |
+
+#### Interface-First Decomposition
+
+When tasks have genuine dependencies, break them into **interface + implementation**:
+
+```
+BEFORE (serial):
+  T001: Create user repository           ← 90 min
+  T002: Create auth service (needs T001) ← 90 min
+  T003: Create login API (needs T002)    ← 60 min
+  Total serial time: 240 min
+
+AFTER (parallel):
+  T001: Define repository port (ABC interface)      ← 15 min
+  T002: Define auth service port (ABC interface)     ← 15 min
+  T003: Implement user repository (needs T001)       ← 75 min
+  T004: Implement auth service (needs T001, T002)    ← 75 min
+  T005: Create login API handler (needs T002)        ← 60 min
+  Parallel time: ~90 min (T001+T002 serial, then T003/T004/T005 parallel)
+```
+
+**Principle**: Interfaces are cheap to define and unblock consumers immediately.
+
+#### Dependency Graph in Tasklist
+
+Every tasklist MUST include a visual dependency graph at the top:
+
+```markdown
+## Dependency Graph
+
+```
+Independent: T001, T002, T004, T005    ← can start immediately
+After T001:  T003                       ← needs T001 only
+After T002:  T006                       ← needs T002 only
+After T003 + T006: T007                 ← integration test (last)
+
+Parallelism Score: 57% (4/7 independent)
+Estimated parallel time: ~3 hours (vs ~7 hours serial)
+```
+```
 
 ### Domain Separation for Parallel Execution
 

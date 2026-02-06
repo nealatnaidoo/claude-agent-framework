@@ -133,6 +133,7 @@ After context compress or session restart:
 | Command | Purpose |
 |---------|---------|
 | `/review-project` | Prime Directive compliance and spec drift check |
+| `/visit` | Generate project-specific visiting agent prompt (security, performance, accessibility) |
 | `/status` | Display system status (MCP, agents, credentials) |
 | `/commit` | Create git commit |
 | `/save-state` | Save session state for resumption |

@@ -198,45 +198,123 @@ Every interactive component MUST:
 ## Startup Protocol
 
 1. **Read manifest**: `{project}/.claude/manifest.yaml`
-2. **Verify phase**: Must be `coding`
+2. **Verify phase**: Must be `coding` or `fast_track` or `remediation`
 3. **Load tasks**: From `outstanding.tasks` (frontend tasks only)
 4. **Verify BA artifacts**: Spec, tasklist exist
+5. **Check remediation**: Handle `outstanding.remediation` (critical/high first)
+6. **Run pre-flight** (see below)
 
-## Work Loop
+## Pre-Flight Check (Runs Once)
+
+Before starting any task, validate the coding environment:
 
 ```
-1. CLAIM: TaskUpdate taskId → "in_progress"
-
-2. READ: TaskGet taskId → full description
-
-3. VALIDATE: Slice structure exists
-   └── If missing: create directories + index.ts FIRST
-
-4. TYPES FIRST: Create/update model/types.ts
-
-5. TDD: Write component tests BEFORE implementation
-
-6. IMPLEMENT:
-   └── Hooks in model/hooks.ts
-   └── Components in ui/
-   └── API calls in api/
-
-7. STORYBOOK: Create stories for visual components
-
-8. QUALITY GATES:
-   └── npm run lint
-   └── npm run typecheck
-   └── npx tsx ~/.claude/patterns/frontend-fsd/fsd-audit.ts src/
-   └── npm run test:coverage
-
-9. EVIDENCE:
-   └── .claude/evidence/quality_gates_run.json
-   └── .claude/evidence/test_report.json
-
-10. COMPLETE: TaskUpdate taskId → "completed"
-
-11. NEXT: TaskList → find next unblocked task
+PRE-FLIGHT CHECKLIST:
+1. [ ] Project structure exists (src/ with FSD layers)
+2. [ ] Dependencies installed (node_modules exists)
+3. [ ] Quality gate tools available (eslint, tsc, vitest/jest)
+4. [ ] FSD layer directories exist (create if missing)
+5. [ ] .claude/evidence/ directory exists (create if missing)
+6. [ ] All frontend tasks from manifest loaded
+7. [ ] No blocking remediation items (critical/high BUGs)
+8. [ ] Read spec and rules for context (002_spec, 004_rules)
 ```
+
+If pre-flight fails on items 1-5, fix them automatically.
+If pre-flight fails on items 6-7, report and wait.
+
+## Autonomous Work Loop
+
+**You process ALL assigned tasks without human intervention.** After pre-flight, enter the autonomous loop and do not stop until all tasks are complete or a Tier 3 halt is triggered.
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  AUTONOMOUS LOOP                     │
+│                                                      │
+│  FOR EACH unblocked task (by dependency order):      │
+│                                                      │
+│  1. CLAIM: TaskUpdate taskId → "in_progress"         │
+│                                                      │
+│  2. READ: TaskGet → full description + AC + TA       │
+│                                                      │
+│  3. SCAFFOLD: Create slice structure if missing       │
+│     └── directories, index.ts, model/types.ts stubs │
+│                                                      │
+│  4. TYPES FIRST: Create/update model/types.ts        │
+│                                                      │
+│  5. TDD: Write component tests BEFORE implementation │
+│                                                      │
+│  6. IMPLEMENT:                                       │
+│     └── Hooks in model/hooks.ts                     │
+│     └── Components in ui/                           │
+│     └── API calls in api/                           │
+│                                                      │
+│  7. STORYBOOK: Create stories for visual components  │
+│                                                      │
+│  8. INLINE QA (self-check, replaces manual QA):      │
+│     ├── npm run lint (--fix where possible)          │
+│     ├── npm run typecheck                            │
+│     ├── fsd-audit.ts src/ (if available)             │
+│     ├── npm run test                                 │
+│     └── Verify data-testid on interactive elements   │
+│                                                      │
+│  9. AUTO-FIX (if inline QA fails):                   │
+│     ├── Fix lint/type errors immediately             │
+│     ├── Fix failing tests (up to 2 attempts)         │
+│     ├── If fix fails after 2 attempts:               │
+│     │   └── Log to .claude/evolution/evolution.md     │
+│     │   └── Mark task with note, continue to next    │
+│     └── Re-run inline QA after fix                   │
+│                                                      │
+│  10. EVIDENCE: Write quality gate results             │
+│      └── .claude/evidence/quality_gates_run.json     │
+│      └── .claude/evidence/test_report.json           │
+│                                                      │
+│  11. COMPLETE: TaskUpdate taskId → "completed"        │
+│                                                      │
+│  12. NEXT: Find next unblocked task                   │
+│      └── If none remain: exit loop                   │
+│                                                      │
+│  HALT CONDITIONS (exit loop immediately):             │
+│  - Tier 3 drift detected (new feature, layer change) │
+│  - Security vulnerability discovered                 │
+│  - >3 consecutive tasks fail inline QA               │
+│                                                      │
+└─────────────────────────────────────────────────────┘
+```
+
+## Completion Protocol
+
+After all tasks are processed (or loop exits):
+
+```markdown
+# Coding Completion Report
+
+## Summary
+| Metric | Value |
+|--------|-------|
+| Tasks Completed | N / M |
+| Tasks Skipped | N (with reasons) |
+| Quality Gate Pass Rate | X% |
+| Evolution Entries Created | N |
+
+## Task Results
+| Task | Status | Notes |
+|------|--------|-------|
+| T004 | completed | All gates pass |
+| T005 | completed | Fixed type error on 1st attempt |
+| T006 | skipped | Missing API dependency |
+
+## Evidence Artifacts
+- .claude/evidence/quality_gates_run.json
+- .claude/evidence/test_report.json
+- .claude/evidence/test_failures.json
+
+## Next Step
+{phase: qa | phase: ba (if drift) | phase: complete (if all done)}
+```
+
+Update manifest: set `phase: qa` and ensure all evidence artifacts are written.
 
 ## Quality Gate Commands
 

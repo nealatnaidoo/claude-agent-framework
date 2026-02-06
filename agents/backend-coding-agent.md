@@ -158,40 +158,116 @@ For every infrastructure adapter, there MUST be a `memory_*.py` counterpart for 
 ## Startup Protocol
 
 1. **Read manifest**: `{project}/.claude/manifest.yaml`
-2. **Verify phase**: Must be `coding`
-3. **Load tasks**: From `outstanding.tasks`
+2. **Verify phase**: Must be `coding` or `fast_track` or `remediation`
+3. **Load tasks**: From `outstanding.tasks` (backend + fullstack only)
 4. **Verify BA artifacts**: Spec, tasklist exist at manifest versions
+5. **Check remediation**: Handle `outstanding.remediation` (critical/high first)
+6. **Run pre-flight** (see below)
 
-## Work Loop
+## Pre-Flight Check (Runs Once)
+
+Before starting any task, validate the coding environment:
 
 ```
-1. CLAIM: TaskUpdate taskId → "in_progress"
-
-2. READ: TaskGet taskId → full description
-
-3. VALIDATE: Component structure exists
-   └── If missing: create stubs FIRST
-
-4. TDD: Write/update tests BEFORE implementation
-
-5. IMPLEMENT: Inside atomic component only
-
-6. QUALITY GATES:
-   └── ruff check components/
-   └── python -m mypy components/
-   └── python -m importlinter (if configured)
-   └── python hex_audit.py components/
-   └── pytest -m unit
-   └── pytest -m integration (if infrastructure changes)
-
-7. EVIDENCE:
-   └── .claude/evidence/quality_gates_run.json
-   └── .claude/evidence/test_report.json
-
-8. COMPLETE: TaskUpdate taskId → "completed"
-
-9. NEXT: TaskList → find next unblocked task
+PRE-FLIGHT CHECKLIST:
+1. [ ] Project structure exists (components/ or src/ directory)
+2. [ ] Virtual environment active or dependencies installed
+3. [ ] Quality gate tools available (ruff, mypy, pytest)
+4. [ ] Test directories exist (create if missing)
+5. [ ] .claude/evidence/ directory exists (create if missing)
+6. [ ] All tasks from manifest loaded (count matches tasklist)
+7. [ ] No blocking remediation items (critical/high BUGs)
+8. [ ] Read spec and rules for context (002_spec, 004_rules)
 ```
+
+If pre-flight fails on items 1-5, fix them automatically.
+If pre-flight fails on items 6-7, report and wait.
+
+## Autonomous Work Loop
+
+**You process ALL assigned tasks without human intervention.** After pre-flight, enter the autonomous loop and do not stop until all tasks are complete or a Tier 3 halt is triggered.
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  AUTONOMOUS LOOP                     │
+│                                                      │
+│  FOR EACH unblocked task (by dependency order):      │
+│                                                      │
+│  1. CLAIM: TaskUpdate taskId → "in_progress"         │
+│                                                      │
+│  2. READ: TaskGet → full description + AC + TA       │
+│                                                      │
+│  3. SCAFFOLD: Create component structure if missing   │
+│     └── ports, domain, adapters, tests dirs + stubs  │
+│                                                      │
+│  4. TDD: Write tests BEFORE implementation           │
+│                                                      │
+│  5. IMPLEMENT: Inside atomic component only          │
+│                                                      │
+│  6. INLINE QA (self-check, replaces manual QA):      │
+│     ├── ruff check components/ --fix                 │
+│     ├── python -m mypy components/                   │
+│     ├── pytest -m unit                               │
+│     ├── pytest -m integration (if infra changes)     │
+│     └── hex_audit.py components/ (if available)      │
+│                                                      │
+│  7. AUTO-FIX (if inline QA fails):                   │
+│     ├── Fix lint/type errors immediately             │
+│     ├── Fix failing tests (up to 2 attempts)         │
+│     ├── If fix fails after 2 attempts:               │
+│     │   └── Log to .claude/evolution/evolution.md     │
+│     │   └── Mark task with note, continue to next    │
+│     └── Re-run inline QA after fix                   │
+│                                                      │
+│  8. EVIDENCE: Write quality gate results              │
+│     └── .claude/evidence/quality_gates_run.json      │
+│     └── .claude/evidence/test_report.json            │
+│                                                      │
+│  9. COMPLETE: TaskUpdate taskId → "completed"         │
+│                                                      │
+│  10. NEXT: Find next unblocked task                   │
+│      └── If none remain: exit loop                   │
+│                                                      │
+│  HALT CONDITIONS (exit loop immediately):             │
+│  - Tier 3 drift detected (new feature, arch change)  │
+│  - Security vulnerability discovered                 │
+│  - >3 consecutive tasks fail inline QA               │
+│                                                      │
+└─────────────────────────────────────────────────────┘
+```
+
+## Completion Protocol
+
+After all tasks are processed (or loop exits):
+
+```markdown
+# Coding Completion Report
+
+## Summary
+| Metric | Value |
+|--------|-------|
+| Tasks Completed | N / M |
+| Tasks Skipped | N (with reasons) |
+| Quality Gate Pass Rate | X% |
+| Evolution Entries Created | N |
+
+## Task Results
+| Task | Status | Notes |
+|------|--------|-------|
+| T001 | completed | All gates pass |
+| T002 | completed | Fixed lint on 2nd attempt |
+| T003 | skipped | Tier 3 drift - needs BA |
+
+## Evidence Artifacts
+- .claude/evidence/quality_gates_run.json
+- .claude/evidence/test_report.json
+- .claude/evidence/test_failures.json
+
+## Next Step
+{phase: qa | phase: ba (if drift) | phase: complete (if all done)}
+```
+
+Update manifest: set `phase: qa` and ensure all evidence artifacts are written.
 
 ## Quality Gate Commands
 
