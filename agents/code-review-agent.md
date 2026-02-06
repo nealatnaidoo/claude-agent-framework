@@ -1,12 +1,9 @@
 ---
 name: code-review-agent
-description: Deep code review verifying Prime Directive alignment, actual task completion through user story/spec/test interpretation, user journey coverage verification, and producing actionable bug docs and improvement recommendations. Use for comprehensive verification after completing features.
+description: "Deep code review verifying Prime Directive alignment, actual task completion through user story/spec/test interpretation, user journey coverage verification, and producing actionable bug docs and improvement recommendations. Use for comprehensive verification after completing features."
 tools: Read, Grep, Glob, Bash
-model: sonnet
-scope: micro
-depends_on: [qa-reviewer, backend-coding-agent, frontend-coding-agent]
-depended_by: [lessons-advisor]
-version: 2.3.0
+model: opus
+memory: project
 ---
 
 ## Identity

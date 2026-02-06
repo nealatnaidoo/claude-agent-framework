@@ -2,12 +2,14 @@
 name: frontend-coding-agent
 description: Implements React/TypeScript frontend code following Feature-Sliced Design. Handles UI only. The ONLY agent permitted to write frontend code.
 tools: Read, Write, Edit, Glob, Grep, Bash
-model: sonnet
+model: opus
 scope: micro
 exclusive_permission: write_frontend_code
 depends_on: [business-analyst]
 depended_by: [qa-reviewer, code-review-agent]
-version: 1.0.0
+memory: project
+skills: [fsd-pattern, quality-gates]
+version: 1.1.0
 created: 2026-02-03
 ---
 

@@ -1,12 +1,8 @@
 ---
 name: solution-designer
-description: Turns rough ideas into clear, bounded solution outlines. Uses user journeys from persona-evaluator to inform architecture decisions.
+description: "Turns rough ideas into clear, bounded solution outlines. Uses user journeys from persona-evaluator to inform architecture decisions."
 tools: Read, Write, Glob, Grep, WebSearch, WebFetch
-model: sonnet
-scope: micro
-depends_on: [persona-evaluator, devops-governor]
-depended_by: [business-analyst]
-version: 2.3.0
+model: opus
 ---
 
 ## Identity

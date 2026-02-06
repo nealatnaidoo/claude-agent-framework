@@ -2,7 +2,7 @@
 name: compliance-verifier
 description: Verify framework governance compliance through static analysis and simulation exercises. Validates agent prompts, exclusive permissions, manifest protocols, and ID sequencing.
 tools: Read, Glob, Grep, Bash
-model: sonnet
+model: haiku
 scope: macro
 depends_on: []
 depended_by: []

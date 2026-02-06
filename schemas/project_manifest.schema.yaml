@@ -1,10 +1,10 @@
-# Project Manifest Schema v1.2
+# Project Manifest Schema v1.3
 # Location: {project_root}/.claude/manifest.yaml
 # Purpose: Single source of truth for project state, restart checkpoint, artifact tracking,
 #          and agent routing (internal + visiting)
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: "claude://schemas/project-manifest/v1.2"
+$id: "claude://schemas/project-manifest/v1.3"
 title: "Claude Project Manifest"
 description: "Tracks project state, artifact versions, agent routing, compliance requirements, and outstanding work"
 
@@ -22,7 +22,7 @@ properties:
   # ============================================================
   schema_version:
     type: string
-    enum: ["1.0", "1.1", "1.2"]
+    enum: ["1.0", "1.1", "1.2", "1.3"]
     description: "Manifest schema version for migration compatibility"
 
   project_slug:
@@ -54,6 +54,7 @@ properties:
       - solution_design   # Solution Designer active
       - ba               # BA creating/updating artifacts
       - coding           # Implementation in progress
+      - fast_track       # Fast-track: coding without full BA cycle (bug fixes, config, docs)
       - qa               # QA review active
       - code_review      # Deep code review active
       - remediation      # Fixing issues from reviews
@@ -69,6 +70,44 @@ properties:
   pause_reason:
     type: string
     description: "Why project is paused (required if phase=paused)"
+
+  # ============================================================
+  # FAST-TRACK CONFIGURATION (v1.3 addition)
+  # ============================================================
+  # Allows small changes to bypass full persona/solution/BA lifecycle
+  fast_track:
+    type: object
+    description: "Configuration for fast-track workflow (skip persona/solution/BA)"
+    properties:
+      enabled:
+        type: boolean
+        default: true
+        description: "Whether fast-track path is available for this project"
+      criteria:
+        type: array
+        description: "Types of changes that qualify for fast-track"
+        items:
+          type: string
+          enum:
+            - single_file_change
+            - bug_fix_with_tests
+            - config_change
+            - documentation_update
+            - dependency_update
+            - minor_refactor
+        default:
+          - single_file_change
+          - bug_fix_with_tests
+          - config_change
+          - documentation_update
+      require_qa:
+        type: boolean
+        default: true
+        description: "QA review still required even on fast-track"
+      max_files_changed:
+        type: integer
+        default: 3
+        description: "Maximum files changed before requiring full lifecycle"
 
   # ============================================================
   # MULTI-VARIANT SUPPORT

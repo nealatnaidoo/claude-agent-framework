@@ -6,7 +6,8 @@ model: haiku
 scope: micro
 depends_on: []
 depended_by: []
-version: 2.0.0
+memory: user
+version: 2.1.0
 ---
 
 ## Identity

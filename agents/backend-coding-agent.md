@@ -2,12 +2,14 @@
 name: backend-coding-agent
 description: Implements Python backend code following hexagonal architecture. Handles backend + API integration. The ONLY agent permitted to write backend code.
 tools: Read, Write, Edit, Glob, Grep, Bash
-model: sonnet
+model: opus
 scope: micro
 exclusive_permission: write_backend_code
 depends_on: [business-analyst]
 depended_by: [qa-reviewer, code-review-agent]
-version: 1.0.0
+memory: project
+skills: [hexagonal-pattern, quality-gates]
+version: 1.1.0
 created: 2026-02-03
 ---
 

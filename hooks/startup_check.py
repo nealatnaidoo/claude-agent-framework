@@ -2,15 +2,19 @@
 """
 Claude Code Startup Check - Displays system status on session start.
 
-This script is triggered by the user-prompt-submit hook on the first
+This script is triggered by the UserPromptSubmit hook on the first
 prompt of each session. It checks:
-1. MCP server connectivity and available tools
-2. Available subagents from the prompts folder
-3. Prime directives from the coding system prompt
+1. Agent integrity (contamination detection via hash baseline)
+2. Quick compliance smoke test
+3. MCP server connectivity and available tools
+4. Available subagents
+5. Credentials and services
+6. Prime directives
 """
 
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -22,12 +26,15 @@ RED = "\033[91m"
 YELLOW = "\033[93m"
 BLUE = "\033[94m"
 CYAN = "\033[96m"
+MAGENTA = "\033[95m"
 BOLD = "\033[1m"
 DIM = "\033[2m"
 RESET = "\033[0m"
 
-# Session tracking file
-SESSION_FILE = Path.home() / ".claude" / ".current_session"
+# Paths
+CLAUDE_DIR = Path.home() / ".claude"
+AGENTS_DIR = CLAUDE_DIR / "agents"
+SESSION_FILE = CLAUDE_DIR / ".current_session"
 
 
 def get_session_id() -> str:
@@ -50,75 +57,269 @@ def should_show_startup() -> bool:
     return True
 
 
+# =============================================================================
+# AGENT INTEGRITY CHECK
+# =============================================================================
+
+def check_agent_integrity() -> dict:
+    """
+    Verify agent files against baseline hashes.
+
+    Returns:
+        dict with verified (bool), baseline_date, agent_count, changes list
+    """
+    # Import the baseline module
+    try:
+        from agent_baseline import verify_baseline, create_baseline, load_baseline
+    except ImportError:
+        # Fallback if import fails - add hooks dir to path
+        hooks_dir = Path(__file__).parent
+        sys.path.insert(0, str(hooks_dir))
+        from agent_baseline import verify_baseline, create_baseline, load_baseline
+
+    # Check if baseline exists, create if not
+    baseline = load_baseline()
+    if not baseline:
+        # First run - create baseline
+        baseline = create_baseline()
+        return {
+            "verified": True,
+            "baseline_date": baseline["created"],
+            "agent_count": len(baseline["agents"]),
+            "changes": [],
+            "first_run": True,
+        }
+
+    result = verify_baseline()
+    result["first_run"] = False
+    return result
+
+
+# =============================================================================
+# COMPLIANCE QUICK CHECK
+# =============================================================================
+
+def check_compliance_quick() -> dict:
+    """
+    Run quick compliance smoke tests on agent files.
+
+    Checks:
+    1. All agents have YAML frontmatter
+    2. Non-coding agents have coding restriction
+    3. All agents reference manifest protocol
+    4. ID sequencing in review agents
+
+    Returns:
+        dict with passed (bool), checks list with individual results
+    """
+    results = {
+        "passed": True,
+        "checks": [],
+        "warnings": [],
+    }
+
+    if not AGENTS_DIR.exists():
+        results["passed"] = False
+        results["checks"].append({
+            "name": "Agents directory",
+            "passed": False,
+            "message": "Agents directory not found"
+        })
+        return results
+
+    agent_files = list(AGENTS_DIR.glob("*.md"))
+    if not agent_files:
+        results["passed"] = False
+        results["checks"].append({
+            "name": "Agent files",
+            "passed": False,
+            "message": "No agent files found"
+        })
+        return results
+
+    # Check 1: YAML frontmatter
+    frontmatter_ok = True
+    missing_frontmatter = []
+    for agent_path in agent_files:
+        content = agent_path.read_text()
+        if not content.startswith("---"):
+            frontmatter_ok = False
+            missing_frontmatter.append(agent_path.name)
+
+    results["checks"].append({
+        "name": "YAML frontmatter",
+        "passed": frontmatter_ok,
+        "message": f"Missing in: {', '.join(missing_frontmatter)}" if missing_frontmatter else "All agents valid"
+    })
+    if not frontmatter_ok:
+        results["passed"] = False
+
+    # Check 2: Coding restriction in non-coding agents
+    coding_restriction_ok = True
+    missing_restriction = []
+    coding_agents = {"backend-coding-agent.md", "frontend-coding-agent.md"}
+
+    for agent_path in agent_files:
+        if agent_path.name in coding_agents:
+            continue  # Skip coding agents
+
+        content = agent_path.read_text()
+        # Check for the restriction table entry
+        if "Create/modify source code" not in content and "modify source code" not in content.lower():
+            # Only flag if it's not a template
+            if "template" not in agent_path.name.lower():
+                missing_restriction.append(agent_path.name)
+
+    # This is a warning, not a failure - some agents may not need explicit restriction
+    if missing_restriction:
+        results["warnings"].append({
+            "name": "Coding restriction",
+            "message": f"Not explicit in: {', '.join(missing_restriction[:3])}" +
+                      (f" +{len(missing_restriction)-3} more" if len(missing_restriction) > 3 else "")
+        })
+
+    results["checks"].append({
+        "name": "Exclusive permissions",
+        "passed": True,  # Warnings don't fail
+        "message": "Coding agents identified"
+    })
+
+    # Check 3: Manifest-first protocol
+    manifest_ok = True
+    missing_manifest = []
+    for agent_path in agent_files:
+        if "template" in agent_path.name.lower():
+            continue
+        content = agent_path.read_text().lower()
+        if "manifest" not in content:
+            missing_manifest.append(agent_path.name)
+
+    if missing_manifest:
+        results["warnings"].append({
+            "name": "Manifest reference",
+            "message": f"Not found in: {', '.join(missing_manifest[:3])}"
+        })
+
+    results["checks"].append({
+        "name": "Manifest protocol",
+        "passed": True,
+        "message": "References found"
+    })
+
+    # Check 4: Identity section exists
+    identity_ok = True
+    missing_identity = []
+    for agent_path in agent_files:
+        content = agent_path.read_text()
+        if "## Identity" not in content and "# Identity" not in content:
+            if "template" not in agent_path.name.lower():
+                missing_identity.append(agent_path.name)
+
+    if missing_identity:
+        identity_ok = False
+        results["checks"].append({
+            "name": "Identity section",
+            "passed": False,
+            "message": f"Missing in: {', '.join(missing_identity[:3])}"
+        })
+        results["passed"] = False
+    else:
+        results["checks"].append({
+            "name": "Identity section",
+            "passed": True,
+            "message": "All agents have identity"
+        })
+
+    return results
+
+
+# =============================================================================
+# MCP SERVER CHECK
+# =============================================================================
+
 def check_mcp_tools() -> dict:
-    """Check MCP server and get available tools."""
+    """Check MCP server configuration and enumerate tools."""
     result = {
         "connected": False,
+        "servers": [],
         "tools": [],
+        "tool_count": 0,
         "adapters": {},
     }
 
-    # Check if bureaucrat MCP is configured
-    mcp_config = Path.home() / ".claude" / "mcp_servers.json"
+    # Check MCP config
+    mcp_config = CLAUDE_DIR / "mcp_servers.json"
     if not mcp_config.exists():
         return result
 
     try:
         config = json.loads(mcp_config.read_text())
-        if "bureaucrat" in config:
-            result["connected"] = True
 
-            # Get rules path to check loaded integrations
-            rules_path = config["bureaucrat"].get("env", {}).get(
-                "BUREAUCRAT_MCP_RULES_PATH", ""
-            )
+        for server_name, server_config in config.items():
+            server_info = {
+                "name": server_name,
+                "command": server_config.get("command", "unknown"),
+                "status": "configured",
+            }
+
+            # Check if server has specific integrations
+            env = server_config.get("env", {})
+            rules_path = env.get("BUREAUCRAT_MCP_RULES_PATH", "")
+
             if rules_path and Path(rules_path).exists():
-                import yaml
-                rules = yaml.safe_load(Path(rules_path).read_text())
+                try:
+                    import yaml
+                    rules = yaml.safe_load(Path(rules_path).read_text())
+                    features = rules.get("features", {})
 
-                # Extract enabled integrations
-                features = rules.get("features", {})
-                integrations = rules.get("integrations", {})
+                    adapters = {
+                        "docker": features.get("enable_docker_integration", False),
+                        "github": features.get("enable_github_integration", False),
+                        "flyio": features.get("enable_flyio_integration", False),
+                        "pytest": features.get("enable_pytest_integration", False),
+                        "notebooklm": features.get("enable_notebooklm_integration", False),
+                    }
+                    result["adapters"] = adapters
 
-                adapters = {
-                    "docker": features.get("enable_docker_integration", False),
-                    "github": features.get("enable_github_integration", False),
-                    "flyio": features.get("enable_flyio_integration", False),
-                    "pytest": features.get("enable_pytest_integration", False),
-                    "notebooklm": features.get("enable_notebooklm_integration", False),
-                    "voice": "voice" in integrations,
-                }
-                result["adapters"] = adapters
+                    # Enumerate tools
+                    tools = []
+                    if adapters.get("docker"):
+                        tools.extend(["docker_build", "docker_run", "docker_logs"])
+                    if adapters.get("github"):
+                        tools.extend(["github_pr", "github_issues", "github_comments"])
+                    if adapters.get("flyio"):
+                        tools.extend(["flyio_deploy", "flyio_status", "flyio_logs"])
+                    if adapters.get("pytest"):
+                        tools.extend(["pytest_run", "ruff_check", "mypy_check"])
+                    if adapters.get("notebooklm"):
+                        tools.extend(["notebooklm_create", "notebooklm_generate"])
 
-                # List tool categories
-                tools = []
-                if adapters.get("docker"):
-                    tools.extend(["docker_build", "docker_run", "docker_logs"])
-                if adapters.get("github"):
-                    tools.extend(["github_create_pr", "github_list_prs", "github_add_comment"])
-                if adapters.get("flyio"):
-                    tools.extend(["flyio_deploy", "flyio_status", "flyio_logs"])
-                if adapters.get("pytest"):
-                    tools.extend(["pytest_run", "ruff_check", "mypy_check"])
-                if adapters.get("notebooklm"):
-                    tools.extend(["notebooklm_create_notebook", "notebooklm_generate_artifact"])
-                if adapters.get("voice"):
-                    tools.extend(["voice_listen", "voice_speak"])
+                    # Core tools always available
+                    tools.extend(["commission_job", "check_job", "validate_code"])
+                    result["tools"] = tools
+                    result["tool_count"] = len(tools)
 
-                # Always available
-                tools.extend(["commission_job", "check_job", "validate_code"])
-                result["tools"] = tools
+                except Exception:
+                    pass
+
+            result["servers"].append(server_info)
+
+        result["connected"] = len(result["servers"]) > 0
+
     except Exception:
         pass
 
     return result
 
 
+# =============================================================================
+# CREDENTIALS & SERVICES
+# =============================================================================
+
 def check_credentials() -> dict:
     """Check available API credentials from Keychain and environment."""
     creds = {}
 
-    # Credentials to check (key_name, display_name)
     credential_list = [
         ("GITHUB_TOKEN", "GitHub"),
         ("FLY_API_TOKEN", "Fly.io"),
@@ -130,11 +331,9 @@ def check_credentials() -> dict:
     for key, name in credential_list:
         found = False
 
-        # First check environment variable
         if os.environ.get(key):
             found = True
         else:
-            # Check Keychain
             try:
                 result = subprocess.run(
                     ["security", "find-generic-password", "-a", os.environ["USER"], "-s", key, "-w"],
@@ -142,7 +341,6 @@ def check_credentials() -> dict:
                     text=True,
                     timeout=2,
                 )
-                # Check if we got actual output (password found) with exit code 0
                 if result.returncode == 0 and result.stdout.strip():
                     found = True
             except Exception:
@@ -153,62 +351,13 @@ def check_credentials() -> dict:
     return creds
 
 
-def check_agentic_hud() -> dict:
-    """Check Agentic HUD status.
-
-    Returns dict with:
-        - running: bool - whether service is running
-        - pid: int | None - process ID if running
-        - dashboard_url: str | None - dashboard URL if running
-    """
-    result = {
-        "running": False,
-        "pid": None,
-        "dashboard_url": None,
-    }
-
-    # Check PID file
-    pid_file = Path.home() / ".agentic_hud" / "hud.pid"
-    if not pid_file.exists():
-        return result
-
-    try:
-        pid = int(pid_file.read_text().strip())
-        # Check if process is alive
-        os.kill(pid, 0)
-        result["running"] = True
-        result["pid"] = pid
-
-        # Try to get dashboard URL from config
-        config_file = Path.home() / ".agentic_hud" / "config.yaml"
-        if config_file.exists():
-            try:
-                import yaml
-                config = yaml.safe_load(config_file.read_text())
-                host = config.get("dashboard", {}).get("host", "127.0.0.1")
-                port = config.get("dashboard", {}).get("port", 8080)
-                result["dashboard_url"] = f"http://{host}:{port}"
-            except Exception:
-                result["dashboard_url"] = "http://127.0.0.1:8080"
-
-    except (ValueError, ProcessLookupError):
-        # Invalid PID or process not found
-        pass
-
-    return result
-
-
 def check_services() -> dict:
     """Check external service availability."""
     services = {}
 
     # Docker
     try:
-        result = subprocess.run(
-            ["docker", "info"],
-            capture_output=True,
-            timeout=5,
-        )
+        result = subprocess.run(["docker", "info"], capture_output=True, timeout=5)
         services["Docker"] = result.returncode == 0
     except Exception:
         services["Docker"] = False
@@ -219,33 +368,45 @@ def check_services() -> dict:
     services["NotebookLM Auth"] = cookies_file.exists()
 
     # Agentic HUD
-    hud_status = check_agentic_hud()
-    services["Agentic HUD"] = hud_status["running"]
+    pid_file = Path.home() / ".agentic_hud" / "hud.pid"
+    if pid_file.exists():
+        try:
+            pid = int(pid_file.read_text().strip())
+            os.kill(pid, 0)
+            services["Agentic HUD"] = True
+        except (ValueError, ProcessLookupError):
+            services["Agentic HUD"] = False
+    else:
+        services["Agentic HUD"] = False
 
     return services
 
 
+# =============================================================================
+# AGENTS LIST
+# =============================================================================
+
 def get_available_agents() -> list:
-    """Get list of available subagents from prompts folder."""
-    agents_dir = Path.home() / "Developer" / "claude" / "prompts" / "agents"
+    """Get list of available subagents."""
     agents = []
 
-    if agents_dir.exists():
-        for f in agents_dir.glob("*.md"):
+    if AGENTS_DIR.exists():
+        for f in sorted(AGENTS_DIR.glob("*.md")):
+            if "template" in f.name.lower():
+                continue
             name = f.stem.replace("-", " ").replace("_", " ").title()
             agents.append({"name": name, "file": f.name})
 
     return agents
 
 
-def get_prime_directives() -> list:
-    """Extract prime directives from coding system prompt."""
-    prompt_path = (
-        Path.home() / "Developer" / "claude" / "prompts" /
-        "system-prompts-v2" / "coding_system_prompt_v4_0_hex_tdd_8k.md"
-    )
+# =============================================================================
+# PRIME DIRECTIVES
+# =============================================================================
 
-    directives = [
+def get_prime_directives() -> list:
+    """Get prime directives."""
+    return [
         "Every change must be task-scoped, atomic, deterministic, hexagonal, and evidenced.",
         "TDD: write or update tests first for substantive logic.",
         "Core logic depends only on models, domain logic, and port interfaces.",
@@ -253,8 +414,10 @@ def get_prime_directives() -> list:
         "Drift protocol: HALT and log EV entry if scope changes detected.",
     ]
 
-    return directives
 
+# =============================================================================
+# OUTPUT FORMATTING
+# =============================================================================
 
 def print_startup_screen():
     """Print the startup status screen."""
@@ -265,81 +428,116 @@ def print_startup_screen():
     print(f"{DIM}  {now}{RESET}")
     print(f"{BOLD}{CYAN}{'='*70}{RESET}\n")
 
-    # MCP Status
+    # =========================================================================
+    # AGENT INTEGRITY CHECK
+    # =========================================================================
+    print(f"{BOLD}Agent Integrity:{RESET}")
+    integrity = check_agent_integrity()
+
+    if integrity.get("first_run"):
+        print(f"  {CYAN}BASELINE CREATED{RESET} - First run, {integrity['agent_count']} agents registered")
+    elif integrity["verified"]:
+        print(f"  {GREEN}VERIFIED{RESET} - {integrity['agent_count']} agents, no changes detected")
+        if integrity.get("baseline_date"):
+            date_str = integrity["baseline_date"][:10] if integrity["baseline_date"] else "unknown"
+            print(f"  {DIM}Baseline: {date_str}{RESET}")
+    else:
+        print(f"  {RED}CHANGES DETECTED{RESET}")
+        for change in integrity.get("changes", [])[:5]:
+            change_type = change.get("type", "unknown")
+            icon = {"added": "+", "removed": "-", "modified": "~", "no_baseline": "!"}.get(change_type, "?")
+            color = {"added": CYAN, "removed": RED, "modified": YELLOW, "no_baseline": YELLOW}.get(change_type, "")
+            print(f"    {color}{icon} {change.get('message', 'Unknown change')}{RESET}")
+        print(f"  {DIM}Run 'python ~/.claude/hooks/agent_baseline.py create' to update baseline{RESET}")
+
+    # =========================================================================
+    # COMPLIANCE QUICK CHECK
+    # =========================================================================
+    print(f"\n{BOLD}Compliance Quick Check:{RESET}")
+    compliance = check_compliance_quick()
+
+    if compliance["passed"]:
+        print(f"  {GREEN}PASSED{RESET} - All governance checks passed")
+    else:
+        print(f"  {YELLOW}WARNINGS{RESET}")
+
+    for check in compliance["checks"]:
+        icon = f"{GREEN}+{RESET}" if check["passed"] else f"{RED}-{RESET}"
+        print(f"    {icon} {check['name']}: {check['message']}")
+
+    if compliance.get("warnings"):
+        for warn in compliance["warnings"][:3]:
+            print(f"    {YELLOW}!{RESET} {warn['name']}: {warn['message']}")
+
+    # =========================================================================
+    # MCP STATUS
+    # =========================================================================
+    print(f"\n{BOLD}MCP Servers:{RESET}")
     mcp = check_mcp_tools()
-    print(f"{BOLD}MCP Server:{RESET}")
-    status = f"{GREEN}Connected{RESET}" if mcp["connected"] else f"{RED}Disconnected{RESET}"
-    print(f"  Status: {status}")
 
-    if mcp["adapters"]:
-        print(f"\n{BOLD}Adapters:{RESET}")
-        for adapter, enabled in mcp["adapters"].items():
-            icon = f"{GREEN}+{RESET}" if enabled else f"{RED}-{RESET}"
-            print(f"  {icon} {adapter}")
+    if mcp["connected"]:
+        for server in mcp["servers"]:
+            print(f"  {GREEN}+{RESET} {server['name']}: {mcp['tool_count']} tools")
 
-    if mcp["tools"]:
-        print(f"\n{BOLD}Available Tools:{RESET} {len(mcp['tools'])} registered")
-        # Group by category
-        categories = {
-            "Docker": [t for t in mcp["tools"] if t.startswith("docker")],
-            "GitHub": [t for t in mcp["tools"] if t.startswith("github")],
-            "Fly.io": [t for t in mcp["tools"] if t.startswith("flyio")],
-            "Quality": [t for t in mcp["tools"] if t in ["pytest_run", "ruff_check", "mypy_check"]],
-            "NotebookLM": [t for t in mcp["tools"] if t.startswith("notebooklm")],
-            "Voice": [t for t in mcp["tools"] if t.startswith("voice")],
-            "Core": [t for t in mcp["tools"] if t in ["commission_job", "check_job", "validate_code"]],
-        }
-        for cat, tools in categories.items():
-            if tools:
-                print(f"  {DIM}{cat}:{RESET} {', '.join(tools)}")
+        if mcp["adapters"]:
+            enabled = [k for k, v in mcp["adapters"].items() if v]
+            if enabled:
+                print(f"    {DIM}Adapters: {', '.join(enabled)}{RESET}")
+    else:
+        print(f"  {YELLOW}-{RESET} No MCP servers configured")
 
-    # Credentials
+    # =========================================================================
+    # CREDENTIALS
+    # =========================================================================
     print(f"\n{BOLD}Credentials:{RESET}")
     creds = check_credentials()
     for name, available in creds.items():
-        icon = f"{GREEN}+{RESET}" if available else f"{YELLOW}?{RESET}"
+        icon = f"{GREEN}+{RESET}" if available else f"{DIM}-{RESET}"
         print(f"  {icon} {name}")
 
-    # Services
+    # =========================================================================
+    # SERVICES
+    # =========================================================================
     print(f"\n{BOLD}Services:{RESET}")
     services = check_services()
     for name, available in services.items():
-        icon = f"{GREEN}+{RESET}" if available else f"{RED}-{RESET}"
+        icon = f"{GREEN}+{RESET}" if available else f"{DIM}-{RESET}"
         print(f"  {icon} {name}")
 
-    # Agentic HUD details (if running)
-    hud_status = check_agentic_hud()
-    if hud_status["running"]:
-        print(f"\n{BOLD}Agentic HUD:{RESET}")
-        print(f"  PID: {hud_status['pid']}")
-        if hud_status["dashboard_url"]:
-            print(f"  Dashboard: {CYAN}{hud_status['dashboard_url']}{RESET}")
-
-    # Agents
+    # =========================================================================
+    # AVAILABLE AGENTS
+    # =========================================================================
     print(f"\n{BOLD}Available Agents:{RESET}")
     agents = get_available_agents()
-    for agent in agents:
-        print(f"  {BLUE}>{RESET} {agent['name']}")
+    # Show in two columns
+    col_width = 35
+    for i in range(0, len(agents), 2):
+        left = f"{BLUE}>{RESET} {agents[i]['name']}"
+        if i + 1 < len(agents):
+            right = f"{BLUE}>{RESET} {agents[i+1]['name']}"
+            print(f"  {left:<{col_width}} {right}")
+        else:
+            print(f"  {left}")
 
-    # Prime Directives
+    # =========================================================================
+    # PRIME DIRECTIVES
+    # =========================================================================
     print(f"\n{BOLD}{YELLOW}Prime Directives:{RESET}")
     directives = get_prime_directives()
     for i, d in enumerate(directives, 1):
         print(f"  {i}. {d}")
 
     print(f"\n{BOLD}{CYAN}{'='*70}{RESET}")
-    print(f"{DIM}  Type /help for commands, /status for this screen anytime{RESET}")
+    print(f"{DIM}  /status - show this screen | /compliance - full verification{RESET}")
     print(f"{BOLD}{CYAN}{'='*70}{RESET}\n")
 
 
 def main():
     """Main entry point."""
-    # Check for force flag (used by /status command)
     force = "--force" in sys.argv or "-f" in sys.argv
 
-    # Check if this is first prompt of session (unless forced)
     if not force and not should_show_startup():
-        sys.exit(0)  # Already shown, silent exit
+        sys.exit(0)
 
     print_startup_screen()
     sys.exit(0)

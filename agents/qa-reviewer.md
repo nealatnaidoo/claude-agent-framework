@@ -1,12 +1,9 @@
 ---
 name: qa-reviewer
-description: Review code changes for quality, TDD adherence, system prompt compliance, and user journey validation. Validates implementations against pre-defined user journeys and runs linked Playwright tests.
+description: "Review code changes for quality, TDD adherence, system prompt compliance, and user journey validation. Validates implementations against pre-defined user journeys and runs linked Playwright tests."
 tools: Read, Grep, Glob, Bash
 model: sonnet
-scope: micro
-depends_on: [backend-coding-agent, frontend-coding-agent]
-depended_by: [code-review-agent]
-version: 2.3.0
+memory: project
 ---
 
 ## Identity

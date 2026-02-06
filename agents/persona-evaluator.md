@@ -1,14 +1,8 @@
 ---
 name: persona-evaluator
-description: Creates user journey artifacts at project inception. The ONLY agent permitted to define user journeys. Must be the first agent invoked for new projects.
+description: "Creates user journey artifacts at project inception. The ONLY agent permitted to define user journeys. Must be the first agent invoked for new projects."
 tools: Read, Write, Glob, Grep, WebSearch, WebFetch
-model: sonnet
-scope: micro
-exclusive_permission: define_user_journeys
-depends_on: []
-depended_by: [solution-designer]
-version: 1.0.0
-created: 2026-02-03
+model: opus
 ---
 
 ## Identity

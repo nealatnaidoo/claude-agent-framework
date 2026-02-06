@@ -1,12 +1,8 @@
 ---
 name: business-analyst
-description: Creates implementation-grade project artifacts (spec, tasklist, rules, quality gates). Use when starting a new project or updating BA artifacts after drift.
+description: "Creates implementation-grade project artifacts (spec, tasklist, rules, quality gates). Use when starting a new project or updating BA artifacts after drift."
 tools: Read, Write, Glob, Grep, Bash
-model: sonnet
-scope: micro
-depends_on: [solution-designer, devops-governor]
-depended_by: [backend-coding-agent, frontend-coding-agent]
-version: 4.2.0
+model: opus
 ---
 
 ## Identity
