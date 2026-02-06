@@ -1,7 +1,7 @@
 # Handoff Envelope Format
 
-**Version**: 1.1
-**Date**: 2026-01-31
+**Version**: 2.0
+**Date**: 2026-02-06
 **Purpose**: Standardized format for agent-to-agent handoffs
 
 ---
@@ -13,16 +13,36 @@ Handoff envelopes are structured documents that transfer work between agents. Ea
 ## Workflow Sequence
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│ Solution        │────▶│ Business        │────▶│ Coding          │
-│ Designer        │     │ Analyst         │     │ Agent           │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-        │                       │                       │
-        ▼                       ▼                       ▼
-  001_solution_           002_spec_v1.md          Evidence +
-  envelope_v1.md          003_tasklist_v1.md      Updated
-  (with DevOps            004_rules_v1.yaml       Manifest
-   approval)              005_quality_gates_v1.md
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ Project      │─▶│ Persona      │─▶│ Solution     │─▶│ Business     │
+│ Initializer  │  │ Evaluator    │  │ Designer     │  │ Analyst      │
+└──────────────┘  └──────────────┘  └──────┬───────┘  └──────┬───────┘
+       │                │              consults│              │
+       ▼                ▼                     ▼              ▼
+  .claude/        000_user_          ┌──────────────┐  002_spec_v1.md
+  structure       journeys_v1.md     │ DevOps Gov   │  003_tasklist_v1.md
+                                     │ (approval)   │  004_rules_v1.yaml
+                                     └──────────────┘  005_quality_gates_v1.md
+                                                              │
+                                     ┌────────────────────────┤
+                                     ▼                        ▼
+                              ┌──────────────┐   ┌──────────────────┐
+                              │ Backend      │   │ Frontend         │
+                              │ Coding Agent │   │ Coding Agent     │
+                              └──────┬───────┘   └────────┬─────────┘
+                                     └────────┬───────────┘
+                                              ▼
+                                     ┌──────────────┐  ┌──────────────┐
+                                     │ QA Reviewer  │─▶│ Code Review  │
+                                     │ (per-task)   │  │ (per-feature)│
+                                     └──────────────┘  └──────┬───────┘
+                                                              │
+                                              feedback ◄──────┘
+                                              envelope
+                                                 │
+                                                 ▼
+                                        Solution Designer
+                                        (next sprint)
 ```
 
 ---
@@ -418,139 +438,132 @@ deployment_request:
 
 ---
 
-### 8. BA to Worktree Handoff (BA → Coding Agent via Worktree) [v1.2]
+### 8. Feedback Envelope (QA/Code Review → Solution Designer) [v2.0]
 
-When spawning a feature worktree:
+After completing review cycles, QA Reviewer and Code Review Agent create feedback envelopes for Solution Designer to incorporate into next sprint planning.
 
-**Main Manifest Update**:
+**When Created**:
+- End of sprint/phase
+- After reviewing a complete feature
+- When `needs_work` findings indicate design issues
 
-```yaml
-# Add to main .claude/manifest.yaml
-feature_backlog:
-  - slug: "user-auth"
-    status: "in_progress"  # Changed from "ready"
-    worktree: "user-auth"  # Links to active_worktrees entry
+**File**: `.claude/remediation/feedback_envelope_YYYY-MM-DD.md` (from QA)
+or `.claude/remediation/code_review_feedback_YYYY-MM-DD.md` (from Code Review)
 
-active_worktrees:
-  - name: "user-auth"
-    path: "../myproject-user-auth"
-    branch: "feature/user-auth"
-    phase: "coding"
-    created: "{ISO timestamp}"
-    tasks: ["T001", "T002", "T003"]
-    last_sync: "{ISO timestamp}"
+**Format**:
+
+```markdown
+# QA Feedback Envelope — {YYYY-MM-DD}
+
+## Summary for Solution Designer
+
+### Review Metrics
+| Metric | Backend | Frontend | Total |
+|--------|---------|----------|-------|
+| Tasks Reviewed | N | N | N |
+| Bugs Found | N | N | N |
+| Improvements | N | N | N |
+| Pass Rate | X% | X% | X% |
+
+### Domain Health
+| Domain | Status | Key Issues |
+|--------|--------|------------|
+| Backend | HEALTHY/NEEDS_ATTENTION | {summary} |
+| Frontend | HEALTHY/NEEDS_ATTENTION | {summary} |
+
+### Evolution Log Summary
+{Relevant entries from .claude/evolution/evolution.md}
+
+### Patterns Observed
+- {Recurring issue pattern 1}
+- {Recurring issue pattern 2}
+
+### Recommendations for Next Sprint
+1. {Architectural recommendation}
+2. {Process improvement}
+3. {Technical debt item}
+
+### Unresolved Items Requiring Design Input
+| ID | Domain | Issue | Design Question |
+|----|--------|-------|-----------------|
+| BUG-XXX | backend | {issue} | {question for SD} |
+| IMPROVE-XXX | frontend | {issue} | {question for SD} |
 ```
 
-**Worktree Manifest** (created at `../myproject-user-auth/.claude/manifest.yaml`):
+**Manifest Update**:
 
 ```yaml
-schema_version: "1.2"
-project_slug: "{project_slug}"
-project_name: "{Project Name} - {Feature Name}"
-created: "{ISO timestamp}"
-phase: "coding"
-
-worktree:
-  is_worktree: true
-  name: "user-auth"
-  branch: "feature/user-auth"
-  main_worktree_path: "../myproject"
-  created: "{ISO timestamp}"
-  feature_scope:
-    - "T001"
-    - "T002"
-    - "T003"
-
-artifact_versions:
-  spec:
-    version: 1
-    file: ".claude/artifacts/002_spec_user_auth_v1.md"
-  tasklist:
-    version: 1
-    file: ".claude/artifacts/003_tasklist_user_auth_v1.md"
-  rules:
-    version: 1
-    file: ".claude/artifacts/004_rules_v1.yaml"
-  quality_gates:
-    version: 1
-    file: ".claude/artifacts/005_quality_gates_v1.md"
-
-outstanding:
-  tasks:
-    - id: "T001"
-      status: "pending"
-    - id: "T002"
-      status: "pending"
-      blocked_by: ["T001"]
-    - id: "T003"
-      status: "pending"
-      blocked_by: ["T002"]
-  remediation: []
+feedback_envelopes:
+  - date: "YYYY-MM-DD"
+    source: "qa_reviewer"  # or "code_review_agent"
+    file: ".claude/remediation/feedback_envelope_YYYY-MM-DD.md"
+    status: "pending_review"  # Solution Designer to review
+    domains_affected: ["backend", "frontend"]
 ```
+
+**Consumption**: Solution Designer reads feedback envelopes before next sprint planning, updates solution envelope with learnings, marks status as `"incorporated"`.
 
 ---
 
-### 9. Worktree Completion (Coding Agent → QA → BA for Merge) [v1.2]
+### 9. Agent Teams Coordination (Team Lead → Teammates) [v2.0]
 
-When a worktree is complete and ready for merge:
+Agent Teams enable parallel development within a single session. The team lead distributes tasks from BA artifacts to teammates.
 
-**Worktree Manifest Update**:
+**Prerequisite**: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
 
-```yaml
-phase: "complete"
-phase_started: "{ISO timestamp}"
-outstanding:
-  tasks: []  # All completed
-reviews:
-  last_qa_review:
-    date: "{timestamp}"
-    result: "pass"
-    report_file: ".claude/remediation/qa_YYYY-MM-DD.md"
-```
-
-**Main Manifest Update**:
+**Task Distribution**: Team lead reads manifest `outstanding.tasks` and distributes by `domain` tag:
 
 ```yaml
-active_worktrees:
-  - name: "user-auth"
-    phase: "complete"  # Changed from "qa"
-    last_sync: "{ISO timestamp}"
+# Tasks distributed by domain
+backend_tasks:   # → backend-worker teammate
+  - id: "T001"
+    domain: "backend"
+  - id: "T002"
+    domain: "backend"
 
-feature_backlog:
-  - slug: "user-auth"
-    status: "complete"  # Changed from "in_progress"
+frontend_tasks:  # → frontend-worker teammate
+  - id: "T003"
+    domain: "frontend"
+  - id: "T004"
+    domain: "frontend"
+
+integration_tasks:  # → team lead (after both complete)
+  - id: "T005"
+    domain: "fullstack"
+    blocked_by: ["T002", "T004"]
 ```
 
-**Merge Report** (BA creates after merging):
+**Coordination Rules**:
+- All teammates work on the same branch (no merge needed)
+- Exclusive permissions still apply (backend teammate writes Python only, frontend writes TypeScript only)
+- Team lead updates manifest on completion
+- Evidence artifacts created per-teammate, consolidated by team lead
 
-```markdown
-# Merge Report — {feature_slug}
+**Completion**: Team lead marks all tasks complete in manifest, triggers QA review.
 
-## Summary
-- **Feature**: {feature_name}
-- **Branch**: feature/{feature_slug}
-- **Merged**: {ISO timestamp}
-- **Tasks Completed**: T001, T002, T003
+See: `~/.claude/docs/agent_teams.md` for full setup and configuration.
 
-## QA Review
-- **Date**: {date}
-- **Result**: pass
-- **Report**: .claude/remediation/qa_YYYY-MM-DD.md
+---
 
-## Post-Merge Actions
-- [ ] Worktree removed (if auto_cleanup: true)
-- [ ] Branch deleted
-- [ ] Backlog updated
-- [ ] Unblocked features can now spawn
-```
+### 10. Worktree Handoff (Legacy, Deprecated) [v1.2]
+
+Git worktree-based parallelism is deprecated in favor of Agent Teams (Type 9). Worktrees are still supported for cross-session parallel work on separate branches.
+
+Full worktree protocol: `~/.claude/docs/agent_operating_model.md` (Section 5.1)
+Helper script: `~/.claude/scripts/worktree_manager.sh`
+
+Manifest schema v1.3 still supports `feature_backlog` and `active_worktrees` fields for backward compatibility.
 
 ---
 
 ## Envelope Validation Rules
 
-1. **DevOps Approval Required**: Solution envelopes MUST have `devops_approval` section before BA can proceed
-2. **Version Incrementing**: New versions increment the N in `*_vN.md`
-3. **Never Overwrite**: Old versions are preserved for audit trail
-4. **Manifest Sync**: Manifest MUST reflect current artifact versions
-5. **Phase Transitions**: Only valid phase transitions allowed (see agent operating model)
-6. **ID Uniqueness**: All IDs (T001, BUG-001, EV-001) are project-global and never reused
+1. **DevOps Approval Required**: Solution envelopes MUST have `devops_approval` section before BA can proceed (mechanically enforced via hook)
+2. **BA Artifacts Required**: Coding agents CANNOT start without spec and tasklist (mechanically enforced via hook)
+3. **Evidence Required**: QA reviewer SHOULD have evidence artifacts before starting review (mechanically enforced via hook)
+4. **Version Incrementing**: New versions increment the N in `*_vN.md`
+5. **Never Overwrite**: Old versions are preserved for audit trail
+6. **Manifest Sync**: Manifest MUST reflect current artifact versions
+7. **Phase Transitions**: Only valid phase transitions allowed (see agent operating model)
+8. **ID Uniqueness**: All IDs (T001, BUG-001, EV-001) are project-global and never reused
+9. **Feedback Loop**: QA/Code Review feedback envelopes consumed by Solution Designer before next sprint

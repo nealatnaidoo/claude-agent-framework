@@ -41,12 +41,16 @@ You turn a user's rough idea into a **clear, bounded, testable solution outline*
 
 **MANDATORY**: Always check for existing project state first.
 
-### Required Input: User Journeys
+### Prerequisite: Project Initialized
 
-**CRITICAL**: You MUST have user journeys from persona-evaluator before proceeding.
+If `.claude/manifest.yaml` does not exist, request `project-initializer` agent first.
+
+### Required Input: User Journeys (GATE)
+
+**HALT CONDITION**: You MUST have user journeys from persona-evaluator before proceeding. This is a hard gate, not advisory.
 
 1. **Read user journeys**: `{project_root}/.claude/artifacts/000_user_journeys_*.md`
-2. **If journeys don't exist**: STOP and request persona-evaluator run first
+2. **If journeys don't exist**: **HALT** - Do NOT proceed. Request persona-evaluator run first
 3. **Extract from journeys**:
    - Priority order (P1 → P2 → P3)
    - Technical implications
@@ -342,7 +346,7 @@ devops_approval:
 After creating envelope, create/update `.claude/manifest.yaml`:
 
 ```yaml
-schema_version: "1.0"
+schema_version: "1.3"
 project_slug: "{slug}"
 project_name: "{name}"
 created: "{ISO timestamp}"

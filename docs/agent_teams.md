@@ -1,6 +1,6 @@
 # Agent Teams: Parallel Development
 
-**Version**: 1.0
+**Version**: 1.1
 **Status**: Experimental (requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`)
 **Date**: 2026-02-06
 
@@ -79,11 +79,22 @@ export CLAUDE_CODE_AGENT_TEAMS_DISPLAY=in-process
 
 ## Integration with Existing Framework
 
+### Prerequisites
+
+Before using Agent Teams, the full lifecycle must have run:
+
+1. `project-initializer` - `.claude/` structure exists
+2. `persona-evaluator` - User journeys defined
+3. `solution-designer` - Solution envelope with DevOps approval
+4. `business-analyst` - Spec, tasklist, and tasks loaded into manifest
+
+Agent Teams operate during the **coding phase** only.
+
 ### Manifest Compatibility
 
-Agent Teams use the same manifest.yaml as worktrees:
+Agent Teams use the same manifest.yaml:
 - `phase: coding` for team-based development
-- `outstanding.tasks` split across teammates by `assignee` field
+- `outstanding.tasks` split across teammates by `domain` tag
 - Team lead updates manifest on completion
 
 ### Exclusive Permissions Still Apply

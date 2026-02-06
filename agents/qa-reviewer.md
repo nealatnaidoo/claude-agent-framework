@@ -457,7 +457,7 @@ Extract the highest BUG-XXX and IMPROVE-XXX numbers found.
 
 ## Parallel Development Review
 
-### Agent Teams (v3.0 - Recommended)
+### Agent Teams (v3.1 - Recommended)
 
 When reviewing work from Agent Teams teammates, follow the standard review protocol above. Each teammate works in the same branch, so no merge checks needed.
 

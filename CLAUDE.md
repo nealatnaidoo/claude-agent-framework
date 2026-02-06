@@ -1,6 +1,6 @@
 # Claude Code Global Instructions
 
-**Version**: v3.0 (optimized) - Updated 2026-02-06
+**Version**: v3.1 (audit-clean) - Updated 2026-02-06
 **Location**: `~/Developer/claude-agent-framework/` (or `~/.claude/` via symlinks)
 
 ## Prime Directive (Non-Negotiable)
@@ -26,14 +26,15 @@ Invoke agents via the Task tool: `subagent_type: "agent-name"`.
 
 | Agent | Model | When to Use | Exclusive Permission |
 |-------|-------|-------------|---------------------|
-| `persona-evaluator` | opus | **First step** - define user journeys before solution design | **Define user journeys** |
+| `project-initializer` | haiku | **New projects** - scaffold .claude/ structure and manifest | - |
+| `persona-evaluator` | opus | Define user journeys before solution design | **Define user journeys** |
 | `solution-designer` | opus | Turn ideas into bounded solutions (consult devops-governor) | - |
 | `business-analyst` | opus | Create spec, tasklist, rules, quality gates | - |
 | `backend-coding-agent` | opus | Python backend (hexagonal architecture) | **Write backend code** |
 | `frontend-coding-agent` | opus | React/TypeScript frontend (FSD) | **Write frontend code** |
-| `qa-reviewer` | sonnet | Quick governance check (5-10 min) after code changes | - |
-| `code-review-agent` | opus | Deep task completion verification (60 min) | - |
-| `lessons-advisor` | haiku | Consult past lessons before decisions | - |
+| `qa-reviewer` | sonnet | Quick governance check (5-10 min) after each task | - |
+| `code-review-agent` | opus | Deep task completion verification (60 min) after feature | - |
+| `lessons-advisor` | haiku | Consult past lessons before decisions (recommended before BA) | - |
 
 ### Exclusive Permissions (CRITICAL)
 
@@ -50,25 +51,70 @@ Coding agents accept work ONLY from BA-produced artifacts (spec, tasklist). User
 
 - Backend tasks (Python, API, database): `backend-coding-agent`
 - Frontend tasks (React, TypeScript, UI): `frontend-coding-agent`
-- Full-stack tasks: Split between agents with clear handoff
+- Full-stack integration tasks: `backend-coding-agent` (owns integration tests)
+
+### Review Workflow (QA vs Code Review)
+
+| Aspect | QA Reviewer | Code Review Agent |
+|--------|------------|-------------------|
+| When | After **each task** completes | After **feature** completes |
+| Duration | 5-10 min | 60 min |
+| Focus | Governance gates (TDD, hexagonal, quality) | Spec fidelity, AC coverage, bug docs |
+| Model | Sonnet (fast, cheap) | Opus (thorough) |
+| Output | Quick pass/fail + remediation items | Deep verification + feedback envelope |
+
+### Visiting Agent Roles
+
+The `visiting-agent-template` supports specialized read-only reviews:
+
+| Role | Invocation | Focus |
+|------|-----------|-------|
+| `security_auditor` | "Run security audit on this project" | OWASP, input validation, auth flows, secrets |
+| `performance_analyst` | "Run performance analysis on {feature}" | N+1 queries, bundle size, caching |
+| `accessibility_auditor` | "Run accessibility audit on {feature}" | ARIA, keyboard nav, color contrast |
 
 ---
 
 ## Agent Lifecycle
 
 ```
-Persona -> Solution Designer -> DevOps (consult) -> BA -> Coding -> QA -> Code Review -> Lessons
-                                                          backend   gates   deep verify   improve
-                                                          frontend  pass    + bug docs    gates
-                                                         (parallel) /fail
+project-initializer → persona-evaluator → lessons-advisor (recommended)
+                                               ↓
+                           solution-designer → DevOps Governor (consult, REQUIRED)
+                                               ↓
+                                     business-analyst
+                                               ↓
+                              ┌─────── coding (parallel) ───────┐
+                              │  backend-coding-agent            │
+                              │  frontend-coding-agent           │
+                              └─────────────┬───────────────────┘
+                                            ↓
+                                    qa-reviewer (per-task, 5-10 min)
+                                            ↓
+                                   code-review-agent (per-feature, 60 min)
+                                            ↓
+                                    feedback → solution-designer (next sprint)
 ```
 
 **Fast-Track Path** (for bug fixes, single-file changes, config/doc updates):
-Skip persona/solution/BA. Go directly to coding -> QA. Criteria:
-- Single file or minor multi-file change
+Skip project-init/persona/solution/BA. Go directly to coding -> QA -> code review.
+- Single file or minor multi-file change (max 3 files)
 - Bug fix with existing tests
 - Configuration or documentation update
 - No new user journeys or architecture changes
+
+---
+
+## Mechanical Enforcement (Hooks)
+
+| Hook | Trigger | What It Does | Strength |
+|------|---------|-------------|----------|
+| `verify_ba_artifacts.py` | Coding agent start | Blocks if spec/tasklist missing | **BLOCKS** |
+| `verify_devops_approval.py` | BA agent start | Blocks if solution envelope lacks DevOps stamp | **BLOCKS** |
+| `verify_evidence_exists.py` | QA reviewer start | Blocks if no evidence artifacts exist | **BLOCKS** |
+| `verify_phase_transition.py` | Any agent start | Blocks if agent doesn't match current phase | **BLOCKS** |
+| `verify_manifest_updated.py` | Session stop | Warns if manifest not updated in >1 hour | Advisory |
+| `save_manifest_state.py` | Context compress | Backs up manifest (keeps 3 most recent) | Protective |
 
 ---
 
@@ -98,7 +144,7 @@ After context compress or session restart:
 
 | When | Consult |
 |------|---------|
-| Starting new project | `lessons-advisor` agent + `~/.claude/knowledge/devlessons.md` |
+| Starting new project | `project-initializer` agent, then `lessons-advisor` |
 | During coding | `~/.claude/knowledge/coding_standards.md` |
 | Architecture decisions | `~/.claude/docs/agent_operating_model.md` |
 | Agent handoffs | `~/.claude/docs/handoff_envelope_format.md` |
@@ -106,12 +152,14 @@ After context compress or session restart:
 | Governance rules | `~/.claude/docs/agent_governance.md` |
 | Permissions/setup | `~/.claude/knowledge/operational.md` |
 | Tech-specific gotchas | `~/.claude/knowledge/devlessons.md` (see topic index) |
+| Parallel development | `~/.claude/docs/agent_teams.md` |
 
 ---
 
 ## Governance Essentials
 
 - **Manifest as Universal Entry Gate**: ALL agents read manifest FIRST on start/restart/resume
+- **Phase enforcement**: Hooks block agents from running in wrong phase
 - **Document Locations**: All outputs use `.claude/` folder (artifacts, evidence, remediation, evolution)
 - **Never overwrite artifacts**: Always create new versions (v1 -> v2)
 - **ID Sequencing**: BUG/IMPROVE IDs are project-global, never reused
@@ -129,10 +177,10 @@ Project-specific: Create `.claude/persona_lenses.yaml` in your project.
 ```
 {project}/.claude/
   manifest.yaml                    # Restart checkpoint (SINGLE SOURCE OF TRUTH)
-  artifacts/                       # Sequenced: 001_solution_envelope_v1.md through 007_coding_prompt_v1.md
+  artifacts/                       # Sequenced: 000_user_journeys through 007_coding_prompt
   evolution/                       # Append-only: evolution.md, decisions.md
-  remediation/                     # QA/review findings: qa_YYYY-MM-DD.md, code_review_YYYY-MM-DD.md
-  evidence/                        # Quality gates: quality_gates_run.json, test_report.json, test_failures.json
+  remediation/                     # QA/review findings + feedback envelopes
+  evidence/                        # Quality gates: quality_gates_run.json, test_report.json
 ```
 
 Naming: `NNN_type_vM.ext` (e.g., `002_spec_v1.md`). See `~/.claude/docs/artifact_convention.md`.

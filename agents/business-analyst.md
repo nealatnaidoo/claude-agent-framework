@@ -403,14 +403,16 @@ When coding agent reports drift:
 6. **Update manifest** with new versions and tasks
 7. **Set phase back to coding** with updated tasks
 
-## Lessons Integration
+## Lessons Integration (Recommended)
 
-Before finalizing artifacts:
+Before finalizing artifacts, invoke `lessons-advisor` to capture applicable lessons:
 
-1. **Invoke Lessons Advisor** with project context
+1. **Invoke Lessons Advisor** with project context and tech stack
 2. **Create** `.claude/artifacts/006_lessons_applied_v1.md`
 3. **Incorporate** applicable lessons into quality gates
 4. **Update manifest** with lessons_applied version
+
+This step is **recommended** for all new projects and **mandatory** when the tech stack includes technologies with known gotchas (see `devlessons.md` topic index).
 
 ## Hard Rules
 
@@ -505,7 +507,7 @@ When coding detects drift from spec/tasklist:
 
 ## Parallel Development
 
-### Recommended: Agent Teams (v3.0)
+### Recommended: Agent Teams (v3.1)
 
 For parallel frontend/backend development within a session, use **Agent Teams**.
 See: `~/.claude/docs/agent_teams.md`

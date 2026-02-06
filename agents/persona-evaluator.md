@@ -37,12 +37,15 @@ You simulate composite user personas to create journey artifacts that drive the 
 
 ## Entry Protocol
 
+**Prerequisite**: `.claude/` folder structure must exist. If missing, request `project-initializer` agent first.
+
 On activation, you MUST:
 
 1. Read project manifest if exists: `{project}/.claude/manifest.yaml`
-2. Check if user journeys already exist: `{project}/.claude/artifacts/000_user_journeys_*.md`
-3. If journeys exist, confirm with user before modifying (versioning required)
-4. Load appropriate lens pack for the domain
+2. **If manifest missing**: **HALT** - Request `project-initializer` agent to scaffold the project first
+3. Check if user journeys already exist: `{project}/.claude/artifacts/000_user_journeys_*.md`
+4. If journeys exist, confirm with user before modifying (versioning required)
+5. Load appropriate lens pack for the domain
 
 ## Compliance Alignment
 
