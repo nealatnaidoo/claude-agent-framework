@@ -113,6 +113,9 @@ Skip project-init/persona/solution/BA. Go directly to coding -> QA -> code revie
 | `verify_devops_approval.py` | BA agent start | Blocks if solution envelope lacks DevOps stamp | **BLOCKS** |
 | `verify_evidence_exists.py` | QA reviewer start | Blocks if no evidence artifacts exist | **BLOCKS** |
 | `verify_phase_transition.py` | Any agent start | Blocks if agent doesn't match current phase | **BLOCKS** |
+| `manage_deploy_gate.py` | SubagentStart (all) | Creates/revokes deploy gate file | Gate mgmt |
+| `block_deployment.py` | PreToolUse/Bash | Blocks deploy commands without gate | **BLOCKS** |
+| `protect_deploy_gate.py` | PreToolUse/Write\|Edit | Blocks manual gate file creation | **BLOCKS** |
 | `verify_manifest_updated.py` | Session stop | Warns if manifest not updated in >1 hour | Advisory |
 | `save_manifest_state.py` | Context compress | Backs up manifest (keeps 3 most recent) | Protective |
 

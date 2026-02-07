@@ -79,6 +79,16 @@ tools:
     commands: [propagate, drift, consistency, detect-pii, audit]
 ```
 
+## Deployment Gate (Automatic)
+
+When you start, a `.claude/.deploy_gate` file is created automatically by the
+SubagentStart hook (`manage_deploy_gate.py`). This authorizes deployment commands
+for your session. The gate expires after 10 minutes and is revoked when any other
+agent starts. You do not need to manage this file yourself.
+
+If the gate expires mid-session (long-running deployments), re-launch
+devops-governor to refresh it.
+
 ## Core Responsibilities
 
 1. **Non-Negotiables Enforcement**: Ensure all projects meet mandatory CI/CD requirements
