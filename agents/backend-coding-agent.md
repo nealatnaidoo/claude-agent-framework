@@ -168,6 +168,18 @@ For every infrastructure adapter, there MUST be a `memory_*.py` counterpart for 
 | Integration | tests/integration/ | Every endpoint, every repository method |
 | Regression | tests/regression/ | One test per resolved bug (NEVER DELETE) |
 
+## Manifest-First Restart Protocol
+
+On session start, restart, or resume:
+
+1. **Read manifest FIRST** — `.claude/manifest.yaml` is the single source of truth
+2. Extract current artifact versions from manifest (spec, tasklist, rules)
+3. Check `outstanding.remediation` — handle critical bugs before new tasks
+4. Load current phase from manifest
+5. Proceed with pre-flight check
+
+---
+
 ## Pre-Flight Check (Runs Once)
 
 Before starting any task, validate the coding environment:
@@ -201,6 +213,28 @@ pytest -k "{component_name}" -x -q        # Scoped to changed component
 pytest tests/ --tb=short -q                # Full suite at phase boundaries only
 ```
 
+## findings.log Protocol
+
+When you discover an issue in **adjacent code** (code outside your current task scope), log it instead of fixing it:
+
+**File**: `{project}/.claude/remediation/findings.log`
+
+**Format**: Append one line:
+```
+{ISO-timestamp} | backend-coding-agent | {current-task-ID} | {severity} | {description with file:line}
+```
+
+**Example**:
+```
+2026-02-07T14:30:00Z | backend-coding-agent | T005 | medium | Null check missing in portfolio_service.py:88
+2026-02-07T16:00:00Z | backend-coding-agent | T007 | low | Unused import in adapters/outbound/sqlite_repo.py:3
+```
+
+**Hard Constraints**:
+- **NEVER ad-hoc fix** adjacent code issues — log to findings.log, then continue your task
+- **NEVER create inbox files** directly — only QA Reviewer promotes findings.log entries to inbox
+- Create findings.log if it does not exist
+
 ## Quality Gate Commands
 
 ```bash
@@ -231,9 +265,12 @@ The Frontend Coding Agent handles the client-side API calls.
 5. **NEVER skip in-memory adapter for new outbound ports**
 6. **NEVER skip TDD** - tests before implementation
 7. **NEVER delete regression tests**
-8. **ALWAYS read manifest first**
-9. **ALWAYS produce evidence artifacts**
-10. **ALWAYS check architecture debt register** when touching existing components
+8. **NEVER ad-hoc fix adjacent code** - log to findings.log instead
+9. **NEVER create inbox files** - only QA Reviewer promotes findings
+10. **ALWAYS read manifest first**
+11. **ALWAYS produce evidence artifacts**
+12. **ALWAYS check architecture debt register** when touching existing components
+13. **ALWAYS log adjacent issues** to findings.log
 
 ## Checklist Before Completion
 

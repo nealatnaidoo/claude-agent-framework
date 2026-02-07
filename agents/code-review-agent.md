@@ -58,7 +58,7 @@ You perform **deep verification** (~60 min) that tasks are **actually complete**
 
 ## Startup Protocol
 
-1. **Read manifest**: `{project_root}/.claude/manifest.yaml`
+1. **Read manifest FIRST** — `.claude/manifest.yaml` is the single source of truth
 2. **Identify task(s) to review**: From manifest `outstanding.tasks` or user request
 3. **Read artifacts**: spec, tasklist, rules, quality gates at versions in manifest
 4. **Gather context**: Files involved, test coverage, evidence artifacts
@@ -259,6 +259,38 @@ Also update `.claude/remediation/remediation_tasks.md`:
 
 See: `~/.claude/docs/remediation_format.md` for full format specification.
 
+## Inbox Deposit Protocol
+
+For **each** BUG or IMPROVE finding created, also deposit an individual file into the remediation inbox:
+
+**Location**: `{project_root}/.claude/remediation/inbox/{ID}_{source}_{YYYY-MM-DD}.md`
+
+**Source**: `code-review-agent`
+
+**Template**:
+
+```markdown
+---
+id: "{BUG-XXX or IMPROVE-XXX}"
+source: "code-review-agent"
+severity: "{critical|high|medium|low}"
+created: "{ISO-timestamp}"
+context: "{Task ID} — {one-line summary}"
+file: "{primary file affected}"
+line: {line number}
+---
+
+# {ID}: {Title}
+
+{Full finding details copied from code review report}
+```
+
+**Example filename**: `BUG-003_code-review-agent_2026-02-07.md`
+
+Create the `inbox/` directory if it does not exist.
+
+**Note**: Code Review Agent does NOT promote findings.log (QA Reviewer handles that).
+
 ## ID Sequencing Protocol (MANDATORY)
 
 Before creating ANY new BUG or IMPROVE IDs:
@@ -415,6 +447,7 @@ Solution Designer SHOULD:
 - **Always create dated report** in `.claude/remediation/`
 - **Always update manifest** with review results
 - **Always update remediation_tasks.md** with new findings
+- **Always deposit inbox files** for each BUG/IMPROVE finding
 - **Use standardized BUG/IMPROVE IDs** (sequential, never reuse)
 - **Link findings to specific file:line locations**
 - **Reference spec/story/AC** for every finding

@@ -37,6 +37,7 @@ FOR EACH unblocked task (by dependency order):
        → Log to .claude/evolution/evolution.md
        → Mark task with note, continue to next
      - Re-run inline QA after fix
+     - Adjacent code issues: log to findings.log, do NOT auto-fix
 
   8. EVIDENCE: Write quality gate results
      → .claude/evidence/quality_gates_run.json
@@ -64,9 +65,26 @@ FOR EACH unblocked task (by dependency order):
 - Adding missing `contract.md` to a component you're touching
 - Migrating a component closer to canonical structure (if scope allows)
 
+### findings.log Deposit Protocol
+
+When you discover an issue in **adjacent code** (code outside your current task scope), you MUST log it rather than fix it:
+
+**Format**: Append one line to `{project}/.claude/remediation/findings.log`
+
+```
+{ISO-timestamp} | {agent} | {task} | {severity} | {description}
+```
+
+**Example**:
+```
+2026-02-07T14:30:00Z | backend-coding-agent | T005 | medium | Null check missing in portfolio_service.py:88
+```
+
+**Hard Constraint**: Coding agents MUST NOT create inbox files directly. Only QA Reviewer promotes findings.log entries to `remediation/inbox/` during its next review pass.
+
 ### Tier 2: Moderate (Assess + Document)
 - Touching files outside task scope
-- Bug discovered in adjacent code
+- Bug discovered in adjacent code → **log to findings.log, do NOT fix**
 - Creating new slice/component not in tasklist
 
 ### Tier 3: Significant (HALT)

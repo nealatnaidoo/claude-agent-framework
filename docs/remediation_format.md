@@ -210,8 +210,41 @@ Reviewer identifies issue and documents:
 - Creates entry in review report (`.claude/remediation/{type}_YYYY-MM-DD.md`)
 - Adds to consolidated tasks (`.claude/remediation/remediation_tasks.md`)
 - Updates manifest (`outstanding.remediation`)
+- **Deposits inbox file** in `.claude/remediation/inbox/{ID}_{source}_{YYYY-MM-DD}.md`
 
-### 2. Prioritization
+### 1b. Discovery (Coding Agent — Lightweight)
+
+Coding agents discovering adjacent issues during implementation:
+- **Append one-liner** to `.claude/remediation/findings.log`
+- Format: `{ISO-timestamp} | {agent} | {task} | {severity} | {description}`
+- **MUST NOT** create inbox files directly (QA promotes these)
+- **MUST NOT** ad-hoc fix adjacent code (log it, move on)
+
+### 2. Inbox Triage (BA Agent)
+
+BA agent scans `remediation/inbox/` on startup:
+- **Critical findings**: Block new feature work, create remediation tasks as P0 dependencies
+- **High findings**: Address this sprint, no blocking
+- **Medium/Low findings**: Next cycle, add to backlog
+- Parse YAML frontmatter from each inbox file to determine severity
+- Sort by severity (critical first), then by date
+
+### 3. Archive Protocol (BA Agent)
+
+After incorporating a finding into the tasklist:
+- Read the inbox file
+- Append archive annotation to frontmatter:
+  - `resolved_as`: Task ID created (e.g., `T015`)
+  - `picked_up`: ISO timestamp
+  - `tasklist_version`: Tasklist file used (e.g., `003_tasklist_v3.md`)
+  - `triage_decision`: Brief rationale
+- Write annotated file to `remediation/archive/`
+- Delete the original from `inbox/`
+- Update manifest with `resolved_as` and `source_remediation` cross-links
+
+**Traceability chain**: `BUG-NNN` → `inbox/` → `T-NNN` in tasklist → `archive/` with `resolved_as`
+
+### 4. Prioritization
 
 Based on severity/priority:
 - `critical` bugs block all other work
@@ -219,13 +252,13 @@ Based on severity/priority:
 - `medium` items batched at sprint boundaries
 - `low` items go to backlog
 
-### 3. Assignment
+### 5. Assignment
 
 When work begins:
 - Update `status: in_progress` in manifest
 - Update consolidated tasks file
 
-### 4. Resolution
+### 6. Resolution
 
 When fixed:
 - Update `status: resolved` in manifest
@@ -233,12 +266,22 @@ When fixed:
 - Move to "Resolved" section in consolidated tasks
 - Link to commit/PR that fixed it
 
-### 5. Verification
+### 7. Verification
 
 After fix:
 - QA Reviewer or Code Review Agent verifies fix
 - If not fixed correctly, status goes back to `pending`
 - If fixed, remains `resolved`
+
+### Inbox/Archive Relationship to Existing Artifacts
+
+| Artifact | Purpose | Relationship to Inbox |
+|----------|---------|----------------------|
+| `manifest.outstanding.remediation` | Active tracking registry | Both updated in sync — inbox is queuing, manifest is tracking |
+| `remediation_tasks.md` | Consolidated human-readable view | Updated alongside inbox deposit |
+| `inbox/` | Arrival queue for findings | Writer: QA, Code Review, Visiting. Reader: BA |
+| `archive/` | Processed + traceable findings | Writer: BA (annotator). Reader: Audit trail |
+| `findings.log` | Lightweight coding agent observations | Writer: Coding agents. Reader: QA (promotes to inbox) |
 
 ## Escalation Triggers
 

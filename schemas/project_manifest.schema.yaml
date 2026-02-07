@@ -488,6 +488,18 @@ properties:
   outstanding:
     type: object
     properties:
+      next_remediation_id:
+        type: object
+        description: "Next available remediation IDs (avoids grep-based discovery)"
+        properties:
+          bug:
+            type: integer
+            minimum: 1
+            description: "Next BUG-XXX number to assign"
+          improve:
+            type: integer
+            minimum: 1
+            description: "Next IMPROVE-XXX number to assign"
       tasks:
         type: array
         description: "Tasks from tasklist not yet completed"
@@ -513,6 +525,10 @@ properties:
             assignee:
               type: string
               description: "Agent or session handling this task"
+            source_remediation:
+              type: string
+              pattern: "^(BUG|IMPROVE)-[0-9]{3}$"
+              description: "Remediation ID that originated this task (e.g., BUG-007)"
             completed_date:
               type: string
               format: date
@@ -548,6 +564,8 @@ properties:
                 - github_actions_review
                 - test_isolation_review
                 - verification_report
+                # Coding agent findings log
+                - findings_log
             priority:
               type: string
               enum: [critical, high, medium, low]
@@ -569,6 +587,13 @@ properties:
             resolution:
               type: string
               description: "How it was resolved"
+            resolved_as:
+              type: string
+              pattern: "^T[0-9]{3}$"
+              description: "Task ID that addresses this finding (e.g., T015)"
+            source_file:
+              type: string
+              description: "Path to inbox/archive file for this finding"
 
   # ============================================================
   # REVIEW HISTORY

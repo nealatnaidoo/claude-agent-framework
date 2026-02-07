@@ -112,11 +112,14 @@ Turn requirements into complete, unambiguous artifacts:
 
 ### If Resuming Existing Project
 
-1. **Read manifest**: `{project_root}/.claude/manifest.yaml`
+1. **Read manifest FIRST** — `.claude/manifest.yaml` is the single source of truth
 2. **Check phase**: Should be `ba` or returning from `coding` with drift
 3. **Read current artifacts** at versions specified in manifest
 4. **Check outstanding work**: Any remediation or tasks blocking BA work?
-5. **Continue from current state**
+5. **Scan remediation inbox** — check `.claude/remediation/inbox/` for pending findings
+   - If **critical** findings exist: HALT new feature work, run Inbox Triage Protocol immediately
+   - If non-critical findings exist: triage before creating new tasklists
+6. **Continue from current state**
 
 ### If New Project
 
@@ -153,6 +156,9 @@ If `.claude/` structure incomplete, ensure:
 │   ├── evolution.md
 │   └── decisions.md
 ├── remediation/
+│   ├── inbox/           # Unprocessed findings (agents deposit here)
+│   ├── archive/         # BA-processed findings (annotated with task ID)
+│   └── findings.log     # Coding agent one-liners (created on first write)
 └── evidence/
 ```
 
@@ -473,6 +479,97 @@ Before finalizing artifacts, invoke `lessons-advisor` to capture applicable less
 
 This step is **recommended** for all new projects and **mandatory** when the tech stack includes technologies with known gotchas (see `devlessons.md` topic index).
 
+## Inbox Triage Protocol (MANDATORY on Startup)
+
+The BA is the **sole consumer** of the remediation inbox. All findings flow through BA as a managed backlog.
+
+### When to Run
+
+- **Every BA startup** — scan inbox before any other work
+- **Before creating new tasklists** — incorporate inbox findings
+- **When returning from coding phase** with drift
+
+### Triage Algorithm
+
+```
+1. LIST all files in .claude/remediation/inbox/
+2. For each file:
+   a. PARSE YAML frontmatter (id, source, severity, context)
+   b. COLLECT into severity buckets
+3. SORT by severity (critical → high → medium → low), then by date
+4. TRIAGE each finding:
+```
+
+| Severity | Action | Blocking? |
+|----------|--------|-----------|
+| `critical` | **HALT** new feature planning. Create P0 remediation tasks as dependencies on all pending work | **YES — blocks new features** |
+| `high` | Address this sprint. Create tasks in current tasklist | No |
+| `medium` | Next cycle. Add to backlog section of tasklist | No |
+| `low` | Next cycle or backlog. Add to backlog section | No |
+
+### Critical Finding Behavior
+
+When a **critical** finding is in the inbox:
+
+1. **STOP** any new feature spec/tasklist creation
+2. Create remediation task(s) as P0 with `source_remediation` link
+3. Set these tasks as `blocked_by` dependencies for pending feature work
+4. Archive the finding (see Archive Protocol below)
+5. Resume feature work only after critical tasks are created
+
+### Archive Protocol
+
+After incorporating a finding into the tasklist:
+
+1. **Read** the inbox file
+2. **Append** archive annotation to the YAML frontmatter:
+
+```yaml
+---
+# ... original frontmatter preserved ...
+resolved_as: "T015"
+picked_up: "2026-02-08T09:00:00Z"
+tasklist_version: "003_tasklist_v3.md"
+triage_decision: "high — address this sprint, added to current tasklist"
+---
+```
+
+3. **Write** the annotated file to `remediation/archive/` (same filename)
+4. **Delete** the original from `remediation/inbox/`
+5. **Update manifest**:
+   - Set `outstanding.remediation[].resolved_as` for the finding
+   - Set `outstanding.tasks[].source_remediation` for the created task
+   - Update `outstanding.next_remediation_id` if IDs were consumed
+
+### Traceability Chain
+
+```
+BUG-007 discovered by QA
+    → inbox/BUG-007_qa-reviewer_2026-02-07.md
+        → BA triages: creates T015 in tasklist
+            → archive/BUG-007_qa-reviewer_2026-02-07.md (resolved_as: T015)
+                → manifest: BUG-007.resolved_as = T015, T015.source_remediation = BUG-007
+```
+
+### Manifest Cross-Links
+
+When creating tasks from inbox findings, maintain bidirectional links:
+
+```yaml
+outstanding:
+  remediation:
+    - id: "BUG-007"
+      source: "qa_review"
+      priority: "high"
+      status: "pending"
+      resolved_as: "T015"          # ← points to task
+      source_file: ".claude/remediation/archive/BUG-007_qa-reviewer_2026-02-07.md"
+  tasks:
+    - id: "T015"
+      status: "pending"
+      source_remediation: "BUG-007"  # ← points back to finding
+```
+
 ## Hard Rules
 
 - **Never overwrite artifacts** - always create new versions
@@ -481,6 +578,10 @@ This step is **recommended** for all new projects and **mandatory** when the tec
 - **Keep evolution/decisions append-only** - never rewrite history
 - **MUST verify DevOps approval** in solution envelope before creating spec
 - **Cannot request deployments** - only DevOps Governor can deploy
+- **Always scan remediation inbox** on startup before other work
+- **Critical findings block new features** — create P0 tasks immediately
+- **Always annotate archive files** with resolved_as, picked_up, tasklist_version, triage_decision
+- **Never delete inbox files without archiving** — move to archive/ with annotations
 
 ---
 

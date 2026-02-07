@@ -208,6 +208,18 @@ Every interactive component MUST:
 - Have sufficient color contrast
 - Include `data-testid` for E2E tests
 
+## Manifest-First Restart Protocol
+
+On session start, restart, or resume:
+
+1. **Read manifest FIRST** — `.claude/manifest.yaml` is the single source of truth
+2. Extract current artifact versions from manifest (spec, tasklist, rules)
+3. Check `outstanding.remediation` — handle critical bugs before new tasks
+4. Load current phase from manifest
+5. Proceed with pre-flight check
+
+---
+
 ## Pre-Flight Check (Runs Once)
 
 Before starting any task, validate the coding environment:
@@ -241,6 +253,28 @@ cd frontend && npx tsc --noEmit           # TypeScript check
 cd frontend && npm run build              # Full build (at phase boundaries)
 ```
 
+## findings.log Protocol
+
+When you discover an issue in **adjacent code** (code outside your current task scope), log it instead of fixing it:
+
+**File**: `{project}/.claude/remediation/findings.log`
+
+**Format**: Append one line:
+```
+{ISO-timestamp} | frontend-coding-agent | {current-task-ID} | {severity} | {description with file:line}
+```
+
+**Example**:
+```
+2026-02-07T14:30:00Z | frontend-coding-agent | T008 | medium | Missing data-testid on submit button in ContentCard.tsx:42
+2026-02-07T16:00:00Z | frontend-coding-agent | T010 | low | Unused CSS class in AdminLayout.tsx:15
+```
+
+**Hard Constraints**:
+- **NEVER ad-hoc fix** adjacent code issues — log to findings.log, then continue your task
+- **NEVER create inbox files** directly — only QA Reviewer promotes findings.log entries to inbox
+- Create findings.log if it does not exist
+
 ## Quality Gate Commands
 
 ```bash
@@ -268,10 +302,13 @@ The Backend Coding Agent provides the API endpoints you consume.
 4. **NEVER put business logic in page components**
 5. **NEVER skip TypeScript types** - contract first for new feature areas
 6. **NEVER skip `data-testid`** on interactive elements
-7. **ALWAYS ensure accessibility** (ARIA, keyboard nav)
-8. **ALWAYS read manifest first**
-9. **ALWAYS produce evidence artifacts**
-10. **ALWAYS check architecture debt register** when touching existing components
+7. **NEVER ad-hoc fix adjacent code** - log to findings.log instead
+8. **NEVER create inbox files** - only QA Reviewer promotes findings
+9. **ALWAYS ensure accessibility** (ARIA, keyboard nav)
+10. **ALWAYS read manifest first**
+11. **ALWAYS produce evidence artifacts**
+12. **ALWAYS check architecture debt register** when touching existing components
+13. **ALWAYS log adjacent issues** to findings.log
 
 ## Checklist Before Completion
 

@@ -25,6 +25,12 @@ All Claude-generated project artifacts are stored in a `.claude/` folder at the 
 │   │   └── decisions.md                  # Architectural decisions
 │   │
 │   ├── remediation/                      # QA + Code Review findings
+│   │   ├── inbox/                        # Unprocessed findings (agents deposit here)
+│   │   │   ├── BUG-007_qa-reviewer_2026-02-07.md
+│   │   │   └── IMPROVE-003_security_auditor_2026-02-07.md
+│   │   ├── archive/                      # BA-processed findings (annotated with task ID)
+│   │   │   └── BUG-007_qa-reviewer_2026-02-07.md  # resolved_as: T015
+│   │   ├── findings.log                  # Coding agent one-liners (pipe-delimited)
 │   │   ├── qa_YYYY-MM-DD.md              # QA review reports
 │   │   ├── code_review_YYYY-MM-DD.md     # Code review reports
 │   │   ├── project_review_YYYY-MM-DD.md  # Full project reviews
@@ -72,6 +78,58 @@ All Claude-generated project artifacts are stored in a `.claude/` folder at the 
 
 - `BUG-001`, `BUG-002` - Bugs requiring fixes
 - `IMPROVE-001`, `IMPROVE-002` - Improvements to consider
+
+### Inbox Files: `{ID}_{source}_{YYYY-MM-DD}.md`
+
+Individual finding files deposited by review agents into `remediation/inbox/`.
+
+| Component | Description | Example |
+|-----------|-------------|---------|
+| `ID` | Remediation ID | `BUG-007`, `IMPROVE-003` |
+| `source` | Agent that created the finding | `qa-reviewer`, `code-review-agent`, `security_auditor` |
+| `YYYY-MM-DD` | Date finding was created | `2026-02-07` |
+
+**Inbox File YAML Frontmatter**:
+
+```yaml
+---
+id: "BUG-007"
+source: "qa-reviewer"
+severity: "high"
+created: "2026-02-07T14:30:00Z"
+context: "T005 — Missing null check in calculate_var()"
+file: "src/core/risk_calculator.py"
+line: 142
+---
+```
+
+**Archive Annotation** (appended by BA when moving to `archive/`):
+
+```yaml
+---
+# ... original frontmatter preserved ...
+resolved_as: "T015"
+picked_up: "2026-02-08T09:00:00Z"
+tasklist_version: "003_tasklist_v3.md"
+triage_decision: "critical — blocked new features, created P0 task"
+---
+```
+
+### findings.log Format
+
+Lightweight one-liner log written by coding agents. Pipe-delimited.
+
+```
+{ISO-timestamp} | {agent} | {task} | {severity} | {description}
+```
+
+**Example**:
+```
+2026-02-07T14:30:00Z | backend-coding-agent | T005 | medium | Adjacent null check missing in portfolio_service.py:88
+2026-02-07T15:10:00Z | frontend-coding-agent | T008 | low | Unused CSS class in ContentCard.tsx:42
+```
+
+QA Reviewer promotes findings.log entries to inbox files during its next review pass.
 
 ## Versioning Rules
 
@@ -247,6 +305,9 @@ myproject-user-auth/                     # Sibling directory
     │   ├── evolution.md                 # Feature-specific drift
     │   └── decisions.md                 # Feature-specific decisions
     ├── remediation/
+    │   ├── inbox/                       # Unprocessed findings
+    │   ├── archive/                     # BA-processed findings
+    │   ├── findings.log                 # Coding agent one-liners
     │   └── qa_YYYY-MM-DD.md             # Feature QA reports
     └── evidence/
         ├── quality_gates_run.json

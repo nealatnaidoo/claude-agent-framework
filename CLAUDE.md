@@ -184,6 +184,9 @@ Project-specific: Create `.claude/persona_lenses.yaml` in your project.
   artifacts/                       # Sequenced: 000_user_journeys through 007_coding_prompt
   evolution/                       # Append-only: evolution.md, decisions.md
   remediation/                     # QA/review findings + feedback envelopes
+    inbox/                         # Unprocessed findings (BA triages on startup)
+    archive/                       # Processed findings (annotated with task IDs)
+    findings.log                   # Coding agent one-liners (QA promotes to inbox)
   evidence/                        # Quality gates: quality_gates_run.json, test_report.json
 ```
 

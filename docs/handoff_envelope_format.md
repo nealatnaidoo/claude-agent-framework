@@ -167,6 +167,8 @@ devops_approval:
 
 ### 2. BA Handoff (BA → Coding Agent)
 
+**Prerequisite**: Remediation inbox (`remediation/inbox/`) MUST be processed before creating new tasklists. All inbox findings must be triaged, incorporated into tasks, and archived.
+
 **Files**:
 - `.claude/artifacts/002_spec_vN.md`
 - `.claude/artifacts/003_tasklist_vN.md`
@@ -262,6 +264,10 @@ reviews:
 ### 4. QA/Review Handoff (QA → Coding Agent for fixes)
 
 **File**: `.claude/remediation/qa_YYYY-MM-DD.md`
+
+**Inbox Deposit**: For each BUG/IMPROVE finding, also deposit an individual file in `remediation/inbox/{ID}_{source}_{YYYY-MM-DD}.md`. This ensures the BA can triage findings even if the review report is lengthy.
+
+**findings.log Promotion**: QA Reviewer also checks `remediation/findings.log` for coding agent observations, promotes them to inbox with assigned IDs, then clears the log.
 
 **Format**:
 

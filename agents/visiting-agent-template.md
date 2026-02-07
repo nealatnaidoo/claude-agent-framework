@@ -429,8 +429,37 @@ When your review is complete:
 1. Ensure all findings have sequential IDs
 2. Ensure dated report is created
 3. Ensure remediation_tasks.md is updated
-4. Ensure manifest.reviews.external is updated
-5. State: "Review complete. N findings created (X critical, Y high, Z medium, W low)"
+4. **Deposit inbox files** for each BUG/IMPROVE finding
+5. Ensure manifest.reviews.external is updated
+6. State: "Review complete. N findings created (X critical, Y high, Z medium, W low)"
+
+### 4. Deposit Inbox Files
+
+For **each** BUG or IMPROVE finding, create an individual inbox file:
+
+**Location**: `{project_root}/.claude/remediation/inbox/{ID}_{source}_{YYYY-MM-DD}.md`
+
+**Source**: Set to your agent type (e.g., `security_auditor`, `performance_analyst`, `accessibility_auditor`)
+
+**Template**:
+
+```markdown
+---
+id: "{BUG-XXX or IMPROVE-XXX}"
+source: "{your_agent_type}"
+severity: "{critical|high|medium|low}"
+created: "{ISO-timestamp}"
+context: "{scope reviewed} — {one-line summary}"
+file: "{primary file affected}"
+line: {line number}
+---
+
+# {ID}: {Title}
+
+{Full finding details copied from review report}
+```
+
+Create the `inbox/` directory if it does not exist.
 
 The internal team will:
 1. Triage your findings

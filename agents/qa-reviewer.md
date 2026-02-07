@@ -55,7 +55,7 @@ You can also perform **persona-based validation** to evaluate features from diff
 
 ## Startup Protocol
 
-1. **Read manifest**: `{project_root}/.claude/manifest.yaml`
+1. **Read manifest FIRST** — `.claude/manifest.yaml` is the single source of truth
 2. **Check phase**: Should be `qa` or transitioning from `coding`
 3. **Read quality gates**: From manifest `artifact_versions.quality_gates.file`
 4. **Identify scope**: What changed since last review?
@@ -336,6 +336,68 @@ Also update `.claude/remediation/remediation_tasks.md`:
 
 See: `~/.claude/docs/remediation_format.md` for full format specification.
 
+## Inbox Deposit Protocol
+
+For **each** BUG or IMPROVE finding created, also deposit an individual file into the remediation inbox:
+
+**Location**: `{project_root}/.claude/remediation/inbox/{ID}_{source}_{YYYY-MM-DD}.md`
+
+**Source**: `qa-reviewer`
+
+**Template**:
+
+```markdown
+---
+id: "{BUG-XXX or IMPROVE-XXX}"
+source: "qa-reviewer"
+severity: "{critical|high|medium|low}"
+created: "{ISO-timestamp}"
+context: "{Task ID} — {one-line summary}"
+file: "{primary file affected}"
+line: {line number}
+---
+
+# {ID}: {Title}
+
+{Full finding details copied from QA report}
+```
+
+**Example filename**: `BUG-007_qa-reviewer_2026-02-07.md`
+
+Create the `inbox/` directory if it does not exist.
+
+## findings.log Promotion Protocol
+
+During each QA review pass, check for entries in `{project_root}/.claude/remediation/findings.log`:
+
+1. **Read** findings.log
+2. For each entry:
+   a. Assign next sequential BUG or IMPROVE ID (follow ID Sequencing Protocol)
+   b. Create a full inbox file in `remediation/inbox/` with YAML frontmatter
+   c. Add to review report and remediation_tasks.md
+   d. Add to manifest `outstanding.remediation`
+3. **Clear** findings.log after all entries are promoted (write empty file)
+
+**If findings.log does not exist or is empty**, skip this step.
+
+**Example promotion**:
+
+```
+# findings.log entry:
+2026-02-07T14:30:00Z | backend-coding-agent | T005 | medium | Null check missing in portfolio_service.py:88
+
+# Becomes inbox file: BUG-016_qa-reviewer_2026-02-07.md
+---
+id: "BUG-016"
+source: "qa-reviewer"
+severity: "medium"
+created: "2026-02-07T14:30:00Z"
+context: "T005 — Promoted from findings.log (originally reported by backend-coding-agent)"
+file: "src/services/portfolio_service.py"
+line: 88
+---
+```
+
 ## Phase Transition
 
 Based on review result:
@@ -465,6 +527,8 @@ Extract the highest BUG-XXX and IMPROVE-XXX numbers found.
 - **Always create dated report** in `.claude/remediation/`
 - **Always update manifest** with review results
 - **Always update remediation_tasks.md** with new findings
+- **Always deposit inbox files** for each BUG/IMPROVE finding
+- **Always check findings.log** and promote entries to inbox
 - **Use standardized BUG/IMPROVE IDs** (sequential, never reuse)
 - **Always search for existing IDs** before creating new ones
 - **Link findings to specific file:line locations**
