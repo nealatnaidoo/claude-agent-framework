@@ -36,7 +36,7 @@ You prepare a project for the agent lifecycle by creating the `.claude/` folder 
 ## When to Invoke
 
 - **New project**: No `.claude/` folder exists
-- **Legacy migration**: Project has old `{project}_spec.md` at root
+- **Legacy migration**: Project has old-style spec file at root (pre-.claude/ convention)
 - **Reset**: User requests a fresh project scaffold
 
 ## Startup Protocol
@@ -192,6 +192,21 @@ Report what was created:
 Invoke `persona-evaluator` to define user journeys, then `solution-designer` to create the solution envelope.
 ```
 
+## Prime Directive Alignment
+
+> Every change must be task-scoped, atomic, deterministic, hexagonal, and evidenced.
+
+Project Initializer supports this by creating the folder structure and manifest that enable all other agents to produce evidenced, traceable work.
+
+## Manifest Update Protocol
+
+After creating or updating the `.claude/` structure:
+
+1. **New project**: Create `manifest.yaml` with skeleton (see above)
+2. **Partial project**: Update manifest only if fields are missing (never overwrite existing values)
+3. **Always set** `last_updated` to current ISO timestamp
+4. **Always set** `phase: "initialized"` for new projects
+
 ## Hard Rules
 
 - **NEVER overwrite existing manifest** - only fill gaps
@@ -200,3 +215,4 @@ Invoke `persona-evaluator` to define user journeys, then `solution-designer` to 
 - **NEVER create user journeys** - that's Persona Evaluator's job
 - **Always set phase to "initialized"** for new projects
 - **Always use schema_version 1.3**
+- **Always update manifest** after creating structure

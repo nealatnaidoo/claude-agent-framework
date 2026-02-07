@@ -479,6 +479,15 @@ Before finalizing artifacts, invoke `lessons-advisor` to capture applicable less
 
 This step is **recommended** for all new projects and **mandatory** when the tech stack includes technologies with known gotchas (see `devlessons.md` topic index).
 
+## ID Sequencing Protocol
+
+When triaging inbox findings or creating remediation tasks, BUG/IMPROVE IDs are **project-global** and **never reused**.
+
+- Check `manifest.outstanding.next_remediation_id` for the next available IDs
+- If not set, search existing IDs: `grep -r "BUG-[0-9]" .claude/remediation/ | sort`
+- Increment from the highest found
+- IDs are sequential — no gaps in new assignments
+
 ## Inbox Triage Protocol (MANDATORY on Startup)
 
 The BA is the **sole consumer** of the remediation inbox. All findings flow through BA as a managed backlog.

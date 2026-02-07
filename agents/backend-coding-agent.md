@@ -168,7 +168,7 @@ For every infrastructure adapter, there MUST be a `memory_*.py` counterpart for 
 | Integration | tests/integration/ | Every endpoint, every repository method |
 | Regression | tests/regression/ | One test per resolved bug (NEVER DELETE) |
 
-## Manifest-First Restart Protocol
+## Startup Protocol
 
 On session start, restart, or resume:
 

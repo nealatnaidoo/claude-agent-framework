@@ -208,7 +208,7 @@ Every interactive component MUST:
 - Have sufficient color contrast
 - Include `data-testid` for E2E tests
 
-## Manifest-First Restart Protocol
+## Startup Protocol
 
 On session start, restart, or resume:
 
