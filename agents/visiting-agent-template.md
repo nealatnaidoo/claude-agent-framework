@@ -198,39 +198,7 @@ Must be running and passing:
 
 ## ID Sequencing Protocol (MANDATORY)
 
-Before creating ANY new BUG or IMPROVE ID:
-
-### Step 1: Search for Existing IDs
-
-```bash
-grep -r "BUG-[0-9]" .claude/remediation/ | sort
-grep -r "IMPROVE-[0-9]" .claude/remediation/ | sort
-```
-
-### Step 2: Find Highest Numbers
-
-Extract the highest BUG-XXX and IMPROVE-XXX numbers found.
-
-### Step 3: Increment from Highest
-
-- New bugs start at: highest_bug + 1
-- New improvements start at: highest_improve + 1
-
-### Rules
-
-- IDs are **project-global** (not per-review)
-- IDs are **never reused** (even for resolved items)
-- IDs are **sequential** (no gaps in new assignments)
-
-### Example
-
-```
-Existing: BUG-001, BUG-002, BUG-003 (resolved), BUG-015
-Your new bugs start at: BUG-016
-
-Existing: IMPROVE-001, IMPROVE-002
-Your new improvements start at: IMPROVE-003
-```
+Follow the full ID Sequencing Protocol in `~/.claude/docs/remediation_format.md`. Key rule: search existing IDs first, increment from highest, never reuse.
 
 ---
 
@@ -435,31 +403,7 @@ When your review is complete:
 
 ### 4. Deposit Inbox Files
 
-For **each** BUG or IMPROVE finding, create an individual inbox file:
-
-**Location**: `{project_root}/.claude/remediation/inbox/{ID}_{source}_{YYYY-MM-DD}.md`
-
-**Source**: Set to your agent type (e.g., `security_auditor`, `performance_analyst`, `accessibility_auditor`)
-
-**Template**:
-
-```markdown
----
-id: "{BUG-XXX or IMPROVE-XXX}"
-source: "{your_agent_type}"
-severity: "{critical|high|medium|low}"
-created: "{ISO-timestamp}"
-context: "{scope reviewed} — {one-line summary}"
-file: "{primary file affected}"
-line: {line number}
----
-
-# {ID}: {Title}
-
-{Full finding details copied from review report}
-```
-
-Create the `inbox/` directory if it does not exist.
+For **each** BUG or IMPROVE finding, deposit an inbox file at `{project_root}/.claude/remediation/inbox/{ID}_{your_agent_type}_{YYYY-MM-DD}.md`. Use the YAML frontmatter template from `~/.claude/docs/remediation_format.md`. Create `inbox/` if missing.
 
 The internal team will:
 1. Triage your findings

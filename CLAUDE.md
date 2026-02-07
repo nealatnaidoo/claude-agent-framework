@@ -107,17 +107,13 @@ Skip project-init/persona/solution/BA. Go directly to coding -> QA -> code revie
 
 ## Mechanical Enforcement (Hooks)
 
-| Hook | Trigger | What It Does | Strength |
-|------|---------|-------------|----------|
-| `verify_ba_artifacts.py` | Coding agent start | Blocks if spec/tasklist missing | **BLOCKS** |
-| `verify_devops_approval.py` | BA agent start | Blocks if solution envelope lacks DevOps stamp | **BLOCKS** |
-| `verify_evidence_exists.py` | QA reviewer start | Blocks if no evidence artifacts exist | **BLOCKS** |
-| `verify_phase_transition.py` | Any agent start | Blocks if agent doesn't match current phase | **BLOCKS** |
-| `manage_deploy_gate.py` | SubagentStart (all) | Creates/revokes deploy gate file | Gate mgmt |
-| `block_deployment.py` | PreToolUse/Bash | Blocks deploy commands without gate | **BLOCKS** |
-| `protect_deploy_gate.py` | PreToolUse/Write\|Edit | Blocks manual gate file creation | **BLOCKS** |
-| `verify_manifest_updated.py` | Session stop | Warns if manifest not updated in >1 hour | Advisory |
-| `save_manifest_state.py` | Context compress | Backs up manifest (keeps 3 most recent) | Protective |
+Hooks enforce governance automatically. Key **blocking** hooks:
+- `verify_ba_artifacts.py` — Blocks coding agents if spec/tasklist missing
+- `verify_devops_approval.py` — Blocks BA if solution envelope lacks DevOps stamp
+- `verify_phase_transition.py` — Blocks agents in wrong phase
+- `block_deployment.py` / `protect_deploy_gate.py` — Blocks unauthorized deployments
+
+Advisory: `verify_manifest_updated.py` (warns on stale manifest), `save_manifest_state.py` (backs up on context compress)
 
 ---
 
@@ -168,11 +164,6 @@ After context compress or session restart:
 - **Never overwrite artifacts**: Always create new versions (v1 -> v2)
 - **ID Sequencing**: BUG/IMPROVE IDs are project-global, never reused
 - **Evolution logs are append-only**: Never rewrite history
-
-### Persona Lens Packs
-
-Available at `~/.claude/lenses/`: `creator_publishing.yaml`, `fitness_training.yaml`, `saas_b2b.yaml`
-Project-specific: Create `.claude/persona_lenses.yaml` in your project.
 
 ---
 
