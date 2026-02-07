@@ -1,6 +1,6 @@
 ---
 description: Generate a project-specific visiting agent prompt for external reviewers
-allowed-tools: Bash(ls:*), Bash(find:*), Bash(grep:*), Bash(cat:*)
+allowed-tools: Bash(ls:*), Bash(find:*), Bash(grep:*), Bash(cat:*), Bash(sort:*), Bash(tail:*)
 ---
 
 <visit>

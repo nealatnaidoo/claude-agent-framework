@@ -1,6 +1,6 @@
 ---
 description: Review entire project for Prime Directive compliance and spec drift
-allowed-tools: Bash(ls:*), Bash(find:*), Bash(grep:*), Bash(cat:*)
+allowed-tools: Bash(ls:*), Bash(find:*), Bash(grep:*), Bash(cat:*), Bash(head:*), Bash(git:*)
 ---
 
 <review-project>
