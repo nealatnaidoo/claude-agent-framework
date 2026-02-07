@@ -204,6 +204,22 @@ Review CANNOT pass unless:
 
 ---
 
+## Fast-Track Mode
+
+For tasks meeting ALL criteria:
+- Less than 3 files modified
+- Bug fix with existing test coverage
+- No new user journeys or architecture changes
+- Marked as `fast_track: true` in manifest
+
+Fast-track reviews:
+1. Run full quality gates (not scoped)
+2. Verify the specific fix is correct
+3. Skip code-review-agent (don't transition to code_review phase)
+4. Transition directly to next coding task or complete
+
+---
+
 ## Output Format
 
 Create: `.claude/remediation/qa_YYYY-MM-DD.md`

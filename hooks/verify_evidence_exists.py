@@ -19,6 +19,13 @@ REQUIRED_EVIDENCE = [
     "test_report.json",
 ]
 
+# Task-scoped evidence patterns (glob-style)
+TASK_SCOPED_PATTERNS = [
+    "T*_quality_gates_run.json",
+    "T*_quality_gates.json",
+    "T*_pytest_output.json",
+]
+
 
 def find_project_root() -> Path | None:
     """Walk up from cwd to find a .claude/manifest.yaml."""
@@ -40,7 +47,12 @@ def check_evidence(project_root: Path) -> tuple[bool, list[str]]:
       - (True, []) if all evidence exists
       - (True, [missing]) if some evidence exists (warn but allow)
       - (False, [all_missing]) if NO evidence exists (block)
+
+    Also accepts task-scoped evidence files (e.g., T013_quality_gates_run.json)
+    as partial evidence, allowing QA to proceed with a warning.
     """
+    import glob
+
     evidence_dir = project_root / ".claude" / "evidence"
     if not evidence_dir.exists():
         return False, REQUIRED_EVIDENCE
@@ -54,6 +66,18 @@ def check_evidence(project_root: Path) -> tuple[bool, list[str]]:
             missing.append(filename)
 
     if found == 0:
+        # No full evidence found - check for task-scoped evidence
+        task_scoped_found = False
+        for pattern in TASK_SCOPED_PATTERNS:
+            matches = glob.glob(str(evidence_dir / pattern))
+            if matches:
+                task_scoped_found = True
+                break
+
+        if task_scoped_found:
+            # Task-scoped evidence exists - warn but allow
+            return True, missing
+
         return False, missing
 
     return True, missing

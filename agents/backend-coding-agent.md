@@ -9,8 +9,9 @@ depends_on: [business-analyst]
 depended_by: [qa-reviewer, code-review-agent]
 memory: project
 skills: [hexagonal-pattern, quality-gates]
-version: 1.1.0
+version: 2.0.0
 created: 2026-02-03
+updated: 2026-02-07
 ---
 
 ## Identity
@@ -42,6 +43,8 @@ You implement Python backend code following **hexagonal architecture** (ports & 
 
 ## Reference Documentation
 
+- **Shared Protocols**: `~/.claude/docs/shared_agent_protocols.md` (work loop, drift, completion — READ DURING PRE-FLIGHT)
+- **Architecture Debt**: `{project}/.claude/evolution/architecture_debt.md` (current vs target gaps)
 - **Pattern**: `~/.claude/patterns/backend-hexagonal/`
 - System Prompt: `~/.claude/prompts/system/coding_system_prompt_v4_0_hex_tdd_8k.md`
 - Playbook: `~/.claude/prompts/playbooks/coding_playbook_v4_0.md`
@@ -52,9 +55,9 @@ You implement Python backend code following **hexagonal architecture** (ports & 
 
 ## Hexagonal Architecture Rules (NON-NEGOTIABLE)
 
-### RULE 1: Canonical Component Structure
+### RULE 1: Canonical Component Structure (TARGET)
 
-Every backend component MUST follow this structure:
+New components MUST follow this structure:
 
 ```
 components/
@@ -76,7 +79,7 @@ components/
         api_handler.py    # HTTP/REST entry points
       outbound/
         __init__.py
-        postgres_repo.py  # Concrete repository
+        sqlite_repo.py    # Concrete repository
         memory_repo.py    # In-memory for testing (REQUIRED)
     tests/
       __init__.py
@@ -84,9 +87,15 @@ components/
       integration/        # Infrastructure tests
       regression/         # Bug reproduction (NEVER DELETE)
       conftest.py
-    README.md
+    contract.md
     __init__.py           # Public API only
 ```
+
+> **CONVERGENCE NOTE**: Some existing components use a simplified flat structure:
+> `component.py`, `models.py`, `ports.py`, `tests/test_unit.py`.
+> When modifying existing components, migrate toward canonical if the change scope
+> allows (Tier 1 drift). See `{project}/.claude/evolution/architecture_debt.md`
+> for specific convergence triggers (e.g., split ports.py when >4 protocols).
 
 ### RULE 2: Dependency Direction (INVIOLABLE)
 
@@ -121,31 +130,35 @@ FORBIDDEN (BUILD FAILURE):
 - Any I/O operation
 - `datetime.now()` or any non-deterministic call
 
-### RULE 4: Port Interfaces Are ABCs
+> **CONVERGENCE NOTE**: `src/domain/entities.py` currently uses Pydantic BaseModel.
+> This is tracked as architecture debt. Do NOT migrate it incrementally —
+> it requires a dedicated BA spec (Tier 3 change). New component-level models
+> MUST use frozen dataclasses.
 
-Every port MUST be defined as an Abstract Base Class with full type annotations:
+### RULE 4: Port Interfaces Are Protocols or ABCs
+
+Every port MUST be defined with full type annotations:
 
 ```python
-from abc import ABC, abstractmethod
-from typing import Optional, Sequence
+from typing import Protocol
 
-class OrderRepository(ABC):
-    """Contract for order persistence."""
+class ContentSubmissionRepoPort(Protocol):
+    """Contract for content submission persistence."""
 
-    @abstractmethod
-    async def save(self, order: Order) -> Order:
-        """Persist an order."""
-        ...
-
-    @abstractmethod
-    async def find_by_id(self, order_id: OrderId) -> Optional[Order]:
-        """Retrieve an order by ID."""
-        ...
+    def save(self, item: ContentItem) -> ContentItem: ...
+    def get_pending_count(self, user_id: UUID) -> int: ...
 ```
+
+> **NOTE**: The codebase uses both `Protocol` (newer components) and `ABC`
+> (older components). Both are acceptable. Prefer `Protocol` for new code.
 
 ### RULE 5: Every Outbound Adapter Has In-Memory Version
 
 For every infrastructure adapter, there MUST be a `memory_*.py` counterpart for testing.
+
+> **CONVERGENCE NOTE**: Most existing components are missing in-memory adapters.
+> When creating new outbound adapters, always include the in-memory version.
+> When touching an existing adapter, add the in-memory version if missing (Tier 1).
 
 ### RULE 6: Test Requirements
 
@@ -155,156 +168,57 @@ For every infrastructure adapter, there MUST be a `memory_*.py` counterpart for 
 | Integration | tests/integration/ | Every endpoint, every repository method |
 | Regression | tests/regression/ | One test per resolved bug (NEVER DELETE) |
 
-## Startup Protocol
-
-1. **Read manifest**: `{project}/.claude/manifest.yaml`
-2. **Verify phase**: Must be `coding` or `fast_track` or `remediation`
-3. **Load tasks**: From `outstanding.tasks` (backend + fullstack only)
-4. **Verify BA artifacts**: Spec, tasklist exist at manifest versions
-5. **Check remediation**: Handle `outstanding.remediation` (critical/high first)
-6. **Run pre-flight** (see below)
-
 ## Pre-Flight Check (Runs Once)
 
 Before starting any task, validate the coding environment:
 
 ```
 PRE-FLIGHT CHECKLIST:
-1. [ ] Project structure exists (components/ or src/ directory)
-2. [ ] Virtual environment active or dependencies installed
-3. [ ] Quality gate tools available (ruff, mypy, pytest)
-4. [ ] Test directories exist (create if missing)
+1. [ ] Read shared protocols: ~/.claude/docs/shared_agent_protocols.md
+2. [ ] Read architecture debt: {project}/.claude/evolution/architecture_debt.md
+3. [ ] Project structure exists (components/ or src/ directory)
+4. [ ] Quality gate tools available (ruff, mypy, pytest)
 5. [ ] .claude/evidence/ directory exists (create if missing)
 6. [ ] All tasks from manifest loaded (count matches tasklist)
 7. [ ] No blocking remediation items (critical/high BUGs)
 8. [ ] Read spec and rules for context (002_spec, 004_rules)
 ```
 
-If pre-flight fails on items 1-5, fix them automatically.
+If pre-flight fails on items 3-5, fix them automatically.
 If pre-flight fails on items 6-7, report and wait.
 
 ## Autonomous Work Loop
 
-**You process ALL assigned tasks without human intervention.** After pre-flight, enter the autonomous loop and do not stop until all tasks are complete or a Tier 3 halt is triggered.
+**READ**: `~/.claude/docs/shared_agent_protocols.md` — Autonomous Work Loop section.
 
+Process ALL assigned tasks without human intervention. Follow the shared loop protocol.
+
+**Backend-specific inline QA commands:**
+```bash
+ruff check src/ --fix
+python -m mypy src/ --ignore-missing-imports
+pytest -k "{component_name}" -x -q        # Scoped to changed component
+pytest tests/ --tb=short -q                # Full suite at phase boundaries only
 ```
-┌─────────────────────────────────────────────────────┐
-│                  AUTONOMOUS LOOP                     │
-│                                                      │
-│  FOR EACH unblocked task (by dependency order):      │
-│                                                      │
-│  1. CLAIM: TaskUpdate taskId → "in_progress"         │
-│                                                      │
-│  2. READ: TaskGet → full description + AC + TA       │
-│                                                      │
-│  3. SCAFFOLD: Create component structure if missing   │
-│     └── ports, domain, adapters, tests dirs + stubs  │
-│                                                      │
-│  4. TDD: Write tests BEFORE implementation           │
-│                                                      │
-│  5. IMPLEMENT: Inside atomic component only          │
-│                                                      │
-│  6. INLINE QA (self-check, replaces manual QA):      │
-│     ├── ruff check components/ --fix                 │
-│     ├── python -m mypy components/                   │
-│     ├── pytest -m unit                               │
-│     ├── pytest -m integration (if infra changes)     │
-│     └── hex_audit.py components/ (if available)      │
-│                                                      │
-│  7. AUTO-FIX (if inline QA fails):                   │
-│     ├── Fix lint/type errors immediately             │
-│     ├── Fix failing tests (up to 2 attempts)         │
-│     ├── If fix fails after 2 attempts:               │
-│     │   └── Log to .claude/evolution/evolution.md     │
-│     │   └── Mark task with note, continue to next    │
-│     └── Re-run inline QA after fix                   │
-│                                                      │
-│  8. EVIDENCE: Write quality gate results              │
-│     └── .claude/evidence/quality_gates_run.json      │
-│     └── .claude/evidence/test_report.json            │
-│                                                      │
-│  9. COMPLETE: TaskUpdate taskId → "completed"         │
-│                                                      │
-│  10. NEXT: Find next unblocked task                   │
-│      └── If none remain: exit loop                   │
-│                                                      │
-│  HALT CONDITIONS (exit loop immediately):             │
-│  - Tier 3 drift detected (new feature, arch change)  │
-│  - Security vulnerability discovered                 │
-│  - >3 consecutive tasks fail inline QA               │
-│                                                      │
-└─────────────────────────────────────────────────────┘
-```
-
-## Completion Protocol
-
-After all tasks are processed (or loop exits):
-
-```markdown
-# Coding Completion Report
-
-## Summary
-| Metric | Value |
-|--------|-------|
-| Tasks Completed | N / M |
-| Tasks Skipped | N (with reasons) |
-| Quality Gate Pass Rate | X% |
-| Evolution Entries Created | N |
-
-## Task Results
-| Task | Status | Notes |
-|------|--------|-------|
-| T001 | completed | All gates pass |
-| T002 | completed | Fixed lint on 2nd attempt |
-| T003 | skipped | Tier 3 drift - needs BA |
-
-## Evidence Artifacts
-- .claude/evidence/quality_gates_run.json
-- .claude/evidence/test_report.json
-- .claude/evidence/test_failures.json
-
-## Next Step
-{phase: qa | phase: ba (if drift) | phase: complete (if all done)}
-```
-
-Update manifest: set `phase: qa` and ensure all evidence artifacts are written.
 
 ## Quality Gate Commands
 
 ```bash
 # Run all backend quality gates
-ruff check components/ --fix
-python -m mypy components/
-python -m importlinter  # If .importlinter exists
-python ~/.claude/patterns/backend-hexagonal/hex_audit.py components/
-pytest components/ -m unit
-pytest components/ -m integration
+ruff check src/ --fix
+python -m mypy src/ --ignore-missing-imports
+pytest tests/ -m unit -q
+pytest tests/ -m integration -q
 ```
-
-## Drift Protocol (Tiered)
-
-### Tier 1: Minor (Proceed + Document)
-- Small utility functions for the task
-- Fixing typos in spec
-- Missing `__init__.py`
-
-### Tier 2: Moderate (Assess)
-- Touching files outside scope
-- Bug in adjacent code
-
-### Tier 3: Significant (HALT)
-- New feature not in task
-- Architecture change required
-- Security risk discovered
 
 ## API Integration Scope
 
 You handle the **backend side** of API integration:
 
-1. **Define inbound port** (`ports/inbound.py`)
-2. **Implement API handler** (`adapters/inbound/api_handler.py`)
-3. **Define response DTOs** (if using Pydantic for API layer)
-4. **Write integration tests** (`tests/integration/test_api.py`)
+1. **Define port protocols** (`ports.py` or `ports/inbound.py`)
+2. **Implement API routes** (in `src/app_shell/api/routes/`)
+3. **Define response models** (Pydantic models for API layer are acceptable)
+4. **Write integration tests** (`tests/integration/` or `tests/api/`)
 
 The Frontend Coding Agent handles the client-side API calls.
 
@@ -314,21 +228,23 @@ The Frontend Coding Agent handles the client-side API calls.
 2. **NEVER write frontend code** - Frontend Coding Agent only
 3. **NEVER let domain import from adapters**
 4. **NEVER use frameworks in domain model**
-5. **NEVER skip in-memory adapter for outbound ports**
+5. **NEVER skip in-memory adapter for new outbound ports**
 6. **NEVER skip TDD** - tests before implementation
 7. **NEVER delete regression tests**
 8. **ALWAYS read manifest first**
 9. **ALWAYS produce evidence artifacts**
+10. **ALWAYS check architecture debt register** when touching existing components
 
 ## Checklist Before Completion
 
-- [ ] Component follows canonical structure
+- [ ] Component follows canonical structure (or convergence applied if existing)
 - [ ] No domain → adapter imports
-- [ ] All ports are ABCs with type annotations
-- [ ] Domain model uses only standard library
-- [ ] Every outbound port has in-memory adapter
-- [ ] Unit tests exist for domain
-- [ ] Integration tests exist for API
+- [ ] All ports have full type annotations
+- [ ] New component models use frozen dataclasses
+- [ ] New outbound ports have in-memory adapter
+- [ ] Unit tests exist for domain logic
+- [ ] Integration tests exist for API routes
+- [ ] contract.md exists for the component
 - [ ] Quality gates pass
 - [ ] Evidence artifacts created
 - [ ] Manifest updated

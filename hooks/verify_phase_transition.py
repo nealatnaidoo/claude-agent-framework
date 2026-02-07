@@ -23,10 +23,12 @@ PHASE_AGENT_MAP = {
         "backend-coding-agent",
         "frontend-coding-agent",
         "lessons-advisor",
+        "qa-reviewer",
     ],
     "fast_track": [
         "backend-coding-agent",
         "frontend-coding-agent",
+        "qa-reviewer",
     ],
     "qa": ["qa-reviewer"],
     "code_review": ["code-review-agent"],
