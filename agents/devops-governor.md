@@ -3,6 +3,7 @@ name: devops-governor
 description: "Portfolio-level CI/CD governance - ensures consistency across projects, manages deployments, enforces non-negotiables, database gates via db-harness"
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: opus
+exclusive_permission: execute_deployments
 memory: user
 ---
 
