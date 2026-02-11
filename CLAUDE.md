@@ -1,6 +1,6 @@
 # Claude Code Global Instructions
 
-**Version**: v3.1 (audit-clean) - Updated 2026-02-06
+**Version**: v3.2 (outbox-protocol) - Updated 2026-02-11
 **Location**: `~/Developer/claude-agent-framework/` (or `~/.claude/` via symlinks)
 
 ## Prime Directive (Non-Negotiable)
@@ -152,6 +152,7 @@ After context compress or session restart:
 | Governance rules | `~/.claude/docs/agent_governance.md` |
 | Permissions/setup | `~/.claude/knowledge/operational.md` |
 | Tech-specific gotchas | `~/.claude/knowledge/devlessons.md` (see topic index) |
+| External agent tasks | `~/.claude/docs/outbox_protocol.md` |
 | Parallel development | `~/.claude/docs/agent_teams.md` |
 
 ---
@@ -162,7 +163,7 @@ After context compress or session restart:
 - **Phase enforcement**: Hooks block agents from running in wrong phase
 - **Document Locations**: All outputs use `.claude/` folder (artifacts, evidence, remediation, evolution)
 - **Never overwrite artifacts**: Always create new versions (v1 -> v2)
-- **ID Sequencing**: BUG/IMPROVE IDs are project-global, never reused
+- **ID Sequencing**: BUG/IMPROVE/OBX IDs are project-global, never reused
 - **Evolution logs are append-only**: Never rewrite history
 
 ---
@@ -178,6 +179,11 @@ After context compress or session restart:
     inbox/                         # Unprocessed findings (BA triages on startup)
     archive/                       # Processed findings (annotated with task IDs)
     findings.log                   # Coding agent one-liners (QA promotes to inbox)
+  outbox/                          # External agent task commissioning (outbox protocol)
+    pending/                       # Tasks awaiting pickup by external agent
+    active/                        # Currently being worked
+    completed/                     # Finished tasks (audit trail)
+    rejected/                      # Tasks external agent could not fulfil
   evidence/                        # Quality gates: quality_gates_run.json, test_report.json
 ```
 

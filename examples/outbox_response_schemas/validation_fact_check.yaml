@@ -1,0 +1,22 @@
+# Response Schema: Fact Check / Validation
+# Use with: task_type: "validation"
+# Use with: delivery.format: "yaml"
+#
+# Copy the structure below into the "Expected Output Shape" section
+# of your outbox task specification.
+
+validation_results:
+  query_summary: "string — one-line summary of what was validated"
+  date_validated: "YYYY-MM-DD"
+  items:
+    - claim: "string — the claim or assumption being validated"
+      verdict: "confirmed | refuted | partially_true | unverifiable"
+      evidence: "string — what supports or refutes the claim"
+      source: "string — URL or reference"
+      confidence: "high | medium | low"
+      notes: "string — any caveats or nuance"
+  overall_verdict: "all_confirmed | some_issues | major_issues"
+  summary: "string — 2-3 sentence summary of validation results"
+  action_required: "none | review_assumptions | update_design | block_work"
+  sources:
+    - "string — URL"

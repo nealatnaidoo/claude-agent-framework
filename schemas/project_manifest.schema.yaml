@@ -1,10 +1,10 @@
-# Project Manifest Schema v1.3
+# Project Manifest Schema v1.4
 # Location: {project_root}/.claude/manifest.yaml
 # Purpose: Single source of truth for project state, restart checkpoint, artifact tracking,
-#          and agent routing (internal + visiting)
+#          agent routing (internal + visiting), and external agent commissioning
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: "claude://schemas/project-manifest/v1.3"
+$id: "claude://schemas/project-manifest/v1.4"
 title: "Claude Project Manifest"
 description: "Tracks project state, artifact versions, agent routing, compliance requirements, and outstanding work"
 
@@ -22,7 +22,7 @@ properties:
   # ============================================================
   schema_version:
     type: string
-    enum: ["1.0", "1.1", "1.2", "1.3"]
+    enum: ["1.0", "1.1", "1.2", "1.3", "1.4"]
     description: "Manifest schema version for migration compatibility"
 
   project_slug:
@@ -566,6 +566,8 @@ properties:
                 - verification_report
                 # Coding agent findings log
                 - findings_log
+                # External agent (outbox protocol)
+                - external_research
             priority:
               type: string
               enum: [critical, high, medium, low]
@@ -686,6 +688,60 @@ properties:
       coverage:
         type: string
         description: "Path to coverage.json (optional)"
+
+  # ============================================================
+  # OUTBOX — EXTERNAL AGENT COMMISSIONING (v1.4 addition)
+  # ============================================================
+  outbox:
+    type: object
+    description: "Commission read-only tasks to external agents (e.g., Antigravity/Gemini 3)"
+    properties:
+      next_id:
+        type: integer
+        minimum: 1
+        description: "Next OBX-NNN number to assign"
+      tasks:
+        type: array
+        description: "All commissioned outbox tasks (pending, active, completed, rejected, expired)"
+        items:
+          type: object
+          required: [id, task_type, status, commissioner, created]
+          properties:
+            id:
+              type: string
+              pattern: "^OBX-[0-9]{3}$"
+              description: "Outbox task ID (e.g., OBX-001)"
+            task_type:
+              type: string
+              enum: [research, data_gathering, analysis, validation]
+              description: "Type of external work commissioned"
+            status:
+              type: string
+              enum: [pending, active, completed, rejected, expired]
+              description: "Current task status"
+            priority:
+              type: string
+              enum: [urgent, normal, low]
+              default: normal
+            commissioner:
+              type: string
+              description: "Agent that created this outbox task"
+            created:
+              type: string
+              format: date-time
+            completed:
+              type: string
+              format: date-time
+              description: "When the external agent completed the task"
+            delivery_file:
+              type: string
+              description: "Path to delivered result in remediation/inbox/"
+            task_file:
+              type: string
+              description: "Path to outbox task file (in pending/active/completed/rejected)"
+            rejection_reason:
+              type: string
+              description: "Why the external agent rejected the task (if status=rejected)"
 
   # ============================================================
   # SESSION TRACKING
@@ -926,6 +982,19 @@ examples:
           findings_count: 3
           critical_count: 1
           agent_type: "visiting"
+
+    outbox:
+      next_id: 2
+      tasks:
+        - id: "OBX-001"
+          task_type: "research"
+          status: "completed"
+          priority: "normal"
+          commissioner: "backend-coding-agent"
+          created: "2026-02-11T14:30:00Z"
+          completed: "2026-02-11T16:00:00Z"
+          delivery_file: ".claude/remediation/inbox/OBX-001_external_research_2026-02-11.md"
+          task_file: ".claude/outbox/completed/OBX-001_research_2026-02-11.md"
 
     evidence:
       quality_gates_run: ".claude/evidence/quality_gates_run.json"

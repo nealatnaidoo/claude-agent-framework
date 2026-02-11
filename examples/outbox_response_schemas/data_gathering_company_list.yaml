@@ -1,0 +1,28 @@
+# Response Schema: Company/Entity Data Gathering
+# Use with: task_type: "data_gathering"
+# Use with: delivery.format: "yaml"
+#
+# Copy the structure below into the "Expected Output Shape" section
+# of your outbox task specification.
+
+research_results:
+  query_summary: "string — one-line summary of data gathered"
+  date_researched: "YYYY-MM-DD"
+  items:
+    - name: "string — company or entity name"
+      website: "string — primary URL"
+      description: "string — one-sentence description"
+      industry: "string — industry or sector"
+      size: "string — startup | sme | enterprise | unknown"
+      location: "string — headquarters location"
+      relevance: "string — why this entity matches the criteria"
+      key_data_points:
+        - field: "string — data point name"
+          value: "string — data point value"
+          source: "string — where this data came from"
+  total_found: 0   # integer — total matching entities found
+  returned: 0      # integer — entities included in this response
+  summary: "string — 2-3 sentence summary of findings"
+  confidence: "high | medium | low"
+  sources:
+    - "string — URL"

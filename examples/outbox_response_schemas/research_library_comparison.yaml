@@ -1,0 +1,29 @@
+# Response Schema: Library/Tool Comparison Research
+# Use with: task_type: "research"
+# Use with: delivery.format: "yaml"
+#
+# Copy the structure below into the "Expected Output Shape" section
+# of your outbox task specification.
+
+research_results:
+  query_summary: "string — one-line summary of research performed"
+  date_researched: "YYYY-MM-DD"
+  items:
+    - name: "string — library or tool name"
+      type: "open_source | commercial | saas | framework"
+      url: "string — primary URL (repo, docs, or homepage)"
+      license: "string — MIT | Apache-2.0 | GPL-3.0 | Commercial | etc"
+      last_release: "YYYY-MM-DD | unknown"
+      popularity_signal: "string — GitHub stars, npm downloads, etc"
+      language: "string — primary language"
+      key_features:
+        - "string — feature 1"
+        - "string — feature 2"
+      limitations:
+        - "string — limitation 1"
+      fits_project: "yes | partial | no"
+      recommendation_notes: "string — one sentence on fit for this project"
+  summary: "string — 2-3 sentence overall recommendation"
+  confidence: "high | medium | low"
+  sources:
+    - "string — URL"

@@ -562,6 +562,105 @@ Manifest schema v1.3 still supports `feature_backlog` and `active_worktrees` fie
 
 ---
 
+### 11. Outbox Commission (Internal Agent → External Agent) [v1.4]
+
+The outbox protocol enables Claude Code agents to commission read-only tasks (research, data gathering, analysis, validation) to an external language model operating outside the session. Results flow back through the existing `remediation/inbox/`.
+
+**Full Protocol**: `~/.claude/docs/outbox_protocol.md`
+
+**Commission File**: `.claude/outbox/pending/OBX-{NNN}_{type}_{YYYY-MM-DD}.md`
+
+**Format**:
+
+```yaml
+---
+id: "OBX-001"
+created: "2026-02-11T14:30:00Z"
+project_slug: "{slug}"
+commissioner: "{agent_type}"
+task_type: "research"               # research | data_gathering | analysis | validation
+priority: "normal"                  # urgent | normal | low
+status: "pending"
+
+delivery:
+  format: "yaml"                    # yaml | markdown | json_in_markdown
+  target: ".claude/remediation/inbox/"
+  target_filename: "OBX-001_external_research_2026-02-11.md"
+
+constraints:
+  read_only: true
+  no_code_changes: true
+  no_manifest_updates: true
+  scope: "external_research_only"
+  timeout_hours: 24
+
+context:
+  project_description: "{brief description}"
+  current_phase: "{phase}"
+  relevant_files: []
+  additional_context: "{free-form context}"
+---
+
+# Task: {Title}
+
+## Objective
+{What needs to be accomplished}
+
+## Specific Questions
+1. {Question}
+
+## Expected Output Shape
+{Exact YAML/Markdown structure in code fence}
+
+## What NOT To Do
+- Do NOT modify source code
+- Do NOT update manifest
+```
+
+**Delivery File** (lands in `remediation/inbox/`):
+
+```yaml
+---
+id: "OBX-001"
+source: "external_research"
+severity: "low"
+created: "{ISO timestamp}"
+context: "{task objective — one line}"
+commissioned_by: "{commissioner}"
+task_type: "{task_type}"
+delivery_format: "{format}"
+---
+{Results in the exact shape specified by the task}
+```
+
+**Lifecycle**:
+```
+pending/ → active/ → completed/ (success)
+                   → rejected/  (cannot fulfil)
+         → rejected/ (expired)
+```
+
+**Manifest Update**:
+
+```yaml
+outbox:
+  next_id: 2
+  tasks:
+    - id: "OBX-001"
+      task_type: "research"
+      status: "completed"
+      commissioner: "backend-coding-agent"
+      created: "2026-02-11T14:30:00Z"
+      completed: "2026-02-11T16:00:00Z"
+      delivery_file: ".claude/remediation/inbox/OBX-001_external_research_2026-02-11.md"
+```
+
+**Who Can Commission**: backend-coding-agent, frontend-coding-agent, solution-designer, business-analyst, devops-governor. QA and Code Review agents do NOT commission outbox tasks.
+
+**Supported External Agents**: Google Antigravity (via `.agent/skills/outbox-poller/`), or any model that reads Markdown + YAML frontmatter. See `examples/antigravity-skill/outbox-poller/SKILL.md`.
+
+---
+
 ## Envelope Validation Rules
 
 1. **DevOps Approval Required**: Solution envelopes MUST have `devops_approval` section before BA can proceed (mechanically enforced via hook)
@@ -571,5 +670,7 @@ Manifest schema v1.3 still supports `feature_backlog` and `active_worktrees` fie
 5. **Never Overwrite**: Old versions are preserved for audit trail
 6. **Manifest Sync**: Manifest MUST reflect current artifact versions
 7. **Phase Transitions**: Only valid phase transitions allowed (see agent operating model)
-8. **ID Uniqueness**: All IDs (T001, BUG-001, EV-001) are project-global and never reused
+8. **ID Uniqueness**: All IDs (T001, BUG-001, EV-001, OBX-001) are project-global and never reused
 9. **Feedback Loop**: QA/Code Review feedback envelopes consumed by Solution Designer before next sprint
+10. **Outbox Read-Only**: External agents commissioned via outbox MUST NOT modify source code, manifest, or project state
+11. **Outbox Delivery**: External agent results MUST use the inbox envelope format with `source: "external_research"`

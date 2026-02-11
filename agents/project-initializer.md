@@ -55,8 +55,16 @@ You prepare a project for the agent lifecycle by creating the `.claude/` folder 
 │   ├── evolution/                  # Append-only logs
 │   │   ├── evolution.md           # Drift governance log
 │   │   └── decisions.md           # Architectural decisions
-│   ├── remediation/               # QA + Code Review findings (empty)
+│   ├── remediation/               # QA + Code Review findings
+│   │   ├── inbox/                 # Unprocessed findings (agents deposit here)
+│   │   ├── archive/               # BA-processed findings (annotated with task IDs)
+│   │   ├── findings.log           # Coding agent one-liners (pipe-delimited)
 │   │   └── remediation_tasks.md   # Consolidated remediation tracker
+│   ├── outbox/                    # External agent task commissioning
+│   │   ├── pending/               # Tasks awaiting pickup
+│   │   ├── active/                # Currently being worked
+│   │   ├── completed/             # Finished tasks (audit trail)
+│   │   └── rejected/              # Tasks external agent could not fulfil
 │   └── evidence/                  # Quality gate outputs (empty)
 ```
 
@@ -65,7 +73,7 @@ You prepare a project for the agent lifecycle by creating the `.claude/` folder 
 Create `.claude/manifest.yaml`:
 
 ```yaml
-schema_version: "1.3"
+schema_version: "1.4"
 project_slug: "{detected-from-directory-name}"
 project_name: "{Detected From Directory Name}"
 created: "{ISO timestamp}"
@@ -181,11 +189,18 @@ Report what was created:
 **Location**: {project_root}/.claude/
 
 ### Created
-- [ ] manifest.yaml (schema v1.3)
+- [ ] manifest.yaml (schema v1.4)
 - [ ] artifacts/ directory
 - [ ] evolution/evolution.md
 - [ ] evolution/decisions.md
+- [ ] remediation/inbox/ directory
+- [ ] remediation/archive/ directory
+- [ ] remediation/findings.log
 - [ ] remediation/remediation_tasks.md
+- [ ] outbox/pending/ directory
+- [ ] outbox/active/ directory
+- [ ] outbox/completed/ directory
+- [ ] outbox/rejected/ directory
 - [ ] evidence/ directory
 
 ### Next Step
@@ -214,5 +229,5 @@ After creating or updating the `.claude/` structure:
 - **NEVER create solution envelopes** - that's Solution Designer's job
 - **NEVER create user journeys** - that's Persona Evaluator's job
 - **Always set phase to "initialized"** for new projects
-- **Always use schema_version 1.3**
+- **Always use schema_version 1.4**
 - **Always update manifest** after creating structure

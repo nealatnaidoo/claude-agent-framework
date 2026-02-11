@@ -1,0 +1,43 @@
+# Response Schema: Trade-off Analysis
+# Use with: task_type: "analysis"
+# Use with: delivery.format: "markdown"
+#
+# Copy the structure below into the "Expected Output Shape" section
+# of your outbox task specification. For markdown delivery, define the
+# heading structure rather than YAML fields.
+
+# Expected Markdown Structure:
+#
+# # Analysis: {Topic}
+#
+# ## Executive Summary
+# {2-3 paragraph summary of analysis and recommendation}
+#
+# ## Options Evaluated
+#
+# ### Option A: {Name}
+# - **Pros**: {bullet list}
+# - **Cons**: {bullet list}
+# - **Risk Level**: high | medium | low
+# - **Effort Estimate**: high | medium | low
+# - **Fit Score**: 1-10
+#
+# ### Option B: {Name}
+# {same structure}
+#
+# ## Comparison Matrix
+#
+# | Criterion | Option A | Option B | Option C |
+# |-----------|----------|----------|----------|
+# | {criterion} | {rating} | {rating} | {rating} |
+#
+# ## Recommendation
+# {Which option and why, with confidence level}
+#
+# ## Assumptions & Caveats
+# - {assumption 1}
+# - {assumption 2}
+#
+# ## Sources
+# - {url 1}
+# - {url 2}

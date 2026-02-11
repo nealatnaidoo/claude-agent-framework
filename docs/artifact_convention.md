@@ -1,4 +1,4 @@
-# Claude Project Artifact Convention v1.1
+# Claude Project Artifact Convention v1.2
 
 ## Overview
 
@@ -27,7 +27,8 @@ All Claude-generated project artifacts are stored in a `.claude/` folder at the 
 │   ├── remediation/                      # QA + Code Review findings
 │   │   ├── inbox/                        # Unprocessed findings (agents deposit here)
 │   │   │   ├── BUG-007_qa-reviewer_2026-02-07.md
-│   │   │   └── IMPROVE-003_security_auditor_2026-02-07.md
+│   │   │   ├── IMPROVE-003_security_auditor_2026-02-07.md
+│   │   │   └── OBX-001_external_research_2026-02-11.md  # External agent delivery
 │   │   ├── archive/                      # BA-processed findings (annotated with task ID)
 │   │   │   └── BUG-007_qa-reviewer_2026-02-07.md  # resolved_as: T015
 │   │   ├── findings.log                  # Coding agent one-liners (pipe-delimited)
@@ -35,6 +36,13 @@ All Claude-generated project artifacts are stored in a `.claude/` folder at the 
 │   │   ├── code_review_YYYY-MM-DD.md     # Code review reports
 │   │   ├── project_review_YYYY-MM-DD.md  # Full project reviews
 │   │   └── remediation_tasks.md          # Consolidated outstanding fixes
+│   │
+│   ├── outbox/                           # External agent task commissioning
+│   │   ├── pending/                      # Tasks awaiting pickup
+│   │   │   └── OBX-001_research_2026-02-11.md
+│   │   ├── active/                       # Currently being worked
+│   │   ├── completed/                    # Finished tasks (audit trail)
+│   │   └── rejected/                     # Tasks external agent could not fulfil
 │   │
 │   └── evidence/                         # Quality gate outputs
 │       ├── quality_gates_run.json
@@ -78,6 +86,21 @@ All Claude-generated project artifacts are stored in a `.claude/` folder at the 
 
 - `BUG-001`, `BUG-002` - Bugs requiring fixes
 - `IMPROVE-001`, `IMPROVE-002` - Improvements to consider
+
+### Outbox IDs
+
+- `OBX-001`, `OBX-002` - External agent task commissions
+
+### Outbox Files: `OBX-{NNN}_{type}_{YYYY-MM-DD}.md`
+
+| Component | Description | Example |
+|-----------|-------------|---------|
+| `OBX-NNN` | Sequential outbox task ID | `OBX-001`, `OBX-002` |
+| `type` | Task type | `research`, `data_gathering`, `analysis`, `validation` |
+| `YYYY-MM-DD` | Date task was created | `2026-02-11` |
+
+Outbox files use YAML frontmatter (see `docs/outbox_protocol.md` for full spec).
+External agent delivers results to `remediation/inbox/` using filename from `delivery.target_filename`.
 
 ### Inbox Files: `{ID}_{source}_{YYYY-MM-DD}.md`
 
@@ -212,10 +235,12 @@ See: `~/.claude/docs/restart_protocol.md`
 - `.claude/evidence/quality_gates_run.json`
 - `.claude/evidence/test_report.json`
 - `.claude/evidence/test_failures.json`
+- `.claude/outbox/pending/OBX-NNN_*.md` (optional — external research commissions)
 
 **Updates manifest:**
 - `outstanding.tasks[].status` as tasks complete
 - `evidence` paths
+- `outbox.tasks` and `outbox.next_id` when commissioning external work
 
 ### QA Reviewer
 
@@ -265,6 +290,7 @@ See: `~/.claude/docs/restart_protocol.md`
 - `.claude/artifacts/` - All versioned artifacts
 - `.claude/evolution/` - Change history
 - `.claude/remediation/` - Review findings
+- `.claude/outbox/` - External agent task history
 - `.claude/evidence/*.json` - Quality gate results (except large coverage)
 
 ## Worktree Artifact Structure (v1.2)

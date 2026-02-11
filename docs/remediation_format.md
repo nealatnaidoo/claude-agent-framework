@@ -279,9 +279,55 @@ After fix:
 |----------|---------|----------------------|
 | `manifest.outstanding.remediation` | Active tracking registry | Both updated in sync — inbox is queuing, manifest is tracking |
 | `remediation_tasks.md` | Consolidated human-readable view | Updated alongside inbox deposit |
-| `inbox/` | Arrival queue for findings | Writer: QA, Code Review, Visiting. Reader: BA |
+| `inbox/` | Arrival queue for findings | Writer: QA, Code Review, Visiting, External Agents. Reader: BA |
 | `archive/` | Processed + traceable findings | Writer: BA (annotator). Reader: Audit trail |
 | `findings.log` | Lightweight coding agent observations | Writer: Coding agents. Reader: QA (promotes to inbox) |
+| `outbox/` | Task commissioning queue | Writer: Internal agents. Reader: External agents (Antigravity) |
+
+## External Research Results (Outbox Protocol)
+
+Results commissioned via the outbox protocol (see `docs/outbox_protocol.md`) arrive in `remediation/inbox/` with `source: "external_research"`.
+
+### Inbox Envelope for External Research
+
+```yaml
+---
+id: "OBX-001"
+source: "external_research"
+severity: "low"
+created: "2026-02-11T16:00:00Z"
+context: "Research VaR calculation library options"
+commissioned_by: "backend-coding-agent"
+task_type: "research"
+delivery_format: "yaml"
+---
+```
+
+### BA Triage Rules for External Research
+
+External research results are informational, not bugs. The BA triages them differently:
+
+| Task Type | BA Action | Archive `resolved_as` |
+|-----------|-----------|----------------------|
+| `research` | Incorporate into context for relevant tasks | `context_incorporated` |
+| `data_gathering` | Attach data to relevant task | Task ID (e.g., `T005`) |
+| `analysis` | Feed into solution design decisions | `analysis_consumed` |
+| `validation` | Update assumptions, flag if validation failed | `validation_complete` |
+
+### Archive Annotation
+
+```yaml
+---
+# ... original frontmatter preserved ...
+resolved_as: "context_incorporated"
+picked_up: "2026-02-12T09:00:00Z"
+tasklist_version: "003_tasklist_v3.md"
+triage_decision: "Research data incorporated into T005 context"
+source_outbox_id: "OBX-001"
+---
+```
+
+---
 
 ## Escalation Triggers
 
