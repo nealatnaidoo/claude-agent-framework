@@ -153,6 +153,17 @@ for dir in "${RUNTIME_DIRS[@]}"; do
 done
 echo "  Runtime directories ready"
 
+# 8.5. Install Python CLI tools
+echo ""
+echo "Installing CLI tools..."
+if command -v pip3 &> /dev/null; then
+    pip3 install -e "$REPO_DIR" 2>&1 | tail -1 || echo "  WARNING: pip install failed. Run manually: pip3 install -e $REPO_DIR"
+elif command -v pip &> /dev/null; then
+    pip install -e "$REPO_DIR" 2>&1 | tail -1 || echo "  WARNING: pip install failed. Run manually: pip install -e $REPO_DIR"
+else
+    echo "  WARNING: pip not found. Install Python CLI tools manually: pip install -e $REPO_DIR"
+fi
+
 # 9. Verify installation
 echo ""
 echo "============================================"
@@ -193,9 +204,11 @@ if [ $ERRORS -eq 0 ]; then
     echo "============================================"
     echo ""
     echo "Next steps:"
-    echo "1. Review ~/.claude/settings.local.json and customize paths"
-    echo "2. Review ~/.claude/mcp_servers.json and configure MCP servers"
-    echo "3. Run validation: python3 ~/.claude/scripts/validate_agents.py"
+    echo "1. Set your API key: export ANTHROPIC_API_KEY=sk-ant-..."
+    echo "   (macOS users can optionally use keychain — see README)"
+    echo "2. Review ~/.claude/settings.local.json and customize as needed"
+    echo "3. Review ~/.claude/mcp_servers.json and configure MCP servers"
+    echo "4. Run validation: caf agents validate"
     echo ""
     if [ -d "$BACKUP_DIR" ]; then
         echo "Your previous configuration was backed up to:"

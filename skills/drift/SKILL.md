@@ -15,13 +15,13 @@ Verify that architectural decisions (ADRs) are actually reflected in the codebas
 2. Check for `.claude/drift_rules.yaml`:
    - If **missing**, offer to create a template:
      ```bash
-     cd ~/Developer/claude-agent-framework && python -m claude_cli.main drift init --project-root <project_root>
+     caf drift init --project-root <project_root>
      ```
    - Then help the user fill in rules based on their `decisions.md` or ADRs.
 
 3. Run drift detection:
    ```bash
-   cd ~/Developer/claude-agent-framework && python -m claude_cli.main drift check --project-root <project_root>
+   caf drift check --project-root <project_root>
    ```
 
 4. Display results:
@@ -34,7 +34,7 @@ Verify that architectural decisions (ADRs) are actually reflected in the codebas
 
 6. Optionally save a report to `.claude/evidence/`:
    ```bash
-   cd ~/Developer/claude-agent-framework && python -m claude_cli.main drift report --project-root <project_root>
+   caf drift report --project-root <project_root>
    ```
 
 ## Assertion Types

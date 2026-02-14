@@ -12,11 +12,11 @@ Generate a portfolio-level HTML dashboard that aggregates status across all gove
 
 1. Run the portfolio cockpit generator:
    ```bash
-   cd ~/Developer/claude-agent-framework && python -m claude_cli.main cockpit portfolio
+   caf cockpit portfolio
    ```
    Or if a specific base directory is requested:
    ```bash
-   cd ~/Developer/claude-agent-framework && python -m claude_cli.main cockpit portfolio --base-dir <path>
+   caf cockpit portfolio --base-dir <path>
    ```
 
 2. Report the output path and summary statistics:

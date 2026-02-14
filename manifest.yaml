@@ -185,7 +185,7 @@ knowledge:
 # Compatibility requirements
 compatibility:
   claude_code_min: "1.0.0"
-  python_min: "3.10"
+  python_min: "3.11"
 
 # Architecture patterns
 patterns:

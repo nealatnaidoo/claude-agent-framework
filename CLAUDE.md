@@ -1,7 +1,7 @@
 # Claude Code Global Instructions
 
 **Version**: v3.2 (outbox-protocol) - Updated 2026-02-11
-**Location**: `~/Developer/claude-agent-framework/` (or `~/.claude/` via symlinks)
+**Location**: `<repo-root>/` (symlinked into `~/.claude/` by the installer)
 
 ## Prime Directive (Non-Negotiable)
 
