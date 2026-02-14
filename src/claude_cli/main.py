@@ -9,6 +9,8 @@ from claude_cli.worktree.cli import app as worktree_app
 from claude_cli.db.cli import app as db_app
 from claude_cli.analysis.cli import app as analysis_app
 from claude_cli.versioning.cli import app as versioning_app
+from claude_cli.batch.cli import app as batch_app
+from claude_cli.drift.cli import app as drift_app
 
 app = typer.Typer(
     name="claude",
@@ -26,6 +28,8 @@ app.add_typer(worktree_app, name="worktree", help="Git worktree management")
 app.add_typer(db_app, name="db", help="Database harness operations (DevOps)")
 app.add_typer(analysis_app, name="analysis", help="Agent dependency analysis")
 app.add_typer(versioning_app, name="versions", help="Bi-temporal version tracking")
+app.add_typer(batch_app, name="batch", help="Batch processing with parallel headless agents")
+app.add_typer(drift_app, name="drift", help="Drift detection: decisions vs code")
 
 
 @app.command()
