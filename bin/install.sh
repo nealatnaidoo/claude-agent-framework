@@ -199,22 +199,37 @@ fi
 
 echo ""
 if [ $ERRORS -eq 0 ]; then
-    echo "============================================"
-    echo "Installation complete! Version $VERSION"
-    echo "============================================"
-    echo ""
-    echo "Next steps:"
-    echo "1. Set your API key: export ANTHROPIC_API_KEY=sk-ant-..."
-    echo "   (macOS users can optionally use keychain — see README)"
-    echo "2. Review ~/.claude/settings.local.json and customize as needed"
-    echo "3. Review ~/.claude/mcp_servers.json and configure MCP servers"
-    echo "4. Run validation: caf agents validate"
+    # Display welcome guide
+    if [ -f "$REPO_DIR/bin/welcome.txt" ]; then
+        cat "$REPO_DIR/bin/welcome.txt"
+    else
+        echo "============================================"
+        echo "Installation complete! Version $VERSION"
+        echo "============================================"
+    fi
     echo ""
     if [ -d "$BACKUP_DIR" ]; then
-        echo "Your previous configuration was backed up to:"
-        echo "  $BACKUP_DIR"
+        echo "  Your previous configuration was backed up to:"
+        echo "    $BACKUP_DIR"
         echo ""
     fi
+    echo "  SETUP — Complete these steps to get started:"
+    echo ""
+    echo "  1. Set your API key:"
+    echo ""
+    echo "     export ANTHROPIC_API_KEY=sk-ant-..."
+    echo ""
+    echo "     To persist, add to your shell profile:"
+    echo "       echo 'export ANTHROPIC_API_KEY=sk-ant-...' >> ~/.zshrc"
+    echo ""
+    echo "     macOS users can optionally use Keychain instead:"
+    echo "       security add-generic-password -s ANTHROPIC_API_KEY -a \$USER -w sk-ant-..."
+    echo "       Then edit ~/.claude/settings.json and change env: to keychain:"
+    echo ""
+    echo "  2. Open Claude Code in any project directory and you're ready to go."
+    echo ""
+    echo "============================================================================"
+    echo ""
 else
     echo "============================================"
     echo "Installation completed with $ERRORS error(s)"

@@ -11,6 +11,10 @@ from claude_cli.analysis.cli import app as analysis_app
 from claude_cli.versioning.cli import app as versioning_app
 from claude_cli.batch.cli import app as batch_app
 from claude_cli.drift.cli import app as drift_app
+from claude_cli.metrics.cli import app as metrics_app
+from claude_cli.lint.cli import app as lint_app
+from claude_cli.audit.cli import app as audit_app
+from claude_cli.cockpit.cli import app as cockpit_app
 
 app = typer.Typer(
     name="claude",
@@ -30,6 +34,10 @@ app.add_typer(analysis_app, name="analysis", help="Agent dependency analysis")
 app.add_typer(versioning_app, name="versions", help="Bi-temporal version tracking")
 app.add_typer(batch_app, name="batch", help="Batch processing with parallel headless agents")
 app.add_typer(drift_app, name="drift", help="Drift detection: decisions vs code")
+app.add_typer(metrics_app, name="metrics", help="Agent performance metrics")
+app.add_typer(lint_app, name="lint", help="Pattern compliance linting")
+app.add_typer(audit_app, name="audit", help="Prime Directive compliance audit")
+app.add_typer(cockpit_app, name="cockpit", help="Project and portfolio dashboards")
 
 
 @app.command()

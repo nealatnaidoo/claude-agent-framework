@@ -194,6 +194,26 @@ If `.claude/manifest.yaml` already exists:
 3. Create only what's missing
 4. Do NOT overwrite manifest
 
+## Register in Portfolio
+
+After creating the `.claude/` structure, register the project in the portfolio registry so it appears in the cockpit dashboard:
+
+1. Read `~/.claude/devops/project_registry.yaml`
+2. Check if a project with the same `path` already exists — if so, skip
+3. Append a new entry under `projects:`:
+
+```yaml
+  - slug: "{project_slug}"
+    name: "{Project Name}"
+    path: "{absolute_path_to_project}"
+    registered: "{ISO date}"
+    notes: "Auto-registered by init agent."
+```
+
+4. Update the `summary.total_projects` count
+
+This ensures every initialized project is discoverable by `caf cockpit portfolio`.
+
 ## Phase Transition
 
 After initialization:
@@ -226,6 +246,9 @@ Report what was created:
 - [ ] outbox/completed/ directory
 - [ ] outbox/rejected/ directory
 - [ ] evidence/ directory
+
+### Portfolio
+- [ ] Registered in ~/.claude/devops/project_registry.yaml
 
 ### Next Step
 Invoke `persona` to define user journeys, then `design` to create the solution envelope.

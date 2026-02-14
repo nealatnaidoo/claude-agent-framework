@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -11,6 +12,17 @@ from claude_cli.cockpit.portfolio import (
     generate_portfolio_cockpit,
     render_portfolio_html,
 )
+
+# All tests patch out the real registry so local machine state doesn't leak in
+@pytest.fixture(autouse=True)
+def _isolate_from_registry(tmp_path, monkeypatch):
+    """Prevent tests from reading the real ~/.claude/devops/project_registry.yaml."""
+    fake_home = tmp_path / "fake_home"
+    fake_home.mkdir()
+    monkeypatch.setenv("HOME", str(fake_home))
+    # Also patch Path.home() which may be cached
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: fake_home))
+    yield
 
 
 def _make_project(base: Path, name: str, phase: str = "coding", tasks: int = 3) -> Path:
@@ -72,25 +84,20 @@ class TestDiscoverProjects:
 
     def test_discovers_from_registry(self, portfolio_dir, tmp_path):
         # Create a registry pointing to an extra project
-        extra = tmp_path / "extra-project"
         _make_project(tmp_path, "extra-project", phase="ba")
+        extra = tmp_path / "extra-project"
 
-        registry_dir = Path.home() / ".claude" / "devops"
-        registry_path = registry_dir / "project_registry.yaml"
-        had_registry = registry_path.exists()
-        old_content = registry_path.read_text() if had_registry else None
+        # Write registry to the fake home used by _isolate_from_registry
+        fake_home = Path.home()  # patched by autouse fixture
+        registry_dir = fake_home / ".claude" / "devops"
+        registry_dir.mkdir(parents=True, exist_ok=True)
+        (registry_dir / "project_registry.yaml").write_text(
+            f"projects:\n  - {extra}\n"
+        )
 
-        try:
-            registry_dir.mkdir(parents=True, exist_ok=True)
-            registry_path.write_text(f"projects:\n  - {extra}\n")
-            projects = discover_projects(portfolio_dir)
-            slugs = {p.name for p in projects}
-            assert "extra-project" in slugs
-        finally:
-            if old_content is not None:
-                registry_path.write_text(old_content)
-            elif registry_path.exists():
-                registry_path.unlink()
+        projects = discover_projects(portfolio_dir)
+        slugs = {p.name for p in projects}
+        assert "extra-project" in slugs
 
     def test_empty_base_dir(self, tmp_path):
         projects = discover_projects(tmp_path)

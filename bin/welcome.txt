@@ -1,0 +1,91 @@
+
+============================================================================
+  CLAUDE AGENT FRAMEWORK — Installed Successfully
+============================================================================
+
+  What is it?
+  -----------
+  A governance layer for Claude Code that replaces one big AI conversation
+  with a team of specialized agents, each with strict permissions. Instead
+  of hoping the AI does the right thing, hooks mechanically enforce it —
+  coding can't start without a spec, deployments need ops approval, and
+  every change is traceable.
+
+  How it works
+  ------------
+  You describe what you want, and the framework routes it through agents:
+
+    You: "I want to build a task manager app"
+                      |
+                init agent         scaffolds project, registers in portfolio
+                      |
+               persona agent       defines user journeys
+                      |
+               design agent        bounded solution (consults ops)
+                      |
+                 ba agent          writes spec, tasklist, quality rules
+                      |
+           back + front agents     implement code (only from the spec)
+                      |
+                qa agent           governance check after each task
+                      |
+               review agent        deep verification after feature
+
+  For small fixes, a fast-track path skips the ceremony: coding -> QA -> done.
+
+  What makes it different?
+  ------------------------
+  Exclusive permissions    Backend agent cannot write frontend code, and
+                           vice versa. Ops is the only one that can deploy.
+                           Hooks block the action if the wrong agent tries.
+
+  Mechanical enforcement   9 hooks fire on tool use and agent startup.
+                           They check: Does a spec exist? Is the phase
+                           correct? Is this agent allowed to do this?
+
+  Portfolio dashboards     caf cockpit portfolio generates an HTML dashboard
+                           across all your governed projects.
+
+  Manifest checkpoint      Every project has .claude/manifest.yaml tracking
+                           phase, tasks, artifacts, and remediation. Agents
+                           read it first on restart and pick up where they
+                           left off.
+
+  What you get out of the box
+  ---------------------------
+  12 specialized agents     Each with defined scope and permissions
+  9 governance hooks        Block unauthorized actions mechanically
+  CLI tooling (caf)         Status, drift detection, validation, dashboards
+  Portfolio cockpit         HTML dashboard aggregating all projects
+  Drift detection           Verify decisions are reflected in code
+  Batch processing          Run parallel headless agent jobs
+  Lesson system             117+ development lessons indexed by topic
+  Snapshot/rollback         Point-in-time recovery for the framework
+
+  Your first 5 minutes
+  --------------------
+  1. Set your API key (see below) and open Claude Code in any directory.
+     A status screen appears automatically.
+
+  2. Say "Initialize this project for governance" — the init agent
+     creates the .claude/ folder and registers the project.
+
+  3. Say "Start with personas" — the persona agent defines user journeys.
+     Then design, BA, and coding agents take over in sequence.
+
+  4. After each task, QA runs a 5-minute check. After a full feature,
+     the review agent does a 60-minute deep verification.
+
+  5. Run  caf cockpit portfolio  to see all your projects at a glance.
+
+  CLI quick reference
+  -------------------
+  caf --help              Show all commands
+  caf status              Framework status
+  caf agents list         List agents
+  caf agents validate     Validate agent prompts
+  caf drift check         Check architectural drift
+  caf cockpit portfolio   Portfolio dashboard
+  caf lessons list        Browse past lessons
+
+============================================================================

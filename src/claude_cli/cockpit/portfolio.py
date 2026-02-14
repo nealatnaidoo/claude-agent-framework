@@ -38,7 +38,14 @@ def discover_projects(base_dir: Path | None = None) -> list[Path]:
         registered = registry.get("projects", [])
         if isinstance(registered, list):
             for entry in registered:
-                p = Path(entry) if isinstance(entry, str) else None
+                if isinstance(entry, str):
+                    p = Path(entry)
+                elif isinstance(entry, dict):
+                    if entry.get("status") == "deprecated":
+                        continue
+                    p = Path(entry["path"]) if "path" in entry else None
+                else:
+                    p = None
                 if p and (p / ".claude" / "manifest.yaml").exists():
                     _add(p)
 

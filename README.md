@@ -1,10 +1,30 @@
 # Claude Agent Framework
 
-A multi-agent governance framework for Claude Code. Provides structured workflows, validated agents with exclusive permissions, and mechanical enforcement via hooks — so your AI-assisted development is repeatable, auditable, and safe.
+A governance layer for Claude Code that replaces one big AI conversation with a team of specialized agents, each with strict permissions. Instead of hoping the AI does the right thing, hooks mechanically enforce it — coding can't start without a spec, deployments need ops approval, and every change is traceable.
 
 ## What It Does
 
-Instead of one monolithic AI session, this framework routes work through specialized agents:
+You describe what you want, and the framework routes it through agents:
+
+```
+You: "I want to build a task manager app"
+                  |
+            init agent         scaffolds project, registers in portfolio
+                  |
+           persona agent       defines user journeys
+                  |
+           design agent        bounded solution (consults ops)
+                  |
+             ba agent          writes spec, tasklist, quality rules
+                  |
+       back + front agents     implement code (only from the spec)
+                  |
+            qa agent           governance check after each task
+                  |
+           review agent        deep verification after feature
+```
+
+For small fixes, a **fast-track path** skips the ceremony: coding -> QA -> done.
 
 | Agent | Purpose | Exclusive Permission |
 |-------|---------|---------------------|
@@ -17,65 +37,85 @@ Instead of one monolithic AI session, this framework routes work through special
 | **qa** | Quick governance check (5-10 min) | - |
 | **review** | Deep verification (60 min) | - |
 
-Hooks enforce the rules mechanically — coding agents can't start without a spec, deployments require ops approval, and phase transitions are validated automatically.
+**Exclusive permissions** mean the backend agent literally cannot write frontend code, and vice versa. The ops agent is the only one that can deploy. This isn't a suggestion — hooks block the action if the wrong agent tries.
 
-## Prerequisites
+**9 governance hooks** fire automatically on tool use and agent startup. They check: Does a spec exist? Is the phase correct? Is this agent allowed to do this? No human has to remember to check.
 
-- **Claude Code CLI** installed and working
-- **Python 3.11+**
+## What You Get Out of the Box
+
+| Capability | How |
+|---|---|
+| 12 specialized agents | Each with defined scope and permissions |
+| 9 governance hooks | Block unauthorized actions mechanically |
+| CLI tooling (`caf`) | Status, drift detection, validation, dashboards |
+| Portfolio cockpit | HTML dashboard aggregating all governed projects |
+| Architectural drift detection | Verify decisions are reflected in code |
+| Batch processing | Run parallel headless agent jobs |
+| Lesson system | 117+ development lessons indexed by topic |
+| Snapshot/rollback | Point-in-time recovery for the framework itself |
+
+---
+
+## New User Setup
+
+### Prerequisites
+
+- **Claude Code CLI** — [install instructions](https://docs.anthropic.com/en/docs/claude-code/overview)
+- **Python 3.11+** — check with `python3 --version`
 - **git**
 
-## Quick Install
+### Step 1: Clone and Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/claude-agent-framework.git
+git clone https://github.com/nealatnaidoo/claude-agent-framework.git
 cd claude-agent-framework
 ./bin/install.sh
 ```
 
-The installer will:
-1. Back up your existing `~/.claude/` configuration
-2. Create symlinks from `~/.claude/` to the repository
-3. Initialize local state directories
-4. Copy config templates (if you don't have existing configs)
-5. Install the `caf` CLI tool via pip
+That's it. The installer will:
+- Back up your existing `~/.claude/` if you have one
+- Symlink the framework into `~/.claude/`
+- Install the `caf` CLI tool
+- Copy config templates
+- Display a full welcome guide explaining what was installed
 
-## API Key Setup
-
-Set your Anthropic API key so Claude Code can find it:
+### Step 2: Set Your API Key
 
 ```bash
-# Works on all platforms (the default after install)
+# Set for this session
 export ANTHROPIC_API_KEY=sk-ant-...
 
-# Add to your shell profile to persist:
-echo 'export ANTHROPIC_API_KEY=sk-ant-...' >> ~/.zshrc  # or ~/.bashrc
+# Persist across sessions (add to your shell profile)
+echo 'export ANTHROPIC_API_KEY=sk-ant-...' >> ~/.zshrc   # or ~/.bashrc
 ```
 
 **macOS users** can optionally use Keychain for secure storage:
 ```bash
-# Store in Keychain
 security add-generic-password -s "ANTHROPIC_API_KEY" -a "$USER" -w "sk-ant-..."
-
-# Then edit ~/.claude/settings.json:
-# Change "env:ANTHROPIC_API_KEY" to "keychain:ANTHROPIC_API_KEY"
+# Then edit ~/.claude/settings.json and change "env:" to "keychain:"
 ```
+
+### Step 3: Open Claude Code
+
+Open Claude Code in any project directory. A status screen appears automatically showing agent availability and credential status.
+
+---
 
 ## Your First 5 Minutes
 
-After install, open Claude Code in any project directory:
-
 1. **Status screen appears automatically** — the startup hook shows agent availability, credential status, and any warnings.
 
-2. **Start a new governed project** — say "Initialize this project for governance" and the `init` agent scaffolds the `.claude/` folder with a manifest, artifact structure, and evolution log.
+2. **Start a governed project** — say "Initialize this project for governance" and the `init` agent scaffolds the `.claude/` folder with manifest, evolution log, and registers the project in your portfolio.
 
 3. **Follow the agent lifecycle** — the framework guides you through: persona (user journeys) -> design (solution) -> BA (spec + tasklist) -> coding (back/front agents) -> QA -> review.
 
 4. **For quick fixes**, say "Fast-track: fix the bug in X" — small changes skip the full lifecycle and go straight to coding -> QA.
 
-## CLI Commands
+5. **See the big picture** — run `caf cockpit portfolio` at any time to see where all your projects stand.
 
-Once installed, the `caf` CLI is available globally:
+---
+
+## CLI Quick Reference
 
 ```bash
 caf --help              # Show all commands
@@ -83,7 +123,8 @@ caf status              # Framework status
 caf agents list         # List agents
 caf agents validate     # Validate agent prompts
 caf drift check         # Check architectural drift
-caf cockpit portfolio   # Generate portfolio dashboard
+caf cockpit project     # Project dashboard
+caf cockpit portfolio   # Portfolio dashboard
 caf lessons list        # Browse past lessons
 ```
 
@@ -96,7 +137,7 @@ claude-agent-framework/
 ├── commands/         # User-invocable slash commands
 ├── config/           # Configuration templates
 ├── docs/             # Governance documentation
-├── hooks/            # Claude Code governance hooks
+├── hooks/            # Claude Code governance hooks (9 scripts)
 ├── knowledge/        # Development lessons (devlessons.md)
 ├── patterns/         # CI/CD and architecture patterns
 ├── prompts/          # System prompts and playbooks
