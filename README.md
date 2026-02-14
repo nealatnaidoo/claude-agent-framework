@@ -64,7 +64,7 @@ For small fixes, a **fast-track path** skips the ceremony: coding -> QA -> done.
 - **Python 3.11+** — check with `python3 --version`
 - **git**
 
-### Step 1: Clone and Install
+### Install
 
 ```bash
 git clone https://github.com/nealatnaidoo/claude-agent-framework.git
@@ -79,25 +79,9 @@ That's it. The installer will:
 - Copy config templates
 - Display a full welcome guide explaining what was installed
 
-### Step 2: Set Your API Key
+Open Claude Code in any project directory and you're ready to go. The framework uses whatever auth Claude Code already has — no extra API key needed.
 
-```bash
-# Set for this session
-export ANTHROPIC_API_KEY=sk-ant-...
-
-# Persist across sessions (add to your shell profile)
-echo 'export ANTHROPIC_API_KEY=sk-ant-...' >> ~/.zshrc   # or ~/.bashrc
-```
-
-**macOS users** can optionally use Keychain for secure storage:
-```bash
-security add-generic-password -s "ANTHROPIC_API_KEY" -a "$USER" -w "sk-ant-..."
-# Then edit ~/.claude/settings.json and change "env:" to "keychain:"
-```
-
-### Step 3: Open Claude Code
-
-Open Claude Code in any project directory. A status screen appears automatically showing agent availability and credential status.
+> **Custom API key (optional):** If you need a separate key for direct API access, set `export ANTHROPIC_API_KEY=sk-ant-...` and add `{"apiKeyHelper": "env:ANTHROPIC_API_KEY"}` to `~/.claude/settings.json`.
 
 ---
 

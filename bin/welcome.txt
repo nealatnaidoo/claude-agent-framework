@@ -64,7 +64,7 @@
 
   Your first 5 minutes
   --------------------
-  1. Set your API key (see below) and open Claude Code in any directory.
+  1. Open Claude Code in any project directory.
      A status screen appears automatically.
 
   2. Say "Initialize this project for governance" — the init agent
