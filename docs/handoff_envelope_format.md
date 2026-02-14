@@ -68,7 +68,7 @@ Handoff envelopes are structured documents that transfer work between agents. Ea
 
 ```yaml
 devops_approval:
-  approved_by: "devops-governor"
+  approved_by: "ops"
   date: "{YYYY-MM-DD}"
   canonical_version: "{pattern_version}"
   non_negotiables_verified: true
@@ -369,7 +369,7 @@ Environments: {environment strategy}
 
 **Project**: {project_slug}
 **Date**: {YYYY-MM-DD}
-**Requested By**: solution-designer
+**Requested By**: design
 
 ### Non-Negotiables Check
 
@@ -399,7 +399,7 @@ Environments: {environment strategy}
 ### DevOps Stamp (if APPROVED)
 ```yaml
 devops_approval:
-  approved_by: "devops-governor"
+  approved_by: "ops"
   date: "{YYYY-MM-DD}"
   canonical_version: "{version}"
   non_negotiables_verified: true
@@ -649,13 +649,13 @@ outbox:
     - id: "OBX-001"
       task_type: "research"
       status: "completed"
-      commissioner: "backend-coding-agent"
+      commissioner: "back"
       created: "2026-02-11T14:30:00Z"
       completed: "2026-02-11T16:00:00Z"
       delivery_file: ".claude/remediation/inbox/OBX-001_external_research_2026-02-11.md"
 ```
 
-**Who Can Commission**: backend-coding-agent, frontend-coding-agent, solution-designer, business-analyst, devops-governor. QA and Code Review agents do NOT commission outbox tasks.
+**Who Can Commission**: back, front, design, ba, ops. QA and Code Review agents do NOT commission outbox tasks.
 
 **Supported External Agents**: Google Antigravity (via `.agent/skills/outbox-poller/`), or any model that reads Markdown + YAML frontmatter. See `examples/antigravity-skill/outbox-poller/SKILL.md`.
 

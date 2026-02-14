@@ -26,11 +26,11 @@ All Claude-generated project artifacts are stored in a `.claude/` folder at the 
 │   │
 │   ├── remediation/                      # QA + Code Review findings
 │   │   ├── inbox/                        # Unprocessed findings (agents deposit here)
-│   │   │   ├── BUG-007_qa-reviewer_2026-02-07.md
+│   │   │   ├── BUG-007_qa_2026-02-07.md
 │   │   │   ├── IMPROVE-003_security_auditor_2026-02-07.md
 │   │   │   └── OBX-001_external_research_2026-02-11.md  # External agent delivery
 │   │   ├── archive/                      # BA-processed findings (annotated with task ID)
-│   │   │   └── BUG-007_qa-reviewer_2026-02-07.md  # resolved_as: T015
+│   │   │   └── BUG-007_qa_2026-02-07.md  # resolved_as: T015
 │   │   ├── findings.log                  # Coding agent one-liners (pipe-delimited)
 │   │   ├── qa_YYYY-MM-DD.md              # QA review reports
 │   │   ├── code_review_YYYY-MM-DD.md     # Code review reports
@@ -109,7 +109,7 @@ Individual finding files deposited by review agents into `remediation/inbox/`.
 | Component | Description | Example |
 |-----------|-------------|---------|
 | `ID` | Remediation ID | `BUG-007`, `IMPROVE-003` |
-| `source` | Agent that created the finding | `qa-reviewer`, `code-review-agent`, `security_auditor` |
+| `source` | Agent that created the finding | `qa`, `review`, `security_auditor` |
 | `YYYY-MM-DD` | Date finding was created | `2026-02-07` |
 
 **Inbox File YAML Frontmatter**:
@@ -117,7 +117,7 @@ Individual finding files deposited by review agents into `remediation/inbox/`.
 ```yaml
 ---
 id: "BUG-007"
-source: "qa-reviewer"
+source: "qa"
 severity: "high"
 created: "2026-02-07T14:30:00Z"
 context: "T005 — Missing null check in calculate_var()"
@@ -148,8 +148,8 @@ Lightweight one-liner log written by coding agents. Pipe-delimited.
 
 **Example**:
 ```
-2026-02-07T14:30:00Z | backend-coding-agent | T005 | medium | Adjacent null check missing in portfolio_service.py:88
-2026-02-07T15:10:00Z | frontend-coding-agent | T008 | low | Unused CSS class in ContentCard.tsx:42
+2026-02-07T14:30:00Z | back | T005 | medium | Adjacent null check missing in portfolio_service.py:88
+2026-02-07T15:10:00Z | front | T008 | low | Unused CSS class in ContentCard.tsx:42
 ```
 
 QA Reviewer promotes findings.log entries to inbox files during its next review pass.

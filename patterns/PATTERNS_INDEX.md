@@ -212,7 +212,7 @@ From `devlessons.md` lines 1263-1295:
 
 ### Starting a New Project
 
-1. **Consult lessons-advisor** with project context
+1. **Consult lessons** with project context
 2. **Copy quality gates template** to `.claude/artifacts/005_quality_gates_v1.md`
 3. **Create manifest** with artifact references
 4. **Apply applicable lessons** to `.claude/artifacts/006_lessons_applied_v1.md`

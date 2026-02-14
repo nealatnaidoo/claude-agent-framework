@@ -59,7 +59,7 @@
 
 | Rule | Enforcement |
 |------|-------------|
-| **ONLY `devops-governor` can execute deployments** | All other agents have identity table row: `Execute deployments: NO - DevOps Governor only` |
+| **ONLY `ops` can execute deployments** | All other agents have identity table row: `Execute deployments: NO - DevOps Governor only` |
 | Deployments include: fly deploy, docker push, npm publish | All production AND dev deployments |
 | Other agents must REQUEST deployment | Via deployment request format |
 
@@ -226,10 +226,10 @@ grep -r "IMPROVE-[0-9]" .claude/remediation/ | sort
 
 | Agent | Must Consult When |
 |-------|-------------------|
-| `solution-designer` | Proposing tech stack, deployment architecture, CI/CD platform |
-| `business-analyst` | MUST verify DevOps approval stamp exists before proceeding |
+| `design` | Proposing tech stack, deployment architecture, CI/CD platform |
+| `ba` | MUST verify DevOps approval stamp exists before proceeding |
 | `coding-agent` | Requesting deployment after task completion |
-| `qa-reviewer` | Requesting deployment after gates pass |
+| `qa` | Requesting deployment after gates pass |
 
 ### Consultation Request Format
 

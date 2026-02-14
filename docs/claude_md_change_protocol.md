@@ -174,7 +174,7 @@ python ~/.claude/scripts/validate_agents.py
 
 ```bash
 # After updating a specific agent
-python ~/.claude/scripts/validate_agents.py solution-designer.md
+python ~/.claude/scripts/validate_agents.py design.md
 ```
 
 ---

@@ -30,7 +30,7 @@ def main():
                     "result": "block",
                     "reason": (
                         "BLOCKED: .deploy_gate is managed by the deployment gate hook. "
-                        "Use devops-governor agent for deployments."
+                        "Use ops agent for deployments."
                     ),
                 }
             )

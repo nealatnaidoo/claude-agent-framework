@@ -1,7 +1,7 @@
 # Shared Agent Protocols
 
 **Version**: 1.0.0
-**Used by**: backend-coding-agent, frontend-coding-agent
+**Used by**: back, front
 **Purpose**: Single source of truth for protocols shared across coding agents. Agents MUST read this file during pre-flight.
 
 ---
@@ -77,7 +77,7 @@ When you discover an issue in **adjacent code** (code outside your current task 
 
 **Example**:
 ```
-2026-02-07T14:30:00Z | backend-coding-agent | T005 | medium | Null check missing in portfolio_service.py:88
+2026-02-07T14:30:00Z | back | T005 | medium | Null check missing in portfolio_service.py:88
 ```
 
 **Hard Constraint**: Coding agents MUST NOT create inbox files directly. Only QA Reviewer promotes findings.log entries to `remediation/inbox/` during its next review pass.

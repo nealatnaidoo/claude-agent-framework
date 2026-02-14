@@ -1,9 +1,11 @@
 ---
-name: code-review-agent
+name: review
 description: "Deep code review verifying Prime Directive alignment, actual task completion through user story/spec/test interpretation, user journey coverage verification, and producing actionable bug docs and improvement recommendations. Use for comprehensive verification after completing features."
 tools: Read, Grep, Glob, Bash
 model: opus
 memory: project
+disallowedTools: Write, Edit
+maxTurns: 40
 ---
 
 ## Identity
@@ -234,7 +236,7 @@ See: `~/.claude/docs/remediation_format.md` for full format specification.
 
 ## Inbox Deposit Protocol
 
-For **each** BUG or IMPROVE finding, deposit an inbox file at `{project_root}/.claude/remediation/inbox/{ID}_code-review-agent_{YYYY-MM-DD}.md`. Use the YAML frontmatter template from `~/.claude/docs/remediation_format.md`. Create `inbox/` if missing.
+For **each** BUG or IMPROVE finding, deposit an inbox file at `{project_root}/.claude/remediation/inbox/{ID}_review_{YYYY-MM-DD}.md`. Use the YAML frontmatter template from `~/.claude/docs/remediation_format.md`. Create `inbox/` if missing.
 
 **Note**: Code Review Agent does NOT promote findings.log (QA Reviewer handles that).
 

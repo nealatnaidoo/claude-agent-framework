@@ -142,15 +142,15 @@ MCP tools are available to all agents but should be used according to agent perm
 
 | Agent | Can Use MCP Tools For |
 |-------|----------------------|
-| `solution-designer` | Research, documentation |
-| `business-analyst` | Artifact validation, schema checks |
+| `design` | Research, documentation |
+| `ba` | Artifact validation, schema checks |
 | `coding-agent` | Code analysis, linting tools |
-| `qa-reviewer` | Quality checks, security scanning |
-| `devops-governor` | CI/CD validation, deployment tools |
+| `qa` | Quality checks, security scanning |
+| `ops` | CI/CD validation, deployment tools |
 
 **Restrictions Still Apply**:
 - If an MCP tool could modify source code, only `coding-agent` should use it
-- If an MCP tool could trigger deployment, only `devops-governor` should use it
+- If an MCP tool could trigger deployment, only `ops` should use it
 
 ---
 

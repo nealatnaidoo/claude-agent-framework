@@ -137,8 +137,8 @@ properties:
         type: array
         items:
           type: string
-          enum: [devops-governor]
-        description: "Only devops-governor is allowed"
+          enum: [ops]
+        description: "Only ops is allowed"
 
       deployment_request_required:
         type: boolean

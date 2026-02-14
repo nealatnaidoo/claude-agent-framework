@@ -52,26 +52,26 @@ scripts:
     path: "scripts/validate_agents.py"
     description: "Validate agent prompts against schema"
     usage: "python scripts/validate_agents.py [agent.md]"
-    used_by: [devops-governor, qa-reviewer]
+    used_by: [ops, qa]
 
   local_docker_validate:
     path: "scripts/local_docker_validate.sh"
     description: "Validate Docker build and health check locally"
     usage: "./scripts/local_docker_validate.sh --port 8080 --health /health"
-    used_by: [devops-governor]
+    used_by: [ops]
     decision_ref: "DEC-DEVOPS-006"
 
   worktree_manager:
     path: "scripts/worktree_manager.sh"
     description: "Manage git worktrees for parallel development"
     usage: "./scripts/worktree_manager.sh create|list|sync|remove"
-    used_by: [business-analyst, backend-coding-agent, frontend-coding-agent]
+    used_by: [ba, back, front]
 
   version_tracker:
     path: "scripts/version_tracker.py"
     description: "Track agent and artifact versions"
     usage: "python scripts/version_tracker.py scan|diff|history"
-    used_by: [devops-governor]
+    used_by: [ops]
 
 # External packaged tools (installed separately)
 packages:
@@ -86,7 +86,7 @@ packages:
       - db-harness consistency
       - db-harness detect-pii
       - db-harness audit
-    used_by: [devops-governor]
+    used_by: [ops]
     gates_implemented: [NN-DB-1, NN-DB-2, NN-DB-3, NN-DB-4]
     decision_refs: [DEC-DEVOPS-009, DEC-DEVOPS-014]
 

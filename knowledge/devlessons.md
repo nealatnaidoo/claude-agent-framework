@@ -1349,14 +1349,14 @@ scripts:
   validate_agents:
     path: "scripts/validate_agents.py"
     description: "Validate agent prompts against schema"
-    used_by: [devops-governor, qa-reviewer]
+    used_by: [ops, qa]
 
 packages:
   db-harness:
     repository: "https://github.com/org/db-harness"
     version: "1.0.0"
     install: "pip install git+https://github.com/org/db-harness.git@v1.0.0"
-    used_by: [devops-governor]
+    used_by: [ops]
     gates_implemented: [NN-DB-1, NN-DB-2, NN-DB-3, NN-DB-4]
 ```
 
@@ -2435,7 +2435,7 @@ project_v2_evolution.md        # Drift tracking
 ```
 
 ### Checklist
-- [ ] Run solution-designer before BA for new feature sets
+- [ ] Run design before BA for new feature sets
 - [ ] Ensure tasklist tasks are 30-120 minutes each
 - [ ] Include TDD evidence requirements per task
 - [ ] Commit after each phase completion
@@ -7752,7 +7752,7 @@ recommended_next_agent: "BA"
 
 ### Prevention Checklist
 
-- [ ] Always start large features with solution-designer agent
+- [ ] Always start large features with design agent
 - [ ] Include security threat model in spec (T1, T2, ... with CTRL controls)
 - [ ] BA tasklist should have 30-120 minute tasks with blockedBy fields
 - [ ] Each task needs acceptance criteria and evidence requirements
@@ -8584,12 +8584,12 @@ grep -r "return \[{" src/api/ --include="*.py"
 
 ### Problem
 
-Attempted to register a custom `code-review-agent` subagent type by adding a file to `~/.claude/agents/code-review-agent.md`, following the same format as existing registered agents (qa-reviewer, business-analyst, etc.). The Task tool rejected the new agent type:
+Attempted to register a custom `review` subagent type by adding a file to `~/.claude/agents/review.md`, following the same format as existing registered agents (qa, ba, etc.). The Task tool rejected the new agent type:
 
 ```
-Agent type 'code-review-agent' not found. Available agents: Bash, general-purpose,
-statusline-setup, Explore, Plan, claude-code-guide, lessons-advisor, business-analyst,
-solution-designer, qa-reviewer
+Agent type 'review' not found. Available agents: Bash, general-purpose,
+statusline-setup, Explore, Plan, claude-code-guide, lessons, ba,
+design, qa
 ```
 
 ### Root Cause
@@ -8598,7 +8598,7 @@ Claude Code subagent types are **system-defined**, not user-configurable. The `~
 
 The available subagent types are hardcoded in the Claude Code runtime:
 - Built-in: `Bash`, `general-purpose`, `statusline-setup`, `Explore`, `Plan`, `claude-code-guide`
-- Custom (pre-registered): `lessons-advisor`, `business-analyst`, `solution-designer`, `qa-reviewer`
+- Custom (pre-registered): `lessons`, `ba`, `design`, `qa`
 
 ### Solution
 
@@ -8606,10 +8606,10 @@ Use an existing agent type with the custom methodology embedded in the prompt:
 
 ```python
 # Instead of:
-Task(subagent_type="code-review-agent", prompt="Review the project...")
+Task(subagent_type="review", prompt="Review the project...")
 
 # Use:
-Task(subagent_type="qa-reviewer", prompt="""
+Task(subagent_type="qa", prompt="""
 You are performing a DEEP CODE REVIEW (not just QA governance check).
 
 Read the full code review methodology from:
@@ -8623,7 +8623,7 @@ Read the full code review methodology from:
 
 For custom agent behaviors:
 1. **Create the prompt file** in `~/.claude/agents/` for reference/documentation
-2. **Use an existing agent type** that has similar tool access (qa-reviewer, general-purpose)
+2. **Use an existing agent type** that has similar tool access (qa, general-purpose)
 3. **Embed the methodology** in the Task prompt, referencing the prompt file
 
 ### Detection
@@ -9014,7 +9014,7 @@ coding_agent:
 Fix the upstream process (BA task loading) instead of relaxing the downstream constraint:
 
 ```yaml
-# ~/.claude/agents/business-analyst.md - CORRECT approach
+# ~/.claude/agents/ba.md - CORRECT approach
 
 ## CRITICAL: Task Loading Protocol (Mandatory)
 
@@ -9092,7 +9092,7 @@ When coding detects drift from spec/tasklist:
 
 ### Evidence
 
-- Updated global BA agent: `~/.claude/agents/business-analyst.md`
+- Updated global BA agent: `~/.claude/agents/ba.md`
 - Project lessons: `.claude/evolution/lessons_social_hub.md` (Lessons 9-11)
 - Workflow config: `.claude/workflow_config.yaml` confirms `task_source: "manifest"`
 
@@ -9340,7 +9340,7 @@ When all tasks for a variant/feature are complete:
 5. NEVER merge code without syncing manifest
 ```
 
-**Visiting Agent (`~/.claude/agents/visiting-agent-template.md`):**
+**Visiting Agent (`~/.claude/agents/visit.md`):**
 ```markdown
 ## Manifest Accuracy Check (Section 11)
 
@@ -9707,7 +9707,7 @@ After a context compress, session resumed with urgent production issues. Instead
 
 1. **Skipped manifest.yaml read** - Failed to re-anchor after context loss
 2. **Bypassed BA workflow** - Modified code directly instead of creating spec + tasklist
-3. **Coded without agents** - Used internal Edit/Write tools instead of backend-coding-agent and frontend-coding-agent
+3. **Coded without agents** - Used internal Edit/Write tools instead of back and front
 4. **Modified multiple files atomically** - Changed sqlite_db.py, admin_newsletter.py, newsletter/page.tsx, AND created migration 023_fix_sent_emails_schema.sql in single session
 5. **No governance checkpoints** - Skipped quality gates, no evidence artifacts, didn't update manifest.yaml
 

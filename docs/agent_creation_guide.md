@@ -23,7 +23,7 @@
 
 **Definition**: Part of the core development workflow. Can modify source code and control workflow.
 
-**Examples**: solution-designer, business-analyst, coding-agent, qa-reviewer, code-review-agent, lessons-advisor
+**Examples**: design, ba, coding-agent, qa, review, lessons
 
 **Characteristics**:
 - Full read/write access to source code
@@ -480,7 +480,7 @@ Before registering a new agent, verify ALL items:
 | Validation script | `~/.claude/scripts/validate_agents.py` |
 | Operating model | `~/.claude/docs/agent_operating_model.md` |
 | Document consistency | `~/.claude/docs/document_consistency.md` |
-| Visiting agent template | `~/.claude/agents/visiting-agent-template.md` |
+| Visiting agent template | `~/.claude/agents/visit.md` |
 
 ---
 

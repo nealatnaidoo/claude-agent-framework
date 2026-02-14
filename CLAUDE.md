@@ -19,29 +19,29 @@ Invoke agents via the Task tool: `subagent_type: "agent-name"`.
 
 | Agent | Model | When to Use | Exclusive Permission |
 |-------|-------|-------------|---------------------|
-| `devops-governor` | opus | CI/CD governance, deployments, stack approval | **Execute deployments** |
-| `compliance-verifier` | haiku | Validate agent governance compliance | - (visiting) |
+| `ops` | opus | CI/CD governance, deployments, stack approval | **Execute deployments** |
+| `audit` | haiku | Validate agent governance compliance | - (visiting) |
 
 ### Micro Agents (Project Level)
 
 | Agent | Model | When to Use | Exclusive Permission |
 |-------|-------|-------------|---------------------|
-| `project-initializer` | haiku | **New projects** - scaffold .claude/ structure and manifest | - |
-| `persona-evaluator` | opus | Define user journeys before solution design | **Define user journeys** |
-| `solution-designer` | opus | Turn ideas into bounded solutions (consult devops-governor) | - |
-| `business-analyst` | opus | Create spec, tasklist, rules, quality gates | - |
-| `backend-coding-agent` | opus | Python backend (hexagonal architecture) | **Write backend code** |
-| `frontend-coding-agent` | opus | React/TypeScript frontend (FSD) | **Write frontend code** |
-| `qa-reviewer` | sonnet | Quick governance check (5-10 min) after each task | - |
-| `code-review-agent` | opus | Deep task completion verification (60 min) after feature | - |
-| `lessons-advisor` | haiku | Consult past lessons before decisions (recommended before BA) | - |
+| `init` | haiku | **New projects** - scaffold .claude/ structure and manifest | - |
+| `persona` | opus | Define user journeys before solution design | **Define user journeys** |
+| `design` | opus | Turn ideas into bounded solutions (consult ops) | - |
+| `ba` | opus | Create spec, tasklist, rules, quality gates | - |
+| `back` | opus | Python backend (hexagonal architecture) | **Write backend code** |
+| `front` | opus | React/TypeScript frontend (FSD) | **Write frontend code** |
+| `qa` | sonnet | Quick governance check (5-10 min) after each task | - |
+| `review` | opus | Deep task completion verification (60 min) after feature | - |
+| `lessons` | haiku | Consult past lessons before decisions (recommended before BA) | - |
 
 ### Exclusive Permissions (CRITICAL)
 
-- **Backend Code**: ONLY `backend-coding-agent` can write/modify Python backend code
-- **Frontend Code**: ONLY `frontend-coding-agent` can write/modify React/TypeScript frontend code
-- **Deployments**: ONLY `devops-governor` can execute deployments
-- **User Journeys**: ONLY `persona-evaluator` can define user journeys and personas
+- **Backend Code**: ONLY `back` can write/modify Python backend code
+- **Frontend Code**: ONLY `front` can write/modify React/TypeScript frontend code
+- **Deployments**: ONLY `ops` can execute deployments
+- **User Journeys**: ONLY `persona` can define user journeys and personas
 
 ### BA-Only Input Constraint
 
@@ -49,9 +49,9 @@ Coding agents accept work ONLY from BA-produced artifacts (spec, tasklist). User
 
 ### Task Assignment
 
-- Backend tasks (Python, API, database): `backend-coding-agent`
-- Frontend tasks (React, TypeScript, UI): `frontend-coding-agent`
-- Full-stack integration tasks: `backend-coding-agent` (owns integration tests)
+- Backend tasks (Python, API, database): `back`
+- Frontend tasks (React, TypeScript, UI): `front`
+- Full-stack integration tasks: `back` (owns integration tests)
 
 ### Review Workflow (QA vs Code Review)
 
@@ -65,7 +65,7 @@ Coding agents accept work ONLY from BA-produced artifacts (spec, tasklist). User
 
 ### Visiting Agent Roles
 
-The `visiting-agent-template` supports specialized read-only reviews:
+The `visit` supports specialized read-only reviews:
 
 | Role | Invocation | Focus |
 |------|-----------|-------|
@@ -78,22 +78,22 @@ The `visiting-agent-template` supports specialized read-only reviews:
 ## Agent Lifecycle
 
 ```
-project-initializer → persona-evaluator → lessons-advisor (recommended)
+init → persona → lessons (recommended)
                                                ↓
-                           solution-designer → DevOps Governor (consult, REQUIRED)
+                           design → ops (consult, REQUIRED)
                                                ↓
-                                     business-analyst
+                                     ba
                                                ↓
                               ┌─────── coding (parallel) ───────┐
-                              │  backend-coding-agent            │
-                              │  frontend-coding-agent           │
+                              │  back            │
+                              │  front           │
                               └─────────────┬───────────────────┘
                                             ↓
-                                    qa-reviewer (per-task, 5-10 min)
+                                    qa (per-task, 5-10 min)
                                             ↓
-                                   code-review-agent (per-feature, 60 min)
+                                   review (per-feature, 60 min)
                                             ↓
-                                    feedback → solution-designer (next sprint)
+                                    feedback → design (next sprint)
 ```
 
 **Fast-Track Path** (for bug fixes, single-file changes, config/doc updates):
@@ -144,7 +144,7 @@ After context compress or session restart:
 
 | When | Consult |
 |------|---------|
-| Starting new project | `project-initializer` agent, then `lessons-advisor` |
+| Starting new project | `init` agent, then `lessons` |
 | During coding | `~/.claude/knowledge/coding_standards.md` |
 | Architecture decisions | `~/.claude/docs/agent_operating_model.md` |
 | Agent handoffs | `~/.claude/docs/handoff_envelope_format.md` |

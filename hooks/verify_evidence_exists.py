@@ -2,7 +2,7 @@
 """
 Governance Hook: Verify evidence artifacts exist before QA reviewer starts.
 
-Triggered by SubagentStart hook for qa-reviewer.
+Triggered by SubagentStart hook for qa.
 Checks that coding agents produced evidence artifacts before QA begins.
 
 Exit codes:
@@ -90,7 +90,7 @@ def main():
         hook_input = {}
 
     agent_name = hook_input.get("agent_name", "unknown")
-    if agent_name != "qa-reviewer":
+    if agent_name != "qa":
         sys.exit(0)
 
     project_root = find_project_root()

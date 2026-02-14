@@ -1,10 +1,12 @@
 ---
-name: visiting-agent-template
+name: visit
 description: Universal template for creating visiting agents (read-only reviewers)
 tools: Read, Glob, Grep, Bash
 model: sonnet
 scope: template
 version: 1.0.0
+disallowedTools: Write, Edit
+maxTurns: 30
 ---
 
 # Visiting Agent Template

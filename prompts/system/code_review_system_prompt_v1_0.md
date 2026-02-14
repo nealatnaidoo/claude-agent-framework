@@ -128,7 +128,7 @@ BUG-XXX:
 - evidence: file:line, expected vs actual
 - root_cause: why it happened
 - fix: before/after code
-- prevention: candidate for lessons-advisor
+- prevention: candidate for lessons
 
 Improvement Documentation (for each improvement):
 IMPROVE-XXX:

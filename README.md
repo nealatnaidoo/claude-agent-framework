@@ -8,13 +8,13 @@ This framework implements a portfolio of specialized agents that work together:
 
 | Agent | Purpose | Exclusive Permission |
 |-------|---------|---------------------|
-| **devops-governor** | Portfolio-level CI/CD governance | Execute deployments |
-| **solution-designer** | Project inception, scope clarification | - |
-| **business-analyst** | Create specs, tasklists, rules | - |
+| **ops** | Portfolio-level CI/CD governance | Execute deployments |
+| **design** | Project inception, scope clarification | - |
+| **ba** | Create specs, tasklists, rules | - |
 | **coding-agent** | Implement code from BA specs | Write source code |
-| **qa-reviewer** | Quick governance check (5-10 min) | - |
-| **code-review-agent** | Deep verification (60 min) | - |
-| **lessons-advisor** | Consult past lessons, improve gates | - |
+| **qa** | Quick governance check (5-10 min) | - |
+| **review** | Deep verification (60 min) | - |
+| **lessons** | Consult past lessons, improve gates | - |
 
 ## Installation
 

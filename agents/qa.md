@@ -1,9 +1,11 @@
 ---
-name: qa-reviewer
+name: qa
 description: "Review code changes for quality, TDD adherence, system prompt compliance, and user journey validation. Validates implementations against pre-defined user journeys and runs linked Playwright tests."
 tools: Read, Grep, Glob, Bash
 model: sonnet
 memory: project
+disallowedTools: Write, Edit
+maxTurns: 30
 ---
 
 ## Identity
@@ -103,16 +105,16 @@ pytest --tb=short
 
 ## User Journey Validation (Required)
 
-QA Reviewer MUST validate changes against defined user journeys created by `persona-evaluator`.
+QA Reviewer MUST validate changes against defined user journeys created by `persona`.
 
 ### Loading User Journeys
 
 ```bash
-# Read user journeys artifact (created by persona-evaluator)
+# Read user journeys artifact (created by persona)
 cat {project_root}/.claude/artifacts/000_user_journeys_*.md
 ```
 
-**If no user journeys exist**, flag review as **BLOCKED** and request `persona-evaluator` run first.
+**If no user journeys exist**, flag review as **BLOCKED** and request `persona` run first.
 
 ### Journey Validation Checklist
 
@@ -213,7 +215,7 @@ For tasks meeting ALL criteria:
 Fast-track reviews:
 1. Run full quality gates (not scoped)
 2. Verify the specific fix is correct
-3. Skip code-review-agent (don't transition to code_review phase)
+3. Skip review (don't transition to code_review phase)
 4. Transition directly to next coding task or complete
 
 ---
@@ -324,14 +326,14 @@ For **each** BUG or IMPROVE finding created, also deposit an individual file int
 
 **Location**: `{project_root}/.claude/remediation/inbox/{ID}_{source}_{YYYY-MM-DD}.md`
 
-**Source**: `qa-reviewer`
+**Source**: `qa`
 
 **Template**:
 
 ```markdown
 ---
 id: "{BUG-XXX or IMPROVE-XXX}"
-source: "qa-reviewer"
+source: "qa"
 severity: "{critical|high|medium|low}"
 created: "{ISO-timestamp}"
 context: "{Task ID} — {one-line summary}"
@@ -344,7 +346,7 @@ line: {line number}
 {Full finding details copied from QA report}
 ```
 
-**Example filename**: `BUG-007_qa-reviewer_2026-02-07.md`
+**Example filename**: `BUG-007_qa_2026-02-07.md`
 
 Create the `inbox/` directory if it does not exist.
 
@@ -366,15 +368,15 @@ During each QA review pass, check for entries in `{project_root}/.claude/remedia
 
 ```
 # findings.log entry:
-2026-02-07T14:30:00Z | backend-coding-agent | T005 | medium | Null check missing in portfolio_service.py:88
+2026-02-07T14:30:00Z | back | T005 | medium | Null check missing in portfolio_service.py:88
 
-# Becomes inbox file: BUG-016_qa-reviewer_2026-02-07.md
+# Becomes inbox file: BUG-016_qa_2026-02-07.md
 ---
 id: "BUG-016"
-source: "qa-reviewer"
+source: "qa"
 severity: "medium"
 created: "2026-02-07T14:30:00Z"
-context: "T005 — Promoted from findings.log (originally reported by backend-coding-agent)"
+context: "T005 — Promoted from findings.log (originally reported by back)"
 file: "src/services/portfolio_service.py"
 line: 88
 ---

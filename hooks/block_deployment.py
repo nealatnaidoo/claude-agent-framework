@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Governance Hook: Block deployment commands unless devops-governor gate exists.
+Governance Hook: Block deployment commands unless ops gate exists.
 
 Triggered by PreToolUse for Bash tool calls (matcher: "Bash").
 Checks if the command matches deployment patterns and blocks if no valid gate.
@@ -86,8 +86,8 @@ def main():
                 {
                     "result": "block",
                     "reason": (
-                        "DEPLOYMENT BLOCKED: Only devops-governor can execute deployments. "
-                        "No project context found. Launch devops-governor via Task tool."
+                        "DEPLOYMENT BLOCKED: Only ops can execute deployments. "
+                        "No project context found. Launch ops via Task tool."
                     ),
                 }
             )
@@ -104,8 +104,8 @@ def main():
             {
                 "result": "block",
                 "reason": (
-                    "DEPLOYMENT BLOCKED: Only devops-governor can execute deployments.\n"
-                    "Launch devops-governor via Task tool to perform deployments.\n"
+                    "DEPLOYMENT BLOCKED: Only ops can execute deployments.\n"
+                    "Launch ops via Task tool to perform deployments.\n"
                     "Read-only commands (fly status, fly logs, etc.) are not affected."
                 ),
             }

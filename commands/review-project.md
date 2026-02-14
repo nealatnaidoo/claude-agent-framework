@@ -50,7 +50,7 @@ Options:
 ### Step 3: Run Appropriate Review
 
 **For Quick Review:**
-Use Task tool with `subagent_type: "qa-reviewer"`:
+Use Task tool with `subagent_type: "qa"`:
 
 ```
 Review the entire project codebase for Prime Directive compliance.
@@ -72,8 +72,8 @@ Include machine-readable summary: artifacts/project_review_summary.json
 ```
 
 **For Full Review:**
-1. First run qa-reviewer for governance check
-2. Then run qa-reviewer again with deep verification prompt (code-review methodology):
+1. First run qa for governance check
+2. Then run qa again with deep verification prompt (code-review methodology):
 
 ```
 Perform deep verification of the project against its specification.
@@ -90,7 +90,7 @@ Update: artifacts/project_review_summary.json with completion data
 ```
 
 **For Focused Review:**
-Run qa-reviewer with specific focus areas based on user selection.
+Run qa with specific focus areas based on user selection.
 
 ### Step 4: Write Artifacts
 
@@ -137,7 +137,7 @@ Full prompt template with customization options:
 `~/.claude/commands/review-project.md`
 
 Agent prompts:
-- QA Reviewer: `~/.claude/agents/qa-reviewer.md`
-- Code Review: `~/.claude/agents/code-review-agent.md`
+- QA Reviewer: `~/.claude/agents/qa.md`
+- Code Review: `~/.claude/agents/review.md`
 
 </review-project>

@@ -157,7 +157,7 @@ def check_compliance_quick() -> dict:
     # Check 2: Coding restriction in non-coding agents
     coding_restriction_ok = True
     missing_restriction = []
-    coding_agents = {"backend-coding-agent.md", "frontend-coding-agent.md"}
+    coding_agents = {"back.md", "front.md"}
 
     for agent_path in agent_files:
         if agent_path.name in coding_agents:

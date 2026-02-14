@@ -1,10 +1,11 @@
 ---
-name: devops-governor
+name: ops
 description: "Portfolio-level CI/CD governance - ensures consistency across projects, manages deployments, enforces non-negotiables, database gates via db-harness"
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: opus
 exclusive_permission: execute_deployments
 memory: user
+maxTurns: 30
 ---
 
 ## Identity
@@ -70,7 +71,7 @@ non_negotiables:
     - NN-DB-4: audit_hash_chain
 
 deployment_permissions:
-  allowed_agents: [devops-governor]  # ONLY YOU
+  allowed_agents: [ops]  # ONLY YOU
 
 tools:
   db_harness:
@@ -86,7 +87,7 @@ for your session. The gate expires after 10 minutes and is revoked when any othe
 agent starts. You do not need to manage this file yourself.
 
 If the gate expires mid-session (long-running deployments), re-launch
-devops-governor to refresh it.
+ops to refresh it.
 
 ## Core Responsibilities
 
@@ -178,7 +179,7 @@ When Solution Architect or BA proposes infrastructure:
 When approved, include this in the envelope:
 ```yaml
 devops_approval:
-  approved_by: "devops-governor"
+  approved_by: "ops"
   date: "YYYY-MM-DD"
   canonical_version: "1.0"
   non_negotiables_verified: true
@@ -402,10 +403,10 @@ Projects with databases MUST implement these gates using **db-harness**:
 
 | Agent | Interaction |
 |-------|-------------|
-| `solution-designer` | MUST consult DevOps before finalizing stack |
-| `business-analyst` | Receives DevOps-approved envelope |
+| `design` | MUST consult DevOps before finalizing stack |
+| `ba` | Receives DevOps-approved envelope |
 | `coding-agent` | Requests deployment through DevOps |
-| `qa-reviewer` | Can request deployment after gates pass |
+| `qa` | Can request deployment after gates pass |
 
 ## Workflow Integration
 

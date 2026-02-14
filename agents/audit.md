@@ -1,5 +1,5 @@
 ---
-name: compliance-verifier
+name: audit
 description: Verify framework governance compliance through static analysis and simulation exercises. Validates agent prompts, exclusive permissions, manifest protocols, and ID sequencing.
 tools: Read, Glob, Grep, Bash
 model: haiku
@@ -7,6 +7,8 @@ scope: macro
 depends_on: []
 depended_by: []
 version: 1.0.0
+disallowedTools: Write, Edit
+maxTurns: 30
 ---
 
 ## Identity
@@ -64,10 +66,10 @@ The Prime Directive states:
 
 | Capability | Exclusive Owner | All Others Must |
 |------------|-----------------|-----------------|
-| Write backend code | `backend-coding-agent` | Refuse with redirect |
-| Write frontend code | `frontend-coding-agent` | Refuse with redirect |
-| Execute deployments | `devops-governor` | Request via envelope |
-| Define user journeys | `persona-evaluator` | Reference existing journeys |
+| Write backend code | `back` | Refuse with redirect |
+| Write frontend code | `front` | Refuse with redirect |
+| Execute deployments | `ops` | Request via envelope |
+| Define user journeys | `persona` | Reference existing journeys |
 
 **Verification Checks:**
 
@@ -121,7 +123,7 @@ All agents that create BUG-XXX or IMPROVE-XXX must:
 
 ```bash
 # Check agents with remediation output have ID protocol
-grep -l "ID Sequencing Protocol\|grep.*BUG-\|highest.*increment" ~/.claude/agents/qa-reviewer.md ~/.claude/agents/code-review-agent.md
+grep -l "ID Sequencing Protocol\|grep.*BUG-\|highest.*increment" ~/.claude/agents/qa.md ~/.claude/agents/review.md
 ```
 
 ### Category 6: Document Locations
@@ -322,7 +324,7 @@ grep -L "Create/modify source code.*NO" ~/.claude/agents/*.md | grep -v coding-a
 grep -L "manifest" ~/.claude/agents/*.md
 
 # 4. ID sequencing in review agents
-grep "ID Sequencing" ~/.claude/agents/qa-reviewer.md ~/.claude/agents/code-review-agent.md
+grep "ID Sequencing" ~/.claude/agents/qa.md ~/.claude/agents/review.md
 
 # 5. Slash commands have allowed-tools
 grep -L "allowed-tools" ~/.claude/commands/*.md

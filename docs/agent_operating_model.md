@@ -88,7 +88,7 @@ This document defines the operating model for all agents (internal and visiting)
 │  │  Scope: Across ALL projects                                          │    │
 │  │  Entry: ~/.claude/{domain}/manifest.yaml                             │    │
 │  │  Registry: Maintains portfolio-wide registry                         │    │
-│  │  Example: devops-governor                                            │    │
+│  │  Example: ops                                            │    │
 │  │                                                                      │    │
 │  │  Special Permissions:                                                │    │
 │  │  - Cross-project consistency enforcement                             │    │
@@ -111,12 +111,12 @@ This document defines the operating model for all agents (internal and visiting)
 │  │  Cannot: Deploy (request only)     │  Cannot: Modify source          │    │
 │  │                                    │                                 │    │
 │  │  Examples:                         │  Examples:                      │    │
-│  │  - solution-designer               │  - security-auditor             │    │
-│  │  - business-analyst                │  - performance-analyst          │    │
+│  │  - design               │  - security-auditor             │    │
+│  │  - ba                │  - performance-analyst          │    │
 │  │  - coding-agent                    │  - accessibility-auditor        │    │
-│  │  - qa-reviewer                     │                                 │    │
-│  │  - code-review-agent               │                                 │    │
-│  │  - lessons-advisor                 │                                 │    │
+│  │  - qa                     │                                 │    │
+│  │  - review               │                                 │    │
+│  │  - lessons                 │                                 │    │
 │  │                                    │                                 │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 │                                                                              │
@@ -138,7 +138,7 @@ This document defines the operating model for all agents (internal and visiting)
 
 | Agent | Domain | Exclusive Permission |
 |-------|--------|---------------------|
-| `devops-governor` | CI/CD & Deployment | Execute deployments |
+| `ops` | CI/CD & Deployment | Execute deployments |
 
 ### Consultation Flow (Macro ↔ Micro)
 
@@ -254,13 +254,13 @@ Restricting execution would make visiting agents unable to verify their findings
 
 | Agent | Domain | Exclusive Permission | Entry Point |
 |-------|--------|---------------------|-------------|
-| devops-governor | CI/CD & Deployment | Execute deployments | `~/.claude/devops/manifest.yaml` |
+| ops | CI/CD & Deployment | Execute deployments | `~/.claude/devops/manifest.yaml` |
 
 ### Internal Agent List (Project Level - Micro)
 
-- solution_designer (MUST consult devops-governor for stack/deployment)
+- solution_designer (MUST consult ops for stack/deployment)
 - business_analyst (MUST verify devops approval before proceeding)
-- coding_agent (MUST request deployment via devops-governor)
+- coding_agent (MUST request deployment via ops)
 - qa_reviewer
 - code_review_agent
 - lessons_advisor
@@ -340,7 +340,7 @@ agent_routing:
       - "id_sequencing_protocol"
       - "output_format_requirements"
       - "priority_scale_for_domain"
-    prompt_location: "~/.claude/agents/visiting-agent-template.md"
+    prompt_location: "~/.claude/agents/visit.md"
     output_location: ".claude/remediation/{type}_review_YYYY-MM-DD.md"
     can_do:
       - "read all project files"
@@ -776,4 +776,4 @@ For full details on the original pain points and decision rationale, see git his
 **Related Documents**:
 - `~/.claude/docs/document_consistency.md`
 - `~/.claude/docs/artifact_convention.md`
-- `~/.claude/agents/visiting-agent-template.md`
+- `~/.claude/agents/visit.md`

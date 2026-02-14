@@ -2,7 +2,7 @@
 """
 Governance Hook: Verify DevOps approval exists before BA agent starts.
 
-Triggered by SubagentStart hook for business-analyst.
+Triggered by SubagentStart hook for ba.
 Checks that the solution envelope contains a devops_approval section.
 
 Exit codes:
@@ -50,7 +50,11 @@ def check_devops_approval(project_root: Path) -> tuple[bool, str]:
     if "devops_approval:" in content:
         return True, ""
 
-    # Also check for common variations
+    # Also check for common variations (including legacy "devops-governor" stamps)
+    if "approved_by: \"ops\"" in content:
+        return True, ""
+    if "approved_by: 'ops'" in content:
+        return True, ""
     if "approved_by: \"devops-governor\"" in content:
         return True, ""
     if "approved_by: 'devops-governor'" in content:
@@ -59,7 +63,7 @@ def check_devops_approval(project_root: Path) -> tuple[bool, str]:
     return False, (
         f"GOVERNANCE BLOCK: Solution envelope exists ({latest.name}) "
         f"but lacks DevOps approval.\n"
-        f"Solution Designer must consult devops-governor and obtain "
+        f"Solution Designer must consult ops and obtain "
         f"approval stamp before BA can proceed."
     )
 
@@ -71,7 +75,7 @@ def main():
         hook_input = {}
 
     agent_name = hook_input.get("agent_name", "unknown")
-    if agent_name != "business-analyst":
+    if agent_name != "ba":
         sys.exit(0)
 
     project_root = find_project_root()

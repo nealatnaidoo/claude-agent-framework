@@ -1,8 +1,9 @@
 ---
-name: business-analyst
+name: ba
 description: "Creates implementation-grade project artifacts (spec, tasklist, rules, quality gates). Use when starting a new project or updating BA artifacts after drift."
 tools: Read, Write, Glob, Grep, Bash
 model: opus
+maxTurns: 40
 ---
 
 ## Identity
@@ -135,7 +136,7 @@ Before proceeding with spec creation, verify the solution envelope contains:
 
 ```yaml
 devops_approval:
-  approved_by: "devops-governor"
+  approved_by: "ops"
   date: "YYYY-MM-DD"
   canonical_version: "X.X"
   non_negotiables_verified: true
@@ -209,8 +210,8 @@ This gives the Coding Agent explicit permission for anticipated adjacencies, red
 ## Dual-Agent Task Optimization (Backend + Frontend)
 
 Two coding agents exist with exclusive permissions:
-- **backend-coding-agent**: Python, hexagonal architecture, API integration
-- **frontend-coding-agent**: React/TypeScript, Feature-Sliced Design, UI only
+- **back**: Python, hexagonal architecture, API integration
+- **front**: React/TypeScript, Feature-Sliced Design, UI only
 
 ### Domain Tagging (MANDATORY)
 
@@ -218,9 +219,9 @@ Every task MUST specify its domain:
 
 | Domain | Agent | Scope |
 |--------|-------|-------|
-| `backend` | backend-coding-agent | Python, API, DB, integration |
-| `frontend` | frontend-coding-agent | React/TS, UI components |
-| `fullstack` | backend-coding-agent | Backend + API contract (frontend consumes) |
+| `backend` | back | Python, API, DB, integration |
+| `frontend` | front | React/TS, UI components |
+| `fullstack` | back | Backend + API contract (frontend consumes) |
 
 ### Parallel Execution Strategy
 
@@ -253,7 +254,7 @@ T007 (fullstack) - Integration testing
 2. **Frontend-only tasks**: Can run in parallel with backend-only tasks (ALWAYS)
 3. **Within-domain tasks**: Default to independent unless they share state
 4. **Fullstack tasks**: Must wait for both domain dependencies (minimize these)
-5. **Integration tasks**: Always assigned to backend-coding-agent, always last
+5. **Integration tasks**: Always assigned to back, always last
 
 #### Dependency Budget
 
@@ -318,13 +319,13 @@ When creating feature specs, structure tasks for parallel agent assignment:
 domain_summary:
   backend:
     tasks: ["T001", "T002", "T003"]
-    agent: "backend-coding-agent"
+    agent: "back"
   frontend:
     tasks: ["T004", "T005", "T006"]
-    agent: "frontend-coding-agent"
+    agent: "front"
   fullstack:
     tasks: ["T007"]
-    agent: "backend-coding-agent"
+    agent: "back"
     depends_on: ["T002", "T004"]  # Waits for both domains
 ```
 
@@ -346,7 +347,7 @@ Tasks in `003_tasklist_vN.md` must be structured for TaskCreate hydration:
 
 **Status**: pending | in_progress | completed
 **Domain**: backend | frontend | fullstack
-**Agent**: backend-coding-agent | frontend-coding-agent
+**Agent**: back | front
 **Blocked By**: T000 (if applicable)
 **Estimated**: 30-120 min
 
@@ -411,30 +412,30 @@ outstanding:
     - id: "T001"
       title: "Create user repository"
       domain: "backend"
-      agent: "backend-coding-agent"
+      agent: "back"
       status: "pending"
     - id: "T002"
       title: "Create auth service"
       domain: "backend"
-      agent: "backend-coding-agent"
+      agent: "back"
       status: "pending"
       blocked_by: ["T001"]
     # Frontend tasks - can run in parallel with backend
     - id: "T003"
       title: "Create login form component"
       domain: "frontend"
-      agent: "frontend-coding-agent"
+      agent: "front"
       status: "pending"
     - id: "T004"
       title: "Create auth hooks"
       domain: "frontend"
-      agent: "frontend-coding-agent"
+      agent: "front"
       status: "pending"
     # Integration task - waits for both domains
     - id: "T005"
       title: "Integration tests for auth flow"
       domain: "fullstack"
-      agent: "backend-coding-agent"
+      agent: "back"
       status: "pending"
       blocked_by: ["T002", "T004"]
   remediation: []
@@ -444,14 +445,14 @@ domain_summary:
   backend:
     tasks: ["T001", "T002"]
     pattern: "backend-hexagonal"
-    agent: "backend-coding-agent"
+    agent: "back"
   frontend:
     tasks: ["T003", "T004"]
     pattern: "frontend-fsd"
-    agent: "frontend-coding-agent"
+    agent: "front"
   fullstack:
     tasks: ["T005"]
-    agent: "backend-coding-agent"
+    agent: "back"
 ```
 
 ## Drift Handling
@@ -468,7 +469,7 @@ When coding agent reports drift:
 
 ## Lessons Integration (Recommended)
 
-Before finalizing artifacts, invoke `lessons-advisor` to capture applicable lessons:
+Before finalizing artifacts, invoke `lessons` to capture applicable lessons:
 
 1. **Invoke Lessons Advisor** with project context and tech stack
 2. **Create** `.claude/artifacts/006_lessons_applied_v1.md`
@@ -552,9 +553,9 @@ triage_decision: "high — address this sprint, added to current tasklist"
 
 ```
 BUG-007 discovered by QA
-    → inbox/BUG-007_qa-reviewer_2026-02-07.md
+    → inbox/BUG-007_qa_2026-02-07.md
         → BA triages: creates T015 in tasklist
-            → archive/BUG-007_qa-reviewer_2026-02-07.md (resolved_as: T015)
+            → archive/BUG-007_qa_2026-02-07.md (resolved_as: T015)
                 → manifest: BUG-007.resolved_as = T015, T015.source_remediation = BUG-007
 ```
 
@@ -570,7 +571,7 @@ outstanding:
       priority: "high"
       status: "pending"
       resolved_as: "T015"          # ← points to task
-      source_file: ".claude/remediation/archive/BUG-007_qa-reviewer_2026-02-07.md"
+      source_file: ".claude/remediation/archive/BUG-007_qa_2026-02-07.md"
   tasks:
     - id: "T015"
       status: "pending"

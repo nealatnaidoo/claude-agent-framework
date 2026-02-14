@@ -71,7 +71,7 @@ Use the Task tool to launch the QA reviewer:
 
 ```
 Task(
-  subagent_type: "qa-reviewer",
+  subagent_type: "qa",
   prompt: "Review recent code changes. Evidence is at .claude/evidence/quality_gates_run.json. {task context if --task provided}",
   run_in_background: true if --background
 )

@@ -3,7 +3,7 @@
 Governance Hook: Manage deployment gate file based on active agent.
 
 Triggered by SubagentStart for ALL agents (matcher: ".*").
-Creates .deploy_gate when devops-governor starts, deletes it for all others.
+Creates .deploy_gate when ops starts, deletes it for all others.
 
 This hook NEVER blocks agent starts (always exits 0).
 
@@ -43,9 +43,9 @@ def main():
 
     gate_file = project_root / ".claude" / ".deploy_gate"
 
-    if agent_name == "devops-governor":
+    if agent_name == "ops":
         gate_data = {
-            "agent": "devops-governor",
+            "agent": "ops",
             "created_at": datetime.now(timezone.utc).isoformat(),
             "session_id": hook_input.get("session_id", ""),
         }

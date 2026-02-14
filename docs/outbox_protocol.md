@@ -46,7 +46,7 @@ Claude Code (commissioner)          External Agent (executor)
     rejected/                   # Tasks the external agent could not fulfil
 ```
 
-All four subdirectories MUST exist. The `project-initializer` agent creates them during scaffold.
+All four subdirectories MUST exist. The `init` agent creates them during scaffold.
 
 ---
 
@@ -77,7 +77,7 @@ Examples:
 id: "OBX-001"
 created: "2026-02-11T14:30:00Z"
 project_slug: "risk_engine"
-commissioner: "backend-coding-agent"
+commissioner: "back"
 task_type: "research"
 priority: "normal"
 status: "pending"
@@ -296,13 +296,13 @@ Outbox IDs follow the same project-global, never-reused pattern as BUG/IMPROVE I
 
 | Agent | Can Commission | Typical Task Types |
 |-------|---------------|-------------------|
-| `backend-coding-agent` | Yes | research, validation |
-| `frontend-coding-agent` | Yes | research, validation |
-| `solution-designer` | Yes | research, analysis |
-| `business-analyst` | Yes | data_gathering, research |
-| `qa-reviewer` | No | — |
-| `code-review-agent` | No | — |
-| `devops-governor` | Yes | validation, analysis |
+| `back` | Yes | research, validation |
+| `front` | Yes | research, validation |
+| `design` | Yes | research, analysis |
+| `ba` | Yes | data_gathering, research |
+| `qa` | No | — |
+| `review` | No | — |
+| `ops` | Yes | validation, analysis |
 
 QA and Code Review agents do not commission outbox tasks — they operate on existing project state only.
 
@@ -349,7 +349,7 @@ outbox:
     - id: "OBX-001"
       task_type: "research"
       status: "completed"
-      commissioner: "backend-coding-agent"
+      commissioner: "back"
       created: "2026-02-11T14:30:00Z"
       completed: "2026-02-11T16:00:00Z"
       delivery_file: ".claude/remediation/inbox/OBX-001_external_research_2026-02-11.md"

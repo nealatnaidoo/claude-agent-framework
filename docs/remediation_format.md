@@ -297,7 +297,7 @@ source: "external_research"
 severity: "low"
 created: "2026-02-11T16:00:00Z"
 context: "Research VaR calculation library options"
-commissioned_by: "backend-coding-agent"
+commissioned_by: "back"
 task_type: "research"
 delivery_format: "yaml"
 ---

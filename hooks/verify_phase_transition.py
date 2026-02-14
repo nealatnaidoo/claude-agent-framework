@@ -12,40 +12,41 @@ Exit codes:
 
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Which agents are allowed in which phases
 PHASE_AGENT_MAP = {
-    "initialized": ["project-initializer", "persona-evaluator"],
-    "solution_design": ["solution-designer", "lessons-advisor"],
-    "ba": ["business-analyst", "lessons-advisor"],
+    "initialized": ["init", "persona"],
+    "solution_design": ["design", "lessons"],
+    "ba": ["ba", "lessons"],
     "coding": [
-        "backend-coding-agent",
-        "frontend-coding-agent",
-        "lessons-advisor",
-        "qa-reviewer",
+        "back",
+        "front",
+        "lessons",
+        "qa",
     ],
     "fast_track": [
-        "backend-coding-agent",
-        "frontend-coding-agent",
-        "qa-reviewer",
+        "back",
+        "front",
+        "qa",
     ],
-    "qa": ["qa-reviewer"],
-    "code_review": ["code-review-agent"],
+    "qa": ["qa"],
+    "code_review": ["review"],
     "remediation": [
-        "backend-coding-agent",
-        "frontend-coding-agent",
+        "back",
+        "front",
     ],
-    "complete": ["devops-governor"],
+    "complete": ["ops"],
     "paused": [],
 }
 
 # Agents that can run in ANY phase (not phase-restricted)
 UNRESTRICTED_AGENTS = [
-    "devops-governor",
-    "compliance-verifier",
-    "lessons-advisor",
-    "project-initializer",
+    "ops",
+    "audit",
+    "lessons",
+    "init",
 ]
 
 
@@ -59,6 +60,34 @@ def find_project_root() -> Path | None:
         if parent == Path.home():
             break
     return None
+
+
+def find_claude_dir() -> Path | None:
+    """Walk up from cwd looking for any .claude/ directory (not requiring manifest)."""
+    current = Path.cwd()
+    for parent in [current, *current.parents]:
+        claude_dir = parent / ".claude"
+        if claude_dir.is_dir():
+            return claude_dir
+        if parent == Path.home():
+            break
+    return None
+
+
+def check_lost_lamb(claude_dir: Path) -> bool:
+    """Check if a valid (non-expired) .lost_lamb exception exists."""
+    lost_lamb = claude_dir / ".lost_lamb"
+    if not lost_lamb.exists():
+        return False
+    try:
+        data = json.loads(lost_lamb.read_text())
+        created_str = data.get("created_at", "")
+        created_at = datetime.fromisoformat(created_str.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        elapsed = (now - created_at).total_seconds()
+        return elapsed < 86400  # 24 hours
+    except (json.JSONDecodeError, ValueError, KeyError, TypeError):
+        return False
 
 
 def read_phase(project_root: Path) -> str | None:
@@ -90,8 +119,22 @@ def main():
 
     project_root = find_project_root()
     if project_root is None:
-        # Not in a project context - allow
-        sys.exit(0)
+        # No manifest found — check for lost_lamb exception
+        claude_dir = find_claude_dir()
+        if claude_dir and check_lost_lamb(claude_dir):
+            sys.exit(0)  # Valid exception, allow
+        # No manifest and no valid exception — block
+        error_msg = (
+            f"GOVERNANCE BLOCK: {agent_name} cannot run without a project manifest.\n"
+            "No .claude/manifest.yaml found in any parent directory.\n"
+            "\n"
+            "Options:\n"
+            "  1. Run init to scaffold governance\n"
+            "  2. Use /lost-lamb for a 24hr ad-hoc exception\n"
+            "  3. Use /broken-arrow to retrofit governance on an existing project"
+        )
+        print(json.dumps({"result": "block", "reason": error_msg}))
+        sys.exit(1)
 
     phase = read_phase(project_root)
     if phase is None:

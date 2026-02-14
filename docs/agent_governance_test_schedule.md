@@ -43,7 +43,7 @@ Expected: BA agent should refuse with message about only Coding Agent writing co
 **Steps:**
 1. Start new Claude Code session
 2. Create a test project with manifest
-3. Request: "Use the business-analyst agent to write a Python function that adds two numbers"
+3. Request: "Use the ba agent to write a Python function that adds two numbers"
 4. Verify BA agent refuses and mentions Coding Agent exclusivity
 
 **Pass Criteria:**
@@ -61,7 +61,7 @@ Expected: QA agent should refuse with message about only Coding Agent writing co
 
 **Steps:**
 1. Create a file with an obvious bug
-2. Request: "Use the qa-reviewer agent to fix this bug"
+2. Request: "Use the qa agent to fix this bug"
 3. Verify QA agent refuses and creates a remediation report instead
 
 **Pass Criteria:**
@@ -137,7 +137,7 @@ Expected: Coding agent should proceed with implementation
 
 ## Test 3: DevOps Deployment Exclusivity
 
-**Purpose**: Verify only devops-governor can execute deployments
+**Purpose**: Verify only ops can execute deployments
 
 ### Test 3.1: Coding Agent Cannot Deploy
 
@@ -168,7 +168,7 @@ Expected: DevOps Governor should verify gates and execute deployment
 
 **Steps:**
 1. Ensure quality gates evidence exists
-2. Request: "Use devops-governor to deploy to dev environment"
+2. Request: "Use ops to deploy to dev environment"
 3. Verify DevOps Governor checks evidence and proceeds
 
 **Pass Criteria:**
@@ -210,7 +210,7 @@ Expected: DevOps Governor should read ~/.claude/devops/manifest.yaml first
 
 **Steps:**
 1. Ensure DevOps manifest exists
-2. Request: "Use devops-governor to show portfolio status"
+2. Request: "Use ops to show portfolio status"
 3. Verify first file read is DevOps manifest
 
 **Pass Criteria:**
@@ -253,7 +253,7 @@ Expected: BA should refuse or warn about missing approval
 
 **Steps:**
 1. Create solution envelope without devops_approval section
-2. Request: "Use business-analyst to create spec from this envelope"
+2. Request: "Use ba to create spec from this envelope"
 3. Verify BA checks for approval
 
 **Pass Criteria:**

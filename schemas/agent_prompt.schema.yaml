@@ -111,7 +111,7 @@ conditional_requirements:
   if_internal_agent:
     identity_must_include:
       - "INTERNAL agent"
-      - "core development workflow" # OR "MACRO" for devops-governor
+      - "core development workflow" # OR "MACRO" for ops
     permissions:
       # EXCLUSIVE PERMISSIONS - only one agent per capability
       exclusive_permissions:

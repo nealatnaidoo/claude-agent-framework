@@ -83,7 +83,7 @@ The prompt MUST include these sections:
 
 You are a **visiting {role}** agent. You can READ and ANALYZE everything, but you CANNOT modify source code, mark tasks, or change workflow state.
 
-**Reference**: `~/.claude/agents/visiting-agent-template.md` (full protocol)
+**Reference**: `~/.claude/agents/visit.md` (full protocol)
 
 ---
 
@@ -255,7 +255,7 @@ After writing the file, display:
 
 ## Reference
 
-Full visiting agent protocol: `~/.claude/agents/visiting-agent-template.md`
+Full visiting agent protocol: `~/.claude/agents/visit.md`
 Agent governance: `~/.claude/docs/agent_governance.md`
 Remediation format: `~/.claude/docs/remediation_format.md`
 

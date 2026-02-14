@@ -3,7 +3,7 @@
   "records": [
     {
       "component_type": "agents",
-      "component_name": "lessons-advisor",
+      "component_name": "lessons",
       "file_path": "agents/lessons-advisor.md",
       "checksum": "2a7f756652199dc2",
       "version": "1.0.0",
@@ -15,7 +15,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "code-review-agent",
+      "component_name": "review",
       "file_path": "agents/code-review-agent.md",
       "checksum": "ba1d6788d2a3fe73",
       "version": "1.0.0",
@@ -27,7 +27,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "visiting-agent-template",
+      "component_name": "visit",
       "file_path": "agents/visiting-agent-template.md",
       "checksum": "78093e96458b4cfc",
       "version": "1.0.0",
@@ -39,7 +39,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "business-analyst",
+      "component_name": "ba",
       "file_path": "agents/business-analyst.md",
       "checksum": "7e48a18e4bba0016",
       "version": "1.0.0",
@@ -63,7 +63,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "solution-designer",
+      "component_name": "design",
       "file_path": "agents/solution-designer.md",
       "checksum": "03ce591b1c7fa6d3",
       "version": "1.0.0",
@@ -75,7 +75,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "qa-reviewer",
+      "component_name": "qa",
       "file_path": "agents/qa-reviewer.md",
       "checksum": "64bac99e631d3edd",
       "version": "1.0.0",
@@ -87,7 +87,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "devops-governor",
+      "component_name": "ops",
       "file_path": "agents/devops-governor.md",
       "checksum": "6a1a679c481aa283",
       "version": "1.0.0",
@@ -495,7 +495,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "code-review-agent",
+      "component_name": "review",
       "file_path": "agents/code-review-agent.md",
       "checksum": "f73a4f27e0e663eb",
       "version": "1.0.1",
@@ -507,7 +507,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "persona-evaluator",
+      "component_name": "persona",
       "file_path": "agents/persona-evaluator.md",
       "checksum": "8f9e834d23be1462",
       "version": "1.0.0",
@@ -519,7 +519,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "solution-designer",
+      "component_name": "design",
       "file_path": "agents/solution-designer.md",
       "checksum": "fa8f2f487c4d2a1d",
       "version": "1.0.1",
@@ -531,7 +531,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "qa-reviewer",
+      "component_name": "qa",
       "file_path": "agents/qa-reviewer.md",
       "checksum": "523e65e927880094",
       "version": "1.0.1",
@@ -555,7 +555,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "business-analyst",
+      "component_name": "ba",
       "file_path": "agents/business-analyst.md",
       "checksum": "600a22583961ef6e",
       "version": "1.0.1",
@@ -567,7 +567,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "solution-designer",
+      "component_name": "design",
       "file_path": "agents/solution-designer.md",
       "checksum": "ed6d38be409874ab",
       "version": "1.0.2",
@@ -579,7 +579,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "code-review-agent",
+      "component_name": "review",
       "file_path": "agents/code-review-agent.md",
       "checksum": "6581b35f967b9461",
       "version": "1.0.2",
@@ -591,7 +591,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "frontend-coding-agent",
+      "component_name": "front",
       "file_path": "agents/frontend-coding-agent.md",
       "checksum": "3de45c43cb2a6638",
       "version": "1.0.0",
@@ -603,7 +603,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "backend-coding-agent",
+      "component_name": "back",
       "file_path": "agents/backend-coding-agent.md",
       "checksum": "24e8146cb7ab4e59",
       "version": "1.0.0",
@@ -615,7 +615,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "qa-reviewer",
+      "component_name": "qa",
       "file_path": "agents/qa-reviewer.md",
       "checksum": "197b88cb7ae38080",
       "version": "1.0.2",
@@ -639,7 +639,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "code-review-agent",
+      "component_name": "review",
       "file_path": "agents/code-review-agent.md",
       "checksum": "3fcd9418b8f1a679",
       "version": "1.0.3",
@@ -651,7 +651,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "business-analyst",
+      "component_name": "ba",
       "file_path": "agents/business-analyst.md",
       "checksum": "45f5b361585f54fe",
       "version": "1.0.2",
@@ -663,7 +663,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "solution-designer",
+      "component_name": "design",
       "file_path": "agents/solution-designer.md",
       "checksum": "a1933c9a30444464",
       "version": "1.0.3",
@@ -675,7 +675,7 @@
     },
     {
       "component_type": "agents",
-      "component_name": "qa-reviewer",
+      "component_name": "qa",
       "file_path": "agents/qa-reviewer.md",
       "checksum": "510851c31140d274",
       "version": "1.0.3",

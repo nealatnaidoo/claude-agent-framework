@@ -8,7 +8,7 @@
 id: "OBX-XXX"                         # Replace XXX with next sequential ID
 created: "YYYY-MM-DDTHH:MM:SSZ"       # ISO 8601 timestamp
 project_slug: "your_project"          # From manifest.yaml
-commissioner: "backend-coding-agent"   # Agent placing this task
+commissioner: "back"   # Agent placing this task
 task_type: "research"                  # research | data_gathering | analysis | validation
 priority: "normal"                     # urgent | normal | low
 status: "pending"                      # Always "pending" when creating

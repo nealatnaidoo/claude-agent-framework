@@ -125,9 +125,9 @@ class BaselineVerifier:
 
 # Framework files to monitor (when used as CLI script)
 FRAMEWORK_FILES = [
-    Path.home() / ".claude/agents/backend-coding-agent.md",
-    Path.home() / ".claude/agents/frontend-coding-agent.md",
-    Path.home() / ".claude/agents/business-analyst.md",
+    Path.home() / ".claude/agents/back.md",
+    Path.home() / ".claude/agents/front.md",
+    Path.home() / ".claude/agents/ba.md",
     Path.home() / ".claude/prompts/system/coding_system_prompt_v4_0_hex_tdd_8k.md",
     Path.home() / ".claude/prompts/playbooks/coding_playbook_v4_0.md",
     Path.home() / ".claude/settings.local.json",

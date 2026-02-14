@@ -17,40 +17,40 @@ scripts:
     path: "scripts/validate_agents.py"
     description: "Validate agent prompts against schema and governance rules"
     usage: "python scripts/validate_agents.py [agent.md]"
-    used_by: [devops-governor, qa-reviewer]
+    used_by: [ops, qa]
 
   version_tracker:
     path: "scripts/version_tracker.py"
     description: "Track agent and artifact version changes with bi-temporal history"
     usage: "python scripts/version_tracker.py scan|diff|history"
-    used_by: [devops-governor]
+    used_by: [ops]
 
   # --- Dependency & Impact ---
   dependency_graph:
     path: "scripts/dependency_graph.py"
     description: "Visualize agent dependency graph"
     usage: "python scripts/dependency_graph.py [--format dot|json|text]"
-    used_by: [devops-governor, solution-designer]
+    used_by: [ops, design]
 
   impact_analysis:
     path: "scripts/impact_analysis.py"
     description: "Analyze impact of changes to agents or patterns"
     usage: "python scripts/impact_analysis.py --agent agent-name"
-    used_by: [devops-governor]
+    used_by: [ops]
 
   # --- Agent Management ---
   new_agent:
     path: "scripts/new_agent.py"
     description: "Create new agent from template with validation"
     usage: "python scripts/new_agent.py --name my-agent --scope micro"
-    used_by: [devops-governor]
+    used_by: [ops]
 
   # --- Deployment & Docker ---
   local_docker_validate:
     path: "scripts/local_docker_validate.sh"
     description: "Validate Docker build and health check locally before deployment"
     usage: "./scripts/local_docker_validate.sh --port 8080 --health /health --timeout 30"
-    used_by: [devops-governor]
+    used_by: [ops]
     decision_ref: "DEC-DEVOPS-006"
     evidence_output: ".claude/evidence/local_docker_validation.json"
 
@@ -59,7 +59,7 @@ scripts:
     path: "scripts/worktree_manager.sh"
     description: "Manage git worktrees for parallel development"
     usage: "./scripts/worktree_manager.sh create|list|sync|remove"
-    used_by: [business-analyst, backend-coding-agent, frontend-coding-agent]
+    used_by: [ba, back, front]
     commands:
       - create: "Create new worktree for feature"
       - list: "List active worktrees"
@@ -92,7 +92,7 @@ scripts:
     path: "scripts/migrate_to_claude_folder.sh"
     description: "Migrate project artifacts to .claude/ folder structure"
     usage: "./scripts/migrate_to_claude_folder.sh [project_slug]"
-    used_by: [business-analyst]
+    used_by: [ba]
 
 # ============================================================================
 # EXTERNAL PACKAGED TOOLS (installed separately)
@@ -114,7 +114,7 @@ packages:
       consistency: "Verify FK integrity and referential consistency"
       detect-pii: "Scan for PII in database tables"
       audit: "Manage and verify audit logs"
-    used_by: [devops-governor]
+    used_by: [ops]
     gates_implemented:
       - NN-DB-1  # Pre-migration schema drift
       - NN-DB-2  # Post-migration FK integrity

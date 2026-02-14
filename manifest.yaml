@@ -7,78 +7,78 @@ description: "Multi-agent development ecosystem for Claude Code"
 
 # Agent definitions with dependencies
 agents:
-  persona-evaluator:
+  persona:
     version: "1.0.0"
-    file: "agents/persona-evaluator.md"
+    file: "agents/persona.md"
     scope: micro
     exclusive_permission: define_user_journeys
     depends_on: []
-    depended_by: [solution-designer]
+    depended_by: [design]
 
-  devops-governor:
+  ops:
     version: "1.1.0"
-    file: "agents/devops-governor.md"
+    file: "agents/ops.md"
     scope: macro
     exclusive_permission: execute_deployments
     depends_on: []
-    depended_by: [solution-designer, business-analyst, backend-coding-agent, frontend-coding-agent]
+    depended_by: [design, ba, back, front]
     tools_managed:
       - db-harness  # Database gates (NN-DB-1 through NN-DB-4)
 
-  solution-designer:
+  design:
     version: "2.3.0"
-    file: "agents/solution-designer.md"
+    file: "agents/design.md"
     scope: micro
-    depends_on: [persona-evaluator, devops-governor]
-    depended_by: [business-analyst]
+    depends_on: [persona, ops]
+    depended_by: [ba]
 
-  business-analyst:
+  ba:
     version: "4.2.0"
-    file: "agents/business-analyst.md"
+    file: "agents/ba.md"
     scope: micro
-    depends_on: [solution-designer, devops-governor]
-    depended_by: [backend-coding-agent, frontend-coding-agent]
+    depends_on: [design, ops]
+    depended_by: [back, front]
 
-  backend-coding-agent:
+  back:
     version: "1.0.0"
-    file: "agents/backend-coding-agent.md"
+    file: "agents/back.md"
     scope: micro
     exclusive_permission: write_backend_code
-    depends_on: [business-analyst]
-    depended_by: [qa-reviewer, code-review-agent]
+    depends_on: [ba]
+    depended_by: [qa, review]
 
-  frontend-coding-agent:
+  front:
     version: "1.0.0"
-    file: "agents/frontend-coding-agent.md"
+    file: "agents/front.md"
     scope: micro
     exclusive_permission: write_frontend_code
-    depends_on: [business-analyst]
-    depended_by: [qa-reviewer, code-review-agent]
+    depends_on: [ba]
+    depended_by: [qa, review]
 
-  qa-reviewer:
+  qa:
     version: "2.3.0"
-    file: "agents/qa-reviewer.md"
+    file: "agents/qa.md"
     scope: micro
-    depends_on: [backend-coding-agent, frontend-coding-agent]
-    depended_by: [code-review-agent]
+    depends_on: [back, front]
+    depended_by: [review]
 
-  code-review-agent:
+  review:
     version: "2.3.0"
-    file: "agents/code-review-agent.md"
+    file: "agents/review.md"
     scope: micro
-    depends_on: [qa-reviewer, backend-coding-agent, frontend-coding-agent]
-    depended_by: [lessons-advisor]
+    depends_on: [qa, back, front]
+    depended_by: [lessons]
 
-  lessons-advisor:
+  lessons:
     version: "2.0.0"
-    file: "agents/lessons-advisor.md"
+    file: "agents/lessons.md"
     scope: micro
     depends_on: []
     depended_by: []
 
-  visiting-agent-template:
+  visit:
     version: "1.0.0"
-    file: "agents/visiting-agent-template.md"
+    file: "agents/visit.md"
     scope: template
     depends_on: []
     depended_by: []
@@ -222,7 +222,7 @@ patterns:
 
 # Exclusive permissions map (for governance validation)
 exclusive_permissions:
-  write_backend_code: backend-coding-agent
-  write_frontend_code: frontend-coding-agent
-  execute_deployments: devops-governor
-  define_user_journeys: persona-evaluator
+  write_backend_code: back
+  write_frontend_code: front
+  execute_deployments: ops
+  define_user_journeys: persona

@@ -1,13 +1,14 @@
 ---
-name: project-initializer
+name: init
 description: "Initialize new projects with .claude/ folder structure, manifest skeleton, and baseline configs. The FIRST agent invoked for any new project."
 tools: Read, Write, Glob, Grep, Bash
 model: haiku
 scope: micro
 depends_on: []
-depended_by: [persona-evaluator, solution-designer, business-analyst]
+depended_by: [persona, design, ba]
 version: 1.0.0
 created: 2026-02-06
+maxTurns: 20
 ---
 
 ## Identity
@@ -39,9 +40,16 @@ You prepare a project for the agent lifecycle by creating the `.claude/` folder 
 - **Legacy migration**: Project has old-style spec file at root (pre-.claude/ convention)
 - **Reset**: User requests a fresh project scaffold
 
+## Manifest-First Restart Protocol
+
+After context compress or session restart:
+1. **Read `.claude/manifest.yaml` FIRST** - single source of truth
+2. Check current `phase` - if already past "initialized", report state only
+3. Check for missing folders/files and fill gaps without overwriting
+
 ## Startup Protocol
 
-1. **Check if `.claude/` exists**: If yes, read manifest and report current state
+1. **Read manifest first** if `.claude/manifest.yaml` exists (see above)
 2. **If `.claude/` missing**: Create full structure (see below)
 3. **If partial**: Fill in missing pieces without overwriting existing files
 
@@ -49,6 +57,12 @@ You prepare a project for the agent lifecycle by creating the `.claude/` folder 
 
 ```
 {project}/
+├── .agent/                              # Google Antigravity skills
+│   └── skills/
+│       └── outbox-poller/
+│           ├── SKILL.md                 # External agent task polling skill
+│           └── scripts/
+│               └── check_outbox.sh      # Helper script to scan pending tasks
 ├── .claude/
 │   ├── manifest.yaml              # Restart checkpoint (SINGLE SOURCE OF TRUTH)
 │   ├── artifacts/                  # Sequenced, versioned BA artifacts (empty)
@@ -150,6 +164,14 @@ Consolidated tracker for BUG and IMPROVE items across all reviews.
 (none)
 ```
 
+## Antigravity Outbox Poller Skill
+
+Create `.agent/skills/outbox-poller/SKILL.md` by copying from `~/.claude/examples/antigravity-skill/outbox-poller/SKILL.md`.
+
+Create `.agent/skills/outbox-poller/scripts/check_outbox.sh` by copying from `~/.claude/examples/antigravity-skill/outbox-poller/scripts/check_outbox.sh`. Ensure it is executable (`chmod +x`).
+
+This enables Google Antigravity (or any compatible external agent) to poll the project's outbox for commissioned tasks by saying "check outbox". See `~/.claude/docs/outbox_protocol.md` for the full protocol.
+
 ## Detection Logic
 
 ### Project Slug
@@ -176,7 +198,7 @@ If `.claude/manifest.yaml` already exists:
 
 After initialization:
 - Set `phase: "initialized"`
-- Next step: Invoke `persona-evaluator` to define user journeys
+- Next step: Invoke `persona` to define user journeys
 
 ## Output
 
@@ -189,6 +211,8 @@ Report what was created:
 **Location**: {project_root}/.claude/
 
 ### Created
+- [ ] .agent/skills/outbox-poller/SKILL.md
+- [ ] .agent/skills/outbox-poller/scripts/check_outbox.sh
 - [ ] manifest.yaml (schema v1.4)
 - [ ] artifacts/ directory
 - [ ] evolution/evolution.md
@@ -204,7 +228,7 @@ Report what was created:
 - [ ] evidence/ directory
 
 ### Next Step
-Invoke `persona-evaluator` to define user journeys, then `solution-designer` to create the solution envelope.
+Invoke `persona` to define user journeys, then `design` to create the solution envelope.
 ```
 
 ## Prime Directive Alignment

@@ -883,7 +883,7 @@ examples:
         must_comply:
           - "id_sequencing_protocol"
           - "output_format_requirements"
-        prompt_location: "~/.claude/agents/visiting-agent-template.md"
+        prompt_location: "~/.claude/agents/visit.md"
         output_location: ".claude/remediation/{type}_review_YYYY-MM-DD.md"
         can_do:
           - "read all project files"
@@ -990,7 +990,7 @@ examples:
           task_type: "research"
           status: "completed"
           priority: "normal"
-          commissioner: "backend-coding-agent"
+          commissioner: "back"
           created: "2026-02-11T14:30:00Z"
           completed: "2026-02-11T16:00:00Z"
           delivery_file: ".claude/remediation/inbox/OBX-001_external_research_2026-02-11.md"

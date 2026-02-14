@@ -2,7 +2,7 @@
 
 **Date**: YYYY-MM-DD
 **Version**: {framework_version}
-**Verifier**: compliance-verifier v1.0.0
+**Verifier**: audit v1.0.0
 
 ## Executive Summary
 
@@ -27,8 +27,8 @@
 ### Checks Performed
 | Agent | Prime Directive Reference | Evidence Requirements | Manifest Update |
 |-------|--------------------------|----------------------|-----------------|
-| backend-coding-agent | PASS/FAIL | PASS/FAIL | PASS/FAIL |
-| qa-reviewer | PASS/FAIL | PASS/FAIL | PASS/FAIL |
+| back | PASS/FAIL | PASS/FAIL | PASS/FAIL |
+| qa | PASS/FAIL | PASS/FAIL | PASS/FAIL |
 | ... | ... | ... | ... |
 
 ### Failures
@@ -44,14 +44,14 @@
 ### Coding Restriction Verification
 | Agent | Has Restriction | Restriction Text |
 |-------|-----------------|------------------|
-| business-analyst | PASS/FAIL | "{text}" |
-| qa-reviewer | PASS/FAIL | "{text}" |
+| ba | PASS/FAIL | "{text}" |
+| qa | PASS/FAIL | "{text}" |
 | ... | ... | ... |
 
 ### Deployment Restriction Verification
 | Agent | Has Restriction | Restriction Text |
 |-------|-----------------|------------------|
-| backend-coding-agent | PASS/FAIL | "{text}" |
+| back | PASS/FAIL | "{text}" |
 | ... | ... | ... |
 
 ### Failures
@@ -64,7 +64,7 @@
 ### Startup Protocol Verification
 | Agent | Has Protocol | First Action |
 |-------|--------------|--------------|
-| backend-coding-agent | PASS/FAIL | "Read manifest" |
+| back | PASS/FAIL | "Read manifest" |
 | ... | ... | ... |
 
 ### Hardcoded Path Check
@@ -90,8 +90,8 @@
 ### Agents Creating IDs
 | Agent | Has Protocol | Search Step | Increment Step |
 |-------|--------------|-------------|----------------|
-| qa-reviewer | PASS/FAIL | PASS/FAIL | PASS/FAIL |
-| code-review-agent | PASS/FAIL | PASS/FAIL | PASS/FAIL |
+| qa | PASS/FAIL | PASS/FAIL | PASS/FAIL |
+| review | PASS/FAIL | PASS/FAIL | PASS/FAIL |
 
 ---
 
@@ -200,5 +200,5 @@ grep -r "ID Sequencing" ~/.claude/agents/
 - [ ] Simulation exercises pass
 - [ ] Ready for production use
 
-**Verified By**: compliance-verifier
+**Verified By**: audit
 **Date**: YYYY-MM-DD

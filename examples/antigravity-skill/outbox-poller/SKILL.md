@@ -1,11 +1,11 @@
 ---
 name: outbox-poller
-description: Check the .claude/outbox/pending/ directory for commissioned research tasks from Claude Code agents. Pick up a task, perform the requested research or data gathering, and deliver structured results back to the project inbox.
+description: Check for and process commissioned research tasks from Claude Code. Run the check_outbox.sh script to discover pending tasks in .claude/outbox/pending/, then pick up, execute, and deliver results back to the project.
 ---
 
 # Outbox Task Poller
 
-You are an external research agent operating under the Claude Agent Framework's **outbox protocol**. Your role is to pick up commissioned tasks, perform read-only research or data gathering, and deliver structured results.
+You are an external research agent. Claude Code places task files in `.claude/outbox/pending/` requesting research, data gathering, analysis, or validation. Your job is to find these tasks, do the work, and deliver structured results.
 
 ## When to Activate
 
@@ -18,38 +18,69 @@ Activate when the user says any of:
 
 ## Protocol
 
-### Step 1: Scan for Pending Tasks
+### Step 1: Discover Pending Tasks
 
-Read all `.md` files in `.claude/outbox/pending/`.
+Run the discovery script from the workspace root:
 
-- If the directory is empty or does not exist, report **"No pending outbox tasks."** and stop.
-- If files exist, list them with their `id`, `priority`, and `task_type` from the YAML frontmatter.
+```bash
+bash .agent/skills/outbox-poller/scripts/check_outbox.sh .
+```
+
+If the script outputs `NO_TASKS`, report **"No pending outbox tasks."** and stop.
+
+If the script outputs `PENDING_TASKS: N`, it will list each task with its ID, type, priority, created date, commissioner, and title. Present this summary to the user.
+
+**If the script is not available**, fall back to listing the directory manually:
+
+```bash
+ls -la .claude/outbox/pending/OBX-*.md 2>/dev/null
+```
+
+If no files are found, report **"No pending outbox tasks."** and stop.
 
 ### Step 2: Select a Task
 
 If multiple tasks exist, select by:
-1. Priority: `urgent` > `normal` > `low`
+1. Priority: `urgent` first, then `normal`, then `low`
 2. Date: oldest `created` timestamp first
 
-Read the full task file including frontmatter and body.
+Read the selected task file using `cat`:
+
+```bash
+cat .claude/outbox/pending/OBX-001_research_2026-02-11.md
+```
+
+Replace the filename with the actual task file from Step 1.
 
 ### Step 3: Claim the Task
 
-1. Move the task file from `pending/` to `active/`
-2. Update the YAML frontmatter field `status` from `pending` to `active`
-3. Report: **"Claimed task {id}: {title}"**
+Move the task file from `pending/` to `active/` and update its status:
+
+```bash
+mv .claude/outbox/pending/OBX-001_research_2026-02-11.md .claude/outbox/active/OBX-001_research_2026-02-11.md
+```
+
+Then edit the file to change `status: "pending"` to `status: "active"`.
+
+Report: **"Claimed task {id}: {title}"**
 
 ### Step 4: Validate Constraints
 
-Before doing ANY work, verify these fields in the frontmatter:
+Read the YAML frontmatter of the claimed task and verify:
 
-| Field | Required Value | Action if Wrong |
-|-------|---------------|-----------------|
-| `constraints.read_only` | `true` | REJECT task |
-| `constraints.no_code_changes` | `true` | REJECT task |
-| `constraints.no_manifest_updates` | `true` | REJECT task |
+| Field | Required Value | If Wrong |
+|-------|---------------|----------|
+| `constraints.read_only` | `true` | REJECT — move to `rejected/` |
+| `constraints.no_code_changes` | `true` | REJECT — move to `rejected/` |
+| `constraints.no_manifest_updates` | `true` | REJECT — move to `rejected/` |
 
-If any constraint is missing or set to `false`, move the task to `rejected/` with:
+To reject a task:
+
+```bash
+mv .claude/outbox/active/OBX-001_research_2026-02-11.md .claude/outbox/rejected/OBX-001_research_2026-02-11.md
+```
+
+Then edit the file: set `status: "rejected"` and append:
 ```yaml
 rejected_at: "{ISO timestamp}"
 rejection_reason: "Constraint validation failed: {field} was not true"
@@ -58,32 +89,40 @@ executor: "antigravity/gemini-3"
 
 ### Step 5: Check Expiry
 
-Compare `created` + `constraints.timeout_hours` against the current time.
+Compare `created` + `constraints.timeout_hours` against the current time. Get the current time:
 
-- If expired, move to `rejected/` with `status: "expired"` and `rejection_reason: "Task expired"`
-- Stop processing
+```bash
+date -u +"%Y-%m-%dT%H:%M:%SZ"
+```
+
+If the task has expired, move to `rejected/` with `status: "expired"` and `rejection_reason: "Task expired after N hours without pickup"`. Stop processing.
 
 ### Step 6: Perform the Task
 
-Execute the work described in the task body:
+Read the task body carefully. It contains:
+- **Objective**: What to accomplish
+- **Specific Questions**: Numbered list of questions to answer
+- **Expected Output Shape**: The EXACT structure your results must follow
+
+Execute the work based on `task_type`:
 
 - **research**: Use web search to find information, compare options, gather data
 - **data_gathering**: Collect specific data points from known or discoverable sources
-- **analysis**: Analyze the provided context and produce insights
+- **analysis**: Analyze provided context and produce insights
 - **validation**: Verify claims, check facts, validate assumptions
 
 **Rules during execution**:
 - Use web search and documentation lookup freely
-- Read files listed in `context.relevant_files` if needed
-- DO NOT read files outside `.claude/outbox/` and `.claude/remediation/` unless listed in `relevant_files`
-- DO NOT run code, install packages, or execute scripts
-- DO NOT modify any existing project files
+- Read project files listed in `context.relevant_files` if needed
+- **DO NOT** modify any source code files
+- **DO NOT** run project code or install packages
+- **DO NOT** modify `.claude/manifest.yaml`
 
 ### Step 7: Deliver Results
 
-Create a delivery file at the exact path: `{delivery.target}{delivery.target_filename}`
+Create the delivery file at the exact path specified in the task's `delivery.target` + `delivery.target_filename`. Typically this is `.claude/remediation/inbox/`.
 
-The delivery file MUST have this YAML frontmatter:
+The delivery file **MUST** start with this YAML frontmatter:
 
 ```yaml
 ---
@@ -98,32 +137,54 @@ delivery_format: "{delivery.format from task}"
 ---
 ```
 
-Below the frontmatter, include the results in **EXACTLY** the structure specified in the task's "Expected Output Shape" section.
+Below the frontmatter, write the results in **EXACTLY** the structure from the task's "Expected Output Shape" section:
 
-- If `delivery.format` is `yaml`: wrap results in a `yaml` code fence
+- If `delivery.format` is `yaml`: wrap results in a ```yaml code fence
 - If `delivery.format` is `markdown`: write results as markdown prose with headers
-- If `delivery.format` is `json_in_markdown`: wrap results in a `json` code fence
+- If `delivery.format` is `json_in_markdown`: wrap results in a ```json code fence
+
+Write the file using the terminal:
+
+```bash
+cat > .claude/remediation/inbox/OBX-001_external_research_2026-02-11.md << 'DELIVERY_EOF'
+---
+id: "OBX-001"
+source: "external_research"
+...frontmatter...
+---
+
+...results...
+DELIVERY_EOF
+```
 
 ### Step 8: Mark Complete
 
-1. Move the task file from `active/` to `completed/`
-2. Update `status` to `completed` in the frontmatter
-3. Append completion annotation to the frontmatter:
+Move the task file from `active/` to `completed/`:
+
+```bash
+mv .claude/outbox/active/OBX-001_research_2026-02-11.md .claude/outbox/completed/OBX-001_research_2026-02-11.md
+```
+
+Edit the file: set `status: "completed"` and append:
 
 ```yaml
-# COMPLETION
 completed_at: "{ISO timestamp}"
-delivery_file: "{full path to delivered file}"
-items_returned: {count of items in results, or 1 for single-item deliveries}
+delivery_file: ".claude/remediation/inbox/OBX-001_external_research_2026-02-11.md"
+items_returned: {count}
 executor: "antigravity/gemini-3"
 ```
 
-4. Report: **"Completed task {id}. Delivered {N} items to {delivery path}."**
+Report: **"Completed task {id}. Delivered {N} items to {delivery path}."**
 
-### Step 9: Check for More Tasks
+### Step 9: Check for More
 
-After completing a task, check `pending/` again. If more tasks exist, ask:
-**"There are {N} more pending tasks. Process the next one?"**
+Run the discovery script again:
+
+```bash
+bash .agent/skills/outbox-poller/scripts/check_outbox.sh .
+```
+
+If more tasks exist, ask: **"There are {N} more pending tasks. Process the next one?"**
 
 ---
 

@@ -2,7 +2,7 @@
 """
 Governance Hook: Verify BA artifacts exist before coding agents start.
 
-Triggered by SubagentStart hook for backend-coding-agent and frontend-coding-agent.
+Triggered by SubagentStart hook for back and front.
 Reads stdin for hook input JSON, checks the current project for required BA artifacts.
 
 Exit codes:
@@ -12,6 +12,7 @@ Exit codes:
 
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -26,6 +27,34 @@ def find_project_root() -> Path | None:
         if parent == Path.home():
             break
     return None
+
+
+def find_claude_dir() -> Path | None:
+    """Walk up from cwd looking for any .claude/ directory (not requiring manifest)."""
+    current = Path.cwd()
+    for parent in [current, *current.parents]:
+        claude_dir = parent / ".claude"
+        if claude_dir.is_dir():
+            return claude_dir
+        if parent == Path.home():
+            break
+    return None
+
+
+def check_lost_lamb(claude_dir: Path) -> bool:
+    """Check if a valid (non-expired) .lost_lamb exception exists."""
+    lost_lamb = claude_dir / ".lost_lamb"
+    if not lost_lamb.exists():
+        return False
+    try:
+        data = json.loads(lost_lamb.read_text())
+        created_str = data.get("created_at", "")
+        created_at = datetime.fromisoformat(created_str.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        elapsed = (now - created_at).total_seconds()
+        return elapsed < 86400  # 24 hours
+    except (json.JSONDecodeError, ValueError, KeyError, TypeError):
+        return False
 
 
 def check_ba_artifacts(project_root: Path) -> list[str]:
@@ -60,22 +89,36 @@ def main():
     agent_name = hook_input.get("agent_name", "unknown")
 
     # Only enforce for coding agents
-    coding_agents = ["backend-coding-agent", "frontend-coding-agent"]
+    coding_agents = ["back", "front"]
     if agent_name not in coding_agents:
         sys.exit(0)
 
     project_root = find_project_root()
     if project_root is None:
-        # Not in a project context - allow but warn
-        print(
-            json.dumps(
-                {
-                    "result": "warn",
-                    "message": "No project manifest found. Coding agents require BA artifacts.",
-                }
+        # No manifest found — check for lost_lamb exception
+        claude_dir = find_claude_dir()
+        if claude_dir and check_lost_lamb(claude_dir):
+            print(
+                json.dumps(
+                    {
+                        "result": "warn",
+                        "message": "Lost-lamb exception active. Coding allowed temporarily without BA artifacts.",
+                    }
+                )
             )
+            sys.exit(0)
+        # No manifest and no valid exception — block
+        error_msg = (
+            f"GOVERNANCE BLOCK: {agent_name} cannot start without a project manifest.\n"
+            "No .claude/manifest.yaml found in any parent directory.\n"
+            "\n"
+            "Options:\n"
+            "  1. Run init to scaffold governance\n"
+            "  2. Use /lost-lamb for a 24hr ad-hoc exception\n"
+            "  3. Use /broken-arrow to retrofit governance on an existing project"
         )
-        sys.exit(0)
+        print(json.dumps({"result": "block", "reason": error_msg}))
+        sys.exit(1)
 
     missing = check_ba_artifacts(project_root)
     if missing:
@@ -83,7 +126,7 @@ def main():
         error_msg = (
             f"GOVERNANCE BLOCK: {agent_name} cannot start without BA artifacts.\n"
             f"Missing: {', '.join(missing)}\n"
-            f"Run the business-analyst agent first to create specifications."
+            f"Run the ba agent first to create specifications."
         )
         print(json.dumps({"result": "block", "reason": error_msg}))
         sys.exit(1)
