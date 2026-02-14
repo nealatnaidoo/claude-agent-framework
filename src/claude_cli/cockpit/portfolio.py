@@ -104,11 +104,19 @@ def collect_portfolio_data(projects: list[Path]) -> dict:
 
 def render_portfolio_html(data: dict) -> str:
     """Render portfolio HTML using Template substitution."""
+    from claude_cli.cockpit.docs_collector import collect_docs_data
+
     template_path = Path(__file__).parent / "templates" / "portfolio.html"
     template_str = template_path.read_text()
+
+    docs_data = collect_docs_data()
+    # Escape $ in docs JSON to avoid Template substitution conflicts
+    docs_json = json.dumps(docs_data, indent=2, default=str).replace("$", "$$")
+
     template = Template(template_str)
     return template.safe_substitute(
         portfolio_data=json.dumps(data, indent=2, default=str),
+        docs_data=docs_json,
         portfolio_name=data.get("portfolio_name", "Portfolio Cockpit"),
         generated_at=data.get("generated_at", ""),
     )

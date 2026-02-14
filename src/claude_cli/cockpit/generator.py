@@ -158,15 +158,22 @@ def collect_data(project_root: Path) -> dict:
 
 def render_html(data: dict) -> str:
     """Render cockpit data as self-contained HTML."""
+    from claude_cli.cockpit.docs_collector import collect_docs_data
+
     template_path = Path(__file__).parent / "templates" / "project.html"
     if template_path.exists():
         template_str = template_path.read_text()
     else:
         template_str = _default_template()
 
+    docs_data = collect_docs_data()
+    # Escape $ in docs JSON to avoid Template substitution conflicts
+    docs_json = json.dumps(docs_data, indent=2, default=str).replace("$", "$$")
+
     template = Template(template_str)
     return template.safe_substitute(
         cockpit_data=json.dumps(data, indent=2, default=str),
+        docs_data=docs_json,
         project_name=data.get("project_name", "Project"),
         generated_at=data.get("generated_at", ""),
     )

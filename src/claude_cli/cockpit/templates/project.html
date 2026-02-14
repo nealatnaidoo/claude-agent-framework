@@ -59,6 +59,39 @@
   .stat-box { background: #0f172a; border-radius: 6px; padding: 12px 8px; }
   .stat-box .num { font-size: 24px; font-weight: 700; }
   .stat-box .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+  /* Tab navigation */
+  .tab-bar { display:flex; background:#1e293b; border-bottom:1px solid #334155; padding:0 24px; }
+  .tab-btn { padding:10px 20px; cursor:pointer; background:none; border:none;
+             color:#94a3b8; font-size:13px; font-weight:500;
+             border-bottom:2px solid transparent; font-family:inherit; transition: color 0.2s; }
+  .tab-btn:hover { color:#e2e8f0; }
+  .tab-btn.active { color:#3b82f6; border-bottom-color:#3b82f6; }
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+  /* Docs-specific styles */
+  .docs-section { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+  .docs-section h2 { font-size: 14px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; margin-top: 20px; }
+  .docs-section h2:first-child { margin-top: 0; }
+  .docs-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px;
+                background: #1e293b; border: 1px solid #334155; border-radius: 8px; overflow: hidden; }
+  .docs-table th { text-align: left; color: #94a3b8; font-weight: 500; padding: 8px 12px;
+                   border-bottom: 1px solid #334155; background: #1e293b; }
+  .docs-table td { padding: 8px 12px; border-bottom: 1px solid #0f172a; }
+  .docs-table tr:last-child td { border-bottom: none; }
+  .docs-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+               padding: 16px; margin-bottom: 12px; }
+  .docs-card h3 { font-size: 13px; font-weight: 600; color: #e2e8f0; margin-bottom: 8px; }
+  .docs-pre { background: #0f172a; border: 1px solid #334155; border-radius: 6px;
+              padding: 12px 16px; font-family: 'SF Mono', 'Fira Code', monospace;
+              font-size: 12px; white-space: pre-wrap; line-height: 1.5; overflow-x: auto; }
+  .docs-tip { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 13px; }
+  .docs-tip::before { content: '\2022'; color: #3b82f6; font-weight: 700; flex-shrink: 0; }
+  .permission-tag { display: inline-block; padding: 2px 8px; border-radius: 4px;
+                    font-size: 11px; font-weight: 600; background: #7c3aed; color: #fff; }
+  .docs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .directive-box { background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #3b82f6;
+                   border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 16px; }
+  .directive-box blockquote { font-size: 16px; font-weight: 600; color: #e2e8f0; font-style: italic; }
 </style>
 </head>
 <body>
@@ -67,6 +100,13 @@
   <span class="badge" id="phase-badge"></span>
   <span class="timestamp" id="generated-at"></span>
 </div>
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('dashboard', this)">Dashboard</button>
+  <button class="tab-btn" onclick="switchTab('reference', this)">Reference</button>
+  <button class="tab-btn" onclick="switchTab('patterns', this)">Patterns</button>
+  <button class="tab-btn" onclick="switchTab('governance', this)">Governance</button>
+</div>
+<div id="tab-dashboard" class="tab-content active">
 <div class="grid">
   <div class="card">
     <h2>Task Progress</h2>
@@ -99,8 +139,26 @@
     <ul class="commit-list" id="commits-list"></ul>
   </div>
 </div>
+</div>
+<div id="tab-reference" class="tab-content">
+  <div class="docs-section" id="reference-content"></div>
+</div>
+<div id="tab-patterns" class="tab-content">
+  <div class="docs-section" id="patterns-content"></div>
+</div>
+<div id="tab-governance" class="tab-content">
+  <div class="docs-section" id="governance-content"></div>
+</div>
 <script>
 const COCKPIT_DATA = $cockpit_data;
+const DOCS = $docs_data;
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(el) { el.classList.remove('active'); });
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
 
 const PHASE_COLORS = {
   initialized: '#6b7280', solution_design: '#8b5cf6', ba: '#f59e0b',
@@ -183,6 +241,140 @@ COCKPIT_DATA.commits.forEach(c => {
 if (COCKPIT_DATA.commits.length === 0) {
   commitsList.innerHTML = '<li style="color:#64748b">No commits</li>';
 }
+
+// --- Reference Tab ---
+(function renderReference() {
+  var el = document.getElementById('reference-content');
+  var html = '';
+
+  // Tools - Scripts
+  if (DOCS.tools && DOCS.tools.scripts && DOCS.tools.scripts.length > 0) {
+    html += '<h2>Framework Scripts</h2>';
+    html += '<table class="docs-table"><thead><tr><th>Name</th><th>Description</th><th>Usage</th><th>Used By</th></tr></thead><tbody>';
+    DOCS.tools.scripts.forEach(function(s) {
+      html += '<tr><td><strong>' + s.name + '</strong></td><td>' + s.description + '</td><td><code>' + s.usage + '</code></td><td>' + (s.used_by || []).join(', ') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  // Tools - Packages
+  if (DOCS.tools && DOCS.tools.packages && DOCS.tools.packages.length > 0) {
+    html += '<h2>External Packages</h2>';
+    html += '<table class="docs-table"><thead><tr><th>Name</th><th>Version</th><th>Description</th><th>Commands</th></tr></thead><tbody>';
+    DOCS.tools.packages.forEach(function(p) {
+      html += '<tr><td><strong>' + p.name + '</strong></td><td>' + p.version + '</td><td>' + p.description + '</td><td>' + (p.commands || []).join(', ') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  // Tools - Planned
+  if (DOCS.tools && DOCS.tools.planned && DOCS.tools.planned.length > 0) {
+    html += '<h2>Planned Tools</h2>';
+    html += '<table class="docs-table"><thead><tr><th>Name</th><th>Purpose</th><th>Status</th></tr></thead><tbody>';
+    DOCS.tools.planned.forEach(function(t) {
+      html += '<tr><td><strong>' + t.name + '</strong></td><td>' + t.purpose + '</td><td>' + t.status + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  // Agents
+  if (DOCS.agents && DOCS.agents.length > 0) {
+    html += '<h2>Agent Matrix</h2>';
+    html += '<table class="docs-table"><thead><tr><th>Agent</th><th>Model</th><th>Scope</th><th>Description</th><th>Permission</th></tr></thead><tbody>';
+    DOCS.agents.forEach(function(a) {
+      var perm = a.exclusive_permission ? '<span class="permission-tag">' + a.exclusive_permission + '</span>' : '-';
+      html += '<tr><td><strong>' + a.name + '</strong></td><td>' + a.model + '</td><td>' + a.scope + '</td><td>' + a.description + '</td><td>' + perm + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  // Commands
+  if (DOCS.commands && DOCS.commands.length > 0) {
+    html += '<h2>CLI Commands</h2>';
+    html += '<table class="docs-table"><thead><tr><th>Command</th><th>Purpose</th></tr></thead><tbody>';
+    DOCS.commands.forEach(function(c) {
+      html += '<tr><td><code>' + c.name + '</code></td><td>' + c.description + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  if (!html) html = '<p style="color:#64748b">No reference documentation available.</p>';
+  el.innerHTML = html;
+})();
+
+// --- Patterns Tab ---
+(function renderPatterns() {
+  var el = document.getElementById('patterns-content');
+  var html = '';
+
+  // Coding tips
+  if (DOCS.coding_tips && DOCS.coding_tips.length > 0) {
+    html += '<h2>Coding Tips &amp; Checkpoints</h2>';
+    html += '<div class="docs-grid">';
+    DOCS.coding_tips.forEach(function(cat) {
+      html += '<div class="docs-card"><h3>' + cat.category + '</h3>';
+      cat.items.forEach(function(item) {
+        html += '<div class="docs-tip">' + item + '</div>';
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  // Pattern categories
+  if (DOCS.patterns && DOCS.patterns.length > 0) {
+    html += '<h2>Pattern Templates</h2>';
+    DOCS.patterns.forEach(function(cat) {
+      html += '<div class="docs-card"><h3>' + cat.category + '</h3>';
+      html += '<table class="docs-table"><thead><tr><th>Template</th><th>Purpose</th></tr></thead><tbody>';
+      cat.templates.forEach(function(t) {
+        html += '<tr><td><code>' + t.name + '</code></td><td>' + t.purpose + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    });
+  }
+
+  if (!html) html = '<p style="color:#64748b">No pattern documentation available.</p>';
+  el.innerHTML = html;
+})();
+
+// --- Governance Tab ---
+(function renderGovernance() {
+  var el = document.getElementById('governance-content');
+  var html = '';
+
+  // Prime Directive
+  if (DOCS.governance && DOCS.governance.prime_directive) {
+    html += '<div class="directive-box"><blockquote>' + DOCS.governance.prime_directive + '</blockquote></div>';
+  }
+
+  // Exclusive permissions
+  if (DOCS.governance && DOCS.governance.permissions && DOCS.governance.permissions.length > 0) {
+    html += '<h2>Exclusive Permissions</h2>';
+    html += '<table class="docs-table"><thead><tr><th>Agent</th><th>Model</th><th>Exclusive Permission</th></tr></thead><tbody>';
+    DOCS.governance.permissions.forEach(function(p) {
+      html += '<tr><td><strong>' + p.agent + '</strong></td><td>' + p.model + '</td><td><span class="permission-tag">' + p.exclusive_permission + '</span></td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  // Lifecycle diagram
+  if (DOCS.governance && DOCS.governance.lifecycle) {
+    html += '<h2>Agent Lifecycle</h2>';
+    html += '<div class="docs-pre">' + DOCS.governance.lifecycle + '</div>';
+  }
+
+  // Governance rules
+  if (DOCS.governance && DOCS.governance.rules && DOCS.governance.rules.length > 0) {
+    html += '<h2>Governance Rules</h2>';
+    DOCS.governance.rules.forEach(function(r) {
+      html += '<div class="docs-card"><h3>' + r.section + '</h3><p>' + r.content + '</p></div>';
+    });
+  }
+
+  if (!html) html = '<p style="color:#64748b">No governance documentation available.</p>';
+  el.innerHTML = html;
+})();
 </script>
 </body>
 </html>
